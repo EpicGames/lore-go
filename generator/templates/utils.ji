@@ -1,0 +1,15 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+{# Symbols (cToGoTypeMap, cToGoFFITypeMap, cTypesThatNeedCustomBuilder,
+   custom_types, ignored_functions) and the auto-detected `array_types`
+   / `event_array_types` lists are now Jinja globals injected by
+   `generator/registry.py` and accessed by their bare names. This file
+   only exists for the `clone_fixed_array` macro (which still needs to
+   be imported under a `utils.` alias). #}
+
+{% macro clone_fixed_array(array, type, length) %}
+  [{{ length }}]{{ type }} {
+    {% for i in range(length | int) %}
+      {{array}}[{{ i }}].Clone(),
+    {% endfor %}
+  }{% endmacro %}

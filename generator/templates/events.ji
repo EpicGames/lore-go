@@ -1,0 +1,193 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package types
+
+import (
+  "fmt"
+  "unsafe"
+)
+
+{% import "utils.ji" as utils %}
+
+// LoreEventFFI is a C-compatible representation of lore_event_t
+// Only valid during the callback
+type LoreEventFFI struct {
+	Tag     LoreEventTag
+	padding [4]byte // Ensure union starts at 8-byte boundary
+	// Union data follows (we access it via unsafe pointer arithmetic)
+}
+
+// Precomputed offset to the union data in LoreEventFFI
+const loreEventUnionOffset = unsafe.Sizeof(LoreEventTag(0)) + unsafe.Sizeof([4]byte{})
+
+// LoreEvent is a Go-native event (safe to keep after callback)
+type LoreEvent struct {
+	Tag LoreEventTag
+    Data any
+ }
+
+
+{% for arr in event_array_types %}
+type {{ arr.ffi_class }} struct {
+  {{ arr.ptr_field_pascal }} uintptr
+  Count uint64
+}
+
+type {{ arr.array_class }} = []{{ arr.element_field_type }}
+
+func (arr {{ arr.ffi_class }}) Len() int {
+  return int(arr.Count)
+}
+
+func (arr {{ arr.ffi_class }}) Get(index int) {{ arr.element_field_type }} {
+  if index < 0 || index >= int(arr.Count) {
+    panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+  }
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("cannot access FFI data outside the callback function")
+  }
+  slice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
+  return slice[index]
+}
+
+func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("cannot access FFI data outside the callback function")
+  }
+  if arr.Count == 0 {
+    return nil
+  }
+  cDataSlice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
+  result := make([]{{ arr.element_field_type }}, arr.Count)
+  copy(result, cDataSlice)
+  return result
+}
+{% endfor %}
+
+{% for struct_type, struct_fields in symbols.events.items() %}
+  {% if struct_type not in custom_types and not struct_type.endswith("_array_t") %}
+    type {{ pascal_case(struct_type.removesuffix("_t")) }}FFI struct {
+      {% for field in struct_fields %}
+          {% if field.0 in cToGoFFITypeMap %}
+              {% set field_type = cToGoFFITypeMap[field.0] %}
+          {% elif field.0 in cToGoTypeMap %}
+              {% set field_type = cToGoTypeMap[field.0] %}
+          {% elif field.0.endswith("_event_data_t") or field.0.endswith("_array_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) + "FFI" %}
+          {% elif field.0 in symbols.types.keys() and field.0 not in custom_types %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) + "FFI" %}
+          {% elif field.0.endswith("_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% else %}
+              {% set field_type = field.0 %}
+          {% endif %}
+          {% if field.3 %}
+            /* {{ "\n".join(field.3) }} */
+          {% endif %}
+          {% if field.2 != 0 %}
+              {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+          {% else %}
+              {{pascal_case(field.1)}} {{ field_type }}
+          {% endif %}
+      {% endfor %}
+    }
+
+    type {{ pascal_case(struct_type.removesuffix("_t")) }} struct {
+      {% for field in struct_fields %}
+          {% if field.0 in cTypesThatNeedCustomBuilder %}
+              {% set field_type = cTypesThatNeedCustomBuilder[field.0] %}
+          {% elif field.0 in cToGoTypeMap %}
+              {% set field_type = cToGoTypeMap[field.0] %}
+          {% elif field.0.endswith("_event_data_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% elif field.0.endswith("_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% else %}
+              {% set field_type = field.0 %}
+          {% endif %}
+          {% if field.3 %}
+            /* {{ "\n".join(field.3) }} */
+          {% endif %}
+          {% if field.2 != 0 %}
+              {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+          {% else %}
+              {{pascal_case(field.1)}} {{ field_type }}
+          {% endif %}
+      {% endfor %}
+    }
+  {% endif %}
+{% endfor %}
+
+{% for enum_name, enum_values in symbols.enums.items() %}
+  {% if enum_name == 'lore_event_tag_t' %}
+    {% for value in enum_values %}
+        func (e *LoreEventFFI) as{{pascal_case(value.lower())}}EventDataFFI() *Lore{{pascal_case(value.lower())}}EventDataFFI {
+            unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+            return (*Lore{{pascal_case(value.lower())}}EventDataFFI)(unionPtr)
+        }
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+
+func (e *LoreEventFFI) GetData() any {
+    switch e.Tag {
+{% for enum_name, enum_values in symbols.enums.items() %}
+  {% if enum_name == 'lore_event_tag_t' %}
+    {% for value in enum_values %}
+        case LoreEventTag_{{value}}:
+            return e.as{{pascal_case(value.lower())}}EventDataFFI()
+    {% endfor %}
+        default:
+            return nil
+  {% endif %}
+{% endfor %}
+    }
+}
+
+{% for struct_type, struct_fields in symbols.events.items() %}
+  {% if struct_type not in custom_types and not struct_type.endswith("_array_t") %}
+    func (e *{{ pascal_case(struct_type.removesuffix("_t")) }}FFI) Clone() {{ pascal_case(struct_type.removesuffix("_t")) }} {
+        return {{ pascal_case(struct_type.removesuffix("_t")) }}{
+            {% for field in struct_fields %}
+                {% if field.2 != 0 %}
+                    {{pascal_case(field.1)}}:     {{ utils.clone_fixed_array("e." + pascal_case(field.1), pascal_case(field.0.removesuffix("_t")), field.2) }},
+                {% elif field.0 == "uint8_t"%}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}} != 0,
+                {% elif field.0 in cToGoFFITypeMap %}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+                {% elif field.0 in cTypesThatNeedCustomBuilder %}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+                {% elif field.0 in symbols.types.keys() and field.0 not in custom_types %}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+                {% elif field.0.endswith("_event_data_t") or field.0.endswith("_array_t") %}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+                {% else %}
+                    {{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}},
+                {% endif %}
+            {% endfor %}
+        }
+    }
+  {% endif %}
+{% endfor %}
+
+// Clone creates a Go-native copy of the event data
+// This copy is safe to keep after the callback returns
+func (e *LoreEventFFI) Clone() LoreEvent {
+    switch e.Tag {
+{% for enum_name, enum_values in symbols.enums.items() %}
+  {% if enum_name == 'lore_event_tag_t' %}
+    {% for value in enum_values %}
+        case LoreEventTag_{{value}}:
+            return LoreEvent{
+                Tag: e.Tag,
+                Data: e.as{{pascal_case(value.lower())}}EventDataFFI().Clone(),
+            }
+    {% endfor %}
+        default:
+            return LoreEvent{                                                                                                                 
+                Tag: e.Tag,
+            }
+  {% endif %}
+{% endfor %}
+    }
+}

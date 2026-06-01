@@ -31,4 +31,3 @@ lore_go/native/*
 lore_go/cmd/fetch-lore-lib/version.go
 !lore_go/internal
 **/.lore-version
-.claude/settings.local.json

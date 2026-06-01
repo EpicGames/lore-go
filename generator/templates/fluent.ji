@@ -1,0 +1,417 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package lore
+
+import (
+	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+
+	"github.com/EpicGames/lore-go/native"
+	"github.com/EpicGames/lore-go/types"
+)
+
+// LoreError represents an error from a Lore operation with a non-zero return code.
+type LoreError struct {
+	ReturnCode int32
+	Messages   []string
+}
+
+func (e *LoreError) Error() string {
+	if len(e.Messages) > 0 {
+		return fmt.Sprintf("Lore operation failed with code %d: %s", e.ReturnCode, strings.Join(e.Messages, "; "))
+	}
+	return fmt.Sprintf("Lore operation failed with code %d", e.ReturnCode)
+}
+
+// ErrCallbackSet is returned when Collect() or AsyncIter() is called on a LoreCall that has a callback set.
+var ErrCallbackSet = fmt.Errorf("Collect() or AsyncIter() cannot be used with Callback(); use Wait() instead")
+
+// ErrAlreadyStarted is returned when Wait() or Collect() is called on a LoreCall that has already started.
+var ErrAlreadyStarted = fmt.Errorf("operation has already started")
+
+// globalCallbackEntry represents a registered global callback with a unique ID.
+type globalCallbackEntry struct {
+	id       uint64
+	callback types.LoreEventCallback
+}
+
+// globalCallbacksSnapshot is an immutable snapshot of callbacks per event type.
+// This is used for copy-on-write: writes create a new snapshot, reads use the current one.
+type globalCallbacksSnapshot map[types.LoreEventTag][]globalCallbackEntry
+
+// Global callback registry using copy-on-write for efficient reads.
+// Writes (register/unregister) are rare and protected by mutex.
+// Reads (invoke) are frequent and lock-free using atomic snapshot.
+var (
+	globalCallbacksPtr   atomic.Pointer[globalCallbacksSnapshot]
+	globalCallbacksMutex sync.Mutex // protects writes only
+	nextGlobalCallbackID uint64 = 1
+)
+
+func init() {
+	// Initialize with empty snapshot
+	empty := make(globalCallbacksSnapshot)
+	globalCallbacksPtr.Store(&empty)
+}
+
+// GlobalCallback registers a global callback handler for events with the given type.
+// The callback will be invoked for all Lore operations that emit events of this type,
+// regardless of which terminating method (Wait, Collect, AsyncIter) is used.
+// Multiple callbacks can be registered for the same event type.
+// Returns a cleanup function that unregisters the callback when called.
+//
+// Example usage:
+//
+//	cleanup := lore.GlobalCallback(types.LoreEventTag_LOG, func(event *types.LoreEventFFI, userContext uint64) {
+//	    if data, ok := event.GetData().(*types.LoreLogEventDataFFI); ok {
+//	        log.Printf("[Lore] %s", data.Message.String())
+//	    }
+//	})
+//	defer cleanup()
+func GlobalCallback(eventType types.LoreEventTag, callback types.LoreEventCallback) func() {
+	globalCallbacksMutex.Lock()
+	defer globalCallbacksMutex.Unlock()
+
+	id := nextGlobalCallbackID
+	nextGlobalCallbackID++
+
+	// Create new snapshot with the added callback
+	oldSnapshot := *globalCallbacksPtr.Load()
+	newSnapshot := make(globalCallbacksSnapshot, len(oldSnapshot))
+	for k, v := range oldSnapshot {
+		newSnapshot[k] = v
+	}
+	newSnapshot[eventType] = append(newSnapshot[eventType], globalCallbackEntry{
+		id:       id,
+		callback: callback,
+	})
+	globalCallbacksPtr.Store(&newSnapshot)
+
+	// Return cleanup function
+	return func() {
+		globalCallbacksMutex.Lock()
+		defer globalCallbacksMutex.Unlock()
+
+		oldSnapshot := *globalCallbacksPtr.Load()
+		entries := oldSnapshot[eventType]
+
+		// Find the entry index
+		idx := -1
+		for i, entry := range entries {
+			if entry.id == id {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return // Already removed
+		}
+
+		// Create new snapshot without this entry
+		newSnapshot := make(globalCallbacksSnapshot, len(oldSnapshot))
+		for k, v := range oldSnapshot {
+			newSnapshot[k] = v
+		}
+		newEntries := make([]globalCallbackEntry, 0, len(entries)-1)
+		newEntries = append(newEntries, entries[:idx]...)
+		newEntries = append(newEntries, entries[idx+1:]...)
+		if len(newEntries) > 0 {
+			newSnapshot[eventType] = newEntries
+		} else {
+			delete(newSnapshot, eventType)
+		}
+		globalCallbacksPtr.Store(&newSnapshot)
+	}
+}
+
+// invokeGlobalCallbacks calls all registered global callbacks for the given event.
+// This is lock-free and allocation-free on the read path.
+func invokeGlobalCallbacks(event *types.LoreEventFFI, userContext uint64) {
+	snapshot := globalCallbacksPtr.Load()
+	entries := (*snapshot)[event.Tag]
+	for _, entry := range entries {
+		entry.callback(event, userContext)
+	}
+}
+
+// LoreCallExecutor is the function type that executes a Lore operation.
+type LoreCallExecutor[TArgs any] func(
+	globals *types.LoreGlobalArgsFFI,
+	args *TArgs,
+	config *types.LoreEventCallbackConfig,
+) (int32, error)
+
+// LoreCall is a cold handle for a Lore operation.
+// It does not execute until a terminating method like Wait() is called.
+type LoreCall[TArgs any] struct {
+	globals     *types.LoreGlobalArgsFFI
+	args        *TArgs
+	callback    types.LoreEventCallback
+	filterTypes map[types.LoreEventTag]struct{}
+	userContext uint64
+	execFunc    LoreCallExecutor[TArgs]
+	started     bool
+}
+
+// Callback sets the event handler for this operation.
+// Returns the same handle for method chaining.
+func (c *LoreCall[TArgs]) Callback(fn types.LoreEventCallback) *LoreCall[TArgs] {
+	c.callback = fn
+	return c
+}
+
+// FilterByType sets which event types should be passed to the callback.
+// Only events with tags in the provided list will trigger the callback.
+// If no filter is set, all events are passed to the callback.
+// Returns the same handle for method chaining.
+func (c *LoreCall[TArgs]) FilterByType(tags ...types.LoreEventTag) *LoreCall[TArgs] {
+	c.filterTypes = make(map[types.LoreEventTag]struct{}, len(tags))
+	for _, tag := range tags {
+		c.filterTypes[tag] = struct{}{}
+	}
+	return c
+}
+
+// UserContext sets a user-provided context value that will be passed to the callback.
+// Returns the same handle for method chaining.
+func (c *LoreCall[TArgs]) UserContext(ctx uint64) *LoreCall[TArgs] {
+	c.userContext = ctx
+	return c
+}
+
+// Wait executes the Lore operation and blocks until completion.
+// Returns the return code and an error if the return code was non-zero.
+func (c *LoreCall[TArgs]) Wait() (int32, error) {
+	if c.started {
+		return -1, ErrAlreadyStarted
+	}
+	c.started = true
+
+	var errorMessages []string
+
+	callbackConfig := &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, userContext uint64) {
+			// Invoke global callbacks first
+			invokeGlobalCallbacks(event, userContext)
+
+			// Collect error messages from ERROR events
+			if event.Tag == types.LoreEventTag_ERROR {
+				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+					errorMessages = append(errorMessages, data.ErrorInner.String())
+				}
+			}
+
+			// Call user's callback if set and event passes filter
+			if c.callback != nil {
+				if len(c.filterTypes) == 0 {
+					c.callback(event, userContext)
+				} else if _, ok := c.filterTypes[event.Tag]; ok {
+					c.callback(event, userContext)
+				}
+			}
+		},
+		UserContext: c.userContext,
+	}
+
+	returnCode, err := c.execFunc(c.globals, c.args, callbackConfig)
+	if err != nil {
+		return -1, err
+	}
+
+	if returnCode != 0 {
+		return returnCode, &LoreError{
+			ReturnCode: returnCode,
+			Messages:   errorMessages,
+		}
+	}
+
+	return returnCode, nil
+}
+
+// Collect executes the Lore operation and collects all events into a slice.
+// Returns the collected events and an error if the operation failed.
+// Events are cloned to Go memory and remain valid after the call completes.
+// If FilterByType was called, only matching events are collected.
+// Cannot be used together with Callback() - returns ErrCallbackSet if a callback is set.
+func (c *LoreCall[TArgs]) Collect() ([]types.LoreEvent, error) {
+	if c.callback != nil {
+		return nil, ErrCallbackSet
+	}
+	if c.started {
+		return nil, ErrAlreadyStarted
+	}
+	c.started = true
+
+	var events []types.LoreEvent
+	var errorMessages []string
+
+	callbackConfig := &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, userContext uint64) {
+			// Invoke global callbacks first
+			invokeGlobalCallbacks(event, userContext)
+
+			// Collect error messages from ERROR events
+			if event.Tag == types.LoreEventTag_ERROR {
+				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+					errorMessages = append(errorMessages, data.ErrorInner.String())
+				}
+			}
+
+			// Collect event if it passes filter
+			if len(c.filterTypes) == 0 {
+				events = append(events, event.Clone())
+			} else if _, ok := c.filterTypes[event.Tag]; ok {
+				events = append(events, event.Clone())
+			}
+		},
+		UserContext: c.userContext,
+	}
+
+	returnCode, err := c.execFunc(c.globals, c.args, callbackConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if returnCode != 0 {
+		return events, &LoreError{
+			ReturnCode: returnCode,
+			Messages:   errorMessages,
+		}
+	}
+
+	return events, nil
+}
+
+// AsyncIter executes the Lore operation and returns channels for async iteration.
+// Returns an event channel and an error channel.
+// Events are cloned to Go memory and remain valid after the call completes.
+// If FilterByType was called, only matching events are sent to the channel.
+// The event channel is closed when the operation completes.
+// The error channel receives the final error (or nil) and is then closed.
+// Cannot be used together with Callback() - returns ErrCallbackSet if a callback is set.
+//
+// Example usage:
+//
+//	events, errCh := lore.RevisionHistory(globals, args).
+//	    FilterByType(types.LoreEventTag_REVISION_HISTORY_ENTRY).
+//	    AsyncIter()
+//	for event := range events {
+//	    // process event
+//	}
+//	if err := <-errCh; err != nil {
+//	    // handle error
+//	}
+func (c *LoreCall[TArgs]) AsyncIter() (<-chan types.LoreEvent, <-chan error) {
+	eventCh := make(chan types.LoreEvent)
+	errCh := make(chan error, 1)
+
+	if c.callback != nil {
+		close(eventCh)
+		errCh <- ErrCallbackSet
+		close(errCh)
+		return eventCh, errCh
+	}
+	if c.started {
+		close(eventCh)
+		errCh <- ErrAlreadyStarted
+		close(errCh)
+		return eventCh, errCh
+	}
+	c.started = true
+
+	go func() {
+		defer close(eventCh)
+		defer close(errCh)
+
+		var errorMessages []string
+
+		callbackConfig := &types.LoreEventCallbackConfig{
+			Callback: func(event *types.LoreEventFFI, userContext uint64) {
+				// Invoke global callbacks first
+				invokeGlobalCallbacks(event, userContext)
+
+				// Collect error messages from ERROR events
+				if event.Tag == types.LoreEventTag_ERROR {
+					if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+						errorMessages = append(errorMessages, data.ErrorInner.String())
+					}
+				}
+
+				// Send event if it passes filter
+				if len(c.filterTypes) == 0 {
+					eventCh <- event.Clone()
+				} else if _, ok := c.filterTypes[event.Tag]; ok {
+					eventCh <- event.Clone()
+				}
+			},
+			UserContext: c.userContext,
+		}
+
+		returnCode, err := c.execFunc(c.globals, c.args, callbackConfig)
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if returnCode != 0 {
+			errCh <- &LoreError{
+				ReturnCode: returnCode,
+				Messages:   errorMessages,
+			}
+			return
+		}
+
+		errCh <- nil
+	}()
+
+	return eventCh, errCh
+}
+
+{% for function_name, function_args in symbols.functions.items() %}
+    {% if function_name not in ignored_functions and "async" not in function_name %}
+		{% if function_name in symbols.functions_comments %}
+			/* {{ "\n".join(symbols.functions_comments[function_name]) }} */
+		{% endif %}
+        func {{ pascal_case(function_name.removeprefix("lore_")) }}(
+          globals *types.LoreGlobalArgsFFI,
+          args *types.{{ pascal_case(function_args.removesuffix("_t")) }}FFI,
+        ) *LoreCall[types.{{ pascal_case(function_name) }}ArgsFFI] {
+			return &LoreCall[types.{{ pascal_case(function_name) }}ArgsFFI]{
+                globals:  globals,
+                args:     args,
+                execFunc: native.{{ pascal_case(function_name.removeprefix("lore_")) }},
+            }
+		}
+    {% endif %}
+{% endfor %}
+
+// LogConfigure configures Lore logging.
+func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {
+	returnCode, err := native.LogConfigure(logConfig)
+	if err != nil {
+		return returnCode, err
+	}
+	if returnCode != 0 {
+		return returnCode, &LoreError{ReturnCode: returnCode}
+	}
+	return returnCode, nil
+}
+
+// Shutdown shuts down the Lore library.
+func Shutdown() (int32, error) {
+	returnCode, err := native.Shutdown()
+	if err != nil {
+		return returnCode, err
+	}
+	if returnCode != 0 {
+		return returnCode, &LoreError{ReturnCode: returnCode}
+	}
+	return returnCode, nil
+}
+
+// Version returns the Lore library version string.
+func Version() (string, error) {
+	return native.Version()
+}

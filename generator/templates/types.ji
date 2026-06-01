@@ -1,0 +1,706 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package types
+
+import (
+  "encoding/hex"
+  "fmt"
+  "unsafe"
+)
+
+{% import "utils.ji" as utils %}
+
+{% for arr in array_types %}
+type {{ arr.ffi_class }} struct {
+  {{ arr.ptr_field_pascal }} uintptr
+  Count uint64
+}
+
+type {{ arr.array_class }} = []{{ arr.element_field_type }}
+
+func (arr {{ arr.ffi_class }}) Len() int {
+  return int(arr.Count)
+}
+
+func (arr {{ arr.ffi_class }}) Get(index int) {{ arr.element_field_type }} {
+  if index < 0 || index >= int(arr.Count) {
+    panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+  }
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("cannot access FFI data outside the callback function")
+  }
+  slice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
+  return slice[index]
+}
+
+func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("cannot access FFI data outside the callback function")
+  }
+  if arr.Count == 0 {
+    return nil
+  }
+  cDataSlice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
+  result := make([]{{ arr.element_field_type }}, arr.Count)
+  copy(result, cDataSlice)
+  return result
+}
+
+func New{{ arr.array_class }}(arr []{{ arr.element_field_type }}) ({{ arr.ffi_class }}, func()) {
+  if len(arr) == 0 {
+    return {{ arr.ffi_class }}{ {{ arr.ptr_field_pascal }}: 0, Count: 0}, func() {}
+  }
+
+  {% if arr.needs_element_builder %}
+  // Element type has separate Go and FFI representations; convert each item
+  // through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+  ffiArray := make([]{{ arr.element_field_type }}FFI, len(arr))
+  cleanups := make([]func(), len(arr))
+  for i := range arr {
+    ffiArray[i], cleanups[i] = New{{ arr.element_field_type }}(arr[i])
+  }
+
+  arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+  cleanup := func() {
+    for _, c := range cleanups {
+      c()
+    }
+    // Keep ffiArray alive
+    _ = ffiArray
+  }
+  {% else %}
+  // Element type is FFI-compatible (primitive, enum, or alias); copy directly.
+  ffiArray := make([]{{ arr.element_field_type }}, len(arr))
+  copy(ffiArray, arr)
+
+  arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+  cleanup := func() {
+    // Keep ffiArray alive
+    _ = ffiArray
+  }
+  {% endif %}
+
+  return {{ arr.ffi_class }}{
+    {{ arr.ptr_field_pascal }}:   arrayPtr,
+    Count: uint64(len(arr)),
+  }, cleanup
+}
+{% endfor %}
+
+{% for struct_type, struct_fields in symbols.types.items() %}
+  {% if struct_type not in custom_types and not struct_type.endswith("_array_t") %}
+        type {{ pascal_case(struct_type.removesuffix("_t")) }}FFI struct {
+          {% for field in struct_fields %}
+              {% if field.0 in cToGoFFITypeMap %}
+                  {% set field_type = cToGoFFITypeMap[field.0] %}
+              {% elif field.0 in cToGoTypeMap %}
+                  {% set field_type = cToGoTypeMap[field.0] %}
+              {% elif field.0.endswith("_t") %}
+                  {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+              {% else %}
+                  {% set field_type = field.0 %}
+              {% endif %}
+              {% if field.3 %}
+                /* {{ "\n".join(field.3) }} */
+              {% endif %}
+              {% if field.2 != 0 %}
+                  {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+              {% else %}
+                  {{pascal_case(field.1)}} {{ field_type }}
+              {% endif %}
+          {% endfor %}
+        }
+
+        type {{ pascal_case(struct_type.removesuffix("_t")) }} struct {
+          {% for field in struct_fields %}
+			  {% if field.0 in cTypesThatNeedCustomBuilder %}
+				{% set field_type = cTypesThatNeedCustomBuilder[field.0] %}
+			  {% elif field.0 in cToGoTypeMap %}
+                {% set field_type = cToGoTypeMap[field.0] %}
+              {% elif field.0.endswith("_t") %}
+                  {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+              {% else %}
+                  {% set field_type = field.0 %}
+              {% endif %}
+              {% if field.3 %}
+                /* {{ "\n".join(field.3) }} */
+              {% endif %}
+              {% if field.2 != 0 %}
+                  {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+              {% else %}
+                  {{pascal_case(field.1)}} {{ field_type }}
+              {% endif %}
+          {% endfor %}
+        }
+
+		func New{{ pascal_case(struct_type.removesuffix("_t")) }}(opts {{ pascal_case(struct_type.removesuffix("_t")) }}) ({{ pascal_case(struct_type.removesuffix("_t")) }}FFI, func()) {
+		  {% for field in struct_fields %}
+			{% if field.0 in cToGoTypeMap %}
+				{% set field_type = cToGoTypeMap[field.0] %}
+			{% elif field.0.endswith("_t") %}
+				{% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+			{% else %}
+				{% set field_type = field.0 %}
+			{% endif %}
+			{% if field.0 in cTypesThatNeedCustomBuilder %}
+				val{{ pascal_case(field.1) }}, cleanup{{ pascal_case(field.1) }} := New{{ field_type }}(opts.{{ pascal_case(field.1) }})
+			{% endif %}
+		  {% endfor %}
+
+		  cleanup := func() {
+			{% for field in struct_fields %}
+				{% if field.0 in cTypesThatNeedCustomBuilder %}
+					cleanup{{ pascal_case(field.1) }}()
+				{% endif %}
+			{% endfor %}
+		  }
+
+		  return {{ pascal_case(struct_type.removesuffix("_t")) }}FFI{
+			{% for field in struct_fields %}
+				{% if field.0 in cTypesThatNeedCustomBuilder %}
+					{{ pascal_case(field.1) }}: val{{ pascal_case(field.1) }},
+				{% else %}
+					{{ pascal_case(field.1) }}: opts.{{ pascal_case(field.1) }},
+				{% endif %}
+			{% endfor %}
+		  }, cleanup
+		}
+
+		func (e *{{ pascal_case(struct_type.removesuffix("_t")) }}FFI) Clone() {{ pascal_case(struct_type.removesuffix("_t")) }} {
+			return {{ pascal_case(struct_type.removesuffix("_t")) }}{
+				{% for field in struct_fields %}
+					{% if field.2 != 0 %}
+						{{pascal_case(field.1)}}:     {{ utils.clone_fixed_array("e." + pascal_case(field.1), pascal_case(field.0.removesuffix("_t")), field.2) }},
+ 					{% elif field.0 == "uint8_t"%}
+						{{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}} != 0,
+					{% elif field.0 in cTypesThatNeedCustomBuilder %}
+						{{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+					{% elif field.0 in symbols.types.keys() and field.0 not in custom_types %}
+						{{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+					{% elif field.0.endswith("_event_data_t") %}
+						{{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}}.Clone(),
+					{% else %}
+						{{pascal_case(field.1)}}:     e.{{pascal_case(field.1)}},
+					{% endif %}
+				{% endfor %}
+			}
+		}
+  {% endif %}
+{% endfor %}
+
+// String returns the hash as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (h LoreHash) String() string {
+	return hex.EncodeToString(h.Data[:])
+}
+
+// String returns the context as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (c LoreContext) String() string {
+	return hex.EncodeToString(c.Data[:])
+}
+
+// String returns the context as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (c LorePartition) String() string {
+	return hex.EncodeToString(c.Data[:])
+}
+
+// String returns the context as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (c LoreBranchId) String() string {
+	return hex.EncodeToString(c.Data[:])
+}
+
+// String returns the context as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (c LoreInstanceId) String() string {
+	return hex.EncodeToString(c.Data[:])
+}
+
+// String returns the context as a lowercase hexadecimal string
+// Implements fmt.Stringer interface
+func (c LoreRepositoryId) String() string {
+	return hex.EncodeToString(c.Data[:])
+}
+
+// The user's callback function type
+// The event pointer is only valid during the callback
+type LoreEventCallback func(*LoreEventFFI, uint64)
+
+// LoreEventCallbackConfig configures the event callback
+type LoreEventCallbackConfig struct {
+	Callback    LoreEventCallback
+	UserContext uint64 // Optional user-provided context value
+}
+
+// C-compatible structures for FFI
+// These must match the C layout exactly
+
+// LoreString is a C-compatible string representation
+type LoreString struct {
+	ptr    uintptr // char*
+	Length uint64  // uintptr_t
+}
+
+type LoreHash struct {
+	Data [32]uint8
+}
+
+func (h LoreHash) Clone() LoreHash {
+	var result LoreHash
+	copy(result.Data[:], h.Data[:])
+	return result
+}
+
+type LoreContext struct {
+	Data [16]uint8
+}
+
+func (c LoreContext) Clone() LoreContext {
+	var result LoreContext
+	copy(result.Data[:], c.Data[:])
+	return result
+}
+
+type LorePartition struct {
+	Data [16]uint8
+}
+
+func (c LorePartition) Clone() LorePartition {
+	var result LorePartition
+	copy(result.Data[:], c.Data[:])
+	return result
+}
+
+type LoreInstanceId struct {
+	Data [16]uint8
+}
+
+func (c LoreInstanceId) Clone() LoreInstanceId {
+	var result LoreInstanceId
+	copy(result.Data[:], c.Data[:])
+	return result
+}
+
+type LoreAddress struct {
+	Hash    LoreHash
+	Context LoreContext
+}
+
+type LoreBranchId LoreContext
+
+func (c LoreBranchId) Clone() LoreBranchId {
+	var result LoreBranchId
+	copy(result.Data[:], c.Data[:])
+	return result
+}
+
+type LoreRepositoryId LorePartition
+
+func (c LoreRepositoryId) Clone() LoreRepositoryId {
+	var result LoreRepositoryId
+	copy(result.Data[:], c.Data[:])
+	return result
+}
+
+func (a LoreAddress) Clone() LoreAddress {
+	return LoreAddress{
+		Hash:    a.Hash.Clone(),
+		Context: a.Context.Clone(),
+	}
+}
+
+// String converts LoreString to a Go string
+// Returns empty string if the pointer is null or length is 0
+// Implements fmt.Stringer interface
+func (u LoreString) String() string {
+	if u.ptr == 0 || u.Length == 0 {
+		return ""
+	}
+	return readCString(u.ptr, int(u.Length))
+}
+
+// Clone converts LoreString from FFI memory to Go string
+func (u LoreString) Clone() string {
+	return u.String()
+}
+
+// LoreStringArrayFFI is a C-compatible string array representation
+type LoreStringArrayFFI struct {
+	Ptr   uintptr // pointer to array of LoreString
+	Count uint64  // uintptr_t
+}
+
+// Len returns the number of elements in the array
+func (arr LoreStringArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+// Get returns the string at the specified index
+// Converts LoreString to Go string
+// Panics if index is out of bounds
+func (arr LoreStringArrayFFI) Get(index int) string {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index].String()
+}
+
+// Clone converts LoreStringArrayFFI from FFI memory to Go []string
+// This creates a copy of the data that remains valid after the callback returns
+func (arr LoreStringArrayFFI) Clone() []string {
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	if arr.Count == 0 {
+		return nil
+	}
+	cStrings := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]string, arr.Count)
+	for i, s := range cStrings {
+		result[i] = s.String()
+	}
+	return result
+}
+
+// LoreUint8ArrayFFI is a C-compatible array representation
+type LoreUint8ArrayFFI struct {
+	Ptr   uintptr // pointer to array of uint8
+	Count uint64  // uintptr_t
+}
+
+type LoreUint8Array = []bool
+
+// Len returns the number of elements in the array
+func (arr LoreUint8ArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+// Get returns the element at the specified index from FFI memory
+// Panics if index is out of bounds
+func (arr LoreUint8ArrayFFI) Get(index int) bool {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*uint8)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index] != 0
+}
+
+// Clone converts LoreUint8ArrayFFI from FFI memory to Go []bool
+// This creates a copy of the data that remains valid after the callback returns
+func (arr LoreUint8ArrayFFI) Clone() []bool {
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	if arr.Count == 0 {
+		return nil
+	}
+	cUint8s := unsafe.Slice((*bool)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]bool, arr.Count)
+	copy(result, cUint8s)
+	return result
+}
+
+type LoreBinaryFFI struct {
+	Payload uintptr
+	Length  uint64
+}
+
+type LoreBinary = []byte
+
+func NewLoreBinary(data LoreBinary) (LoreBinaryFFI, func()) {
+  if len(data) == 0 {
+    return LoreBinaryFFI{Payload: 0, Length: 0}, func() {}
+  }
+
+	// Allocate Go memory with null terminator
+	// The slice will be kept alive by the caller until cleanup
+	bytes := make([]byte, len(data))
+	copy(bytes, data)
+
+	ptr := uintptr(unsafe.Pointer(&bytes[0]))
+
+	cleanup := func() {
+		// Keep bytes alive by referencing it
+		_ = bytes
+	}
+
+	return LoreBinaryFFI{
+		Payload: ptr,
+		Length:  uint64(len(data)),
+	}, cleanup
+}
+
+func (data *LoreBinaryFFI) Clone() LoreBinary {
+  if data.Payload == 0 {
+    panic("cannot access FFI data outside the callback function")
+  }
+  if data.Length == 0 {
+    return nil
+  }
+  cDataSlice := unsafe.Slice((*byte)(unsafe.Pointer(data.Payload)), data.Length)
+  result := make([]byte, data.Length)
+  copy(result, cDataSlice)
+  return result
+}
+
+type LoreBytesFFI = LoreBinaryFFI
+type LoreBytes = LoreBinary
+func NewLoreBytes(data LoreBinary) (LoreBinaryFFI, func()) {
+  return NewLoreBinary(data)
+}
+
+// LoreMetadataFFI is a C-compatible representation of lore_metadata_t
+type LoreMetadataFFI struct {
+	Tag     LoreMetadataTag
+	padding [4]byte // Ensure union starts at 8-byte boundary
+	// Union data follows (we access it via unsafe pointer arithmetic)
+}
+
+// LoreMetadata is a Go-compatible representation of lore_metadata_t
+type LoreMetadata struct {
+	Tag     LoreMetadataTag
+	Address *LoreAddress
+	Boolean *bool
+	Binary  *LoreBinary
+	Context *LoreContext
+	Hash    *LoreHash
+	Numeric *uint64
+	String  *string
+}
+
+// Precomputed offset to the union data in LoreMetadata
+const loreMetadataUnionOffset = unsafe.Sizeof(LoreMetadataTag(0)) + unsafe.Sizeof([4]byte{})
+
+// AsAddress returns the metadata value as LoreAddress
+// Only valid if Tag == LoreMetadataTag_ADDRESS
+func (m *LoreMetadataFFI) AsLoreAddress() *LoreAddress {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return (*LoreAddress)(unionPtr)
+}
+
+// AsBoolean returns the metadata value as bool
+// Only valid if Tag == LoreMetadataTag_BOOLEAN
+func (m *LoreMetadataFFI) AsBoolean() bool {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return *(*uint8)(unionPtr) != 0
+}
+
+// AsBinary returns the metadata value as LoreBinaryFFI
+// Only valid if Tag == LoreMetadataTag_BINARY
+func (m *LoreMetadataFFI) AsLoreBinary() *LoreBinaryFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return (*LoreBinaryFFI)(unionPtr)
+}
+
+// AsContext returns the metadata value as LoreContext
+// Only valid if Tag == LoreMetadataTag_CONTEXT
+func (m *LoreMetadataFFI) AsLoreContext() *LoreContext {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return (*LoreContext)(unionPtr)
+}
+
+// AsHash returns the metadata value as LoreHash
+// Only valid if Tag == LoreMetadataTag_HASH
+func (m *LoreMetadataFFI) AsLoreHash() *LoreHash {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return (*LoreHash)(unionPtr)
+}
+
+// AsNumeric returns the metadata value as uint64
+// Only valid if Tag == LoreMetadataTag_NUMERIC
+func (m *LoreMetadataFFI) AsNumeric() uint64 {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return *(*uint64)(unionPtr)
+}
+
+// AsString returns the metadata value as LoreString
+// Only valid if Tag == LoreMetadataTag_STRING
+func (m *LoreMetadataFFI) AsLoreString() *LoreString {
+	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
+	return (*LoreString)(unionPtr)
+}
+
+func (m *LoreMetadataFFI) Clone() LoreMetadata {
+	switch m.Tag {
+	case LoreMetadataTag_ADDRESS:
+		addr := m.AsLoreAddress().Clone()
+		return LoreMetadata{
+			Tag:     m.Tag,
+			Address: &addr,
+		}
+	case LoreMetadataTag_BOOLEAN:
+		boolVal := m.AsBoolean()
+		return LoreMetadata{
+			Tag:     m.Tag,
+			Boolean: &boolVal,
+		}
+	case LoreMetadataTag_BINARY:
+		binary := m.AsLoreBinary()
+		// Copy binary data to Go-owned memory
+		binaryCopy := binary.Clone()
+		return LoreMetadata{
+			Tag:    m.Tag,
+			Binary: &binaryCopy,
+		}
+	case LoreMetadataTag_CONTEXT:
+		ctx := m.AsLoreContext().Clone()
+		return LoreMetadata{
+			Tag:     m.Tag,
+			Context: &ctx,
+		}
+	case LoreMetadataTag_HASH:
+		hash := m.AsLoreHash().Clone()
+		return LoreMetadata{
+			Tag:  m.Tag,
+			Hash: &hash,
+		}
+	case LoreMetadataTag_NUMERIC:
+		num := m.AsNumeric()
+		return LoreMetadata{
+			Tag:     m.Tag,
+			Numeric: &num,
+		}
+	case LoreMetadataTag_STRING:
+		str := m.AsLoreString().String()
+		return LoreMetadata{
+			Tag:    m.Tag,
+			String: &str,
+		}
+	default:
+		return LoreMetadata{
+			Tag: m.Tag,
+		}
+	}
+}
+
+// LoreEventCallbackConfigFFI is a C-compatible representation of lore_event_callback_config_t
+type LoreEventCallbackConfigFFI struct {
+	UserContext uint64
+	FuncPtr     uintptr
+}
+
+// readCString reads a C string of known length into a Go string
+func readCString(ptr uintptr, length int) string {
+	if ptr == 0 || length == 0 {
+		return ""
+	}
+	// Use unsafe.Slice to create a zero-copy view of the C memory
+	// Then convert to string (which does copy, but avoids the manual loop)
+	bytes := unsafe.Slice((*byte)(unsafe.Pointer(ptr)), length)
+	return string(bytes)
+}
+
+// allocateCString allocates a C string from a Go string
+// Returns the pointer and a cleanup function (which is a no-op since Go manages the memory)
+func allocateCString(s string) (uintptr, func()) {
+	if s == "" {
+		return 0, func() {}
+	}
+
+	// Allocate Go memory with null terminator
+	// The slice will be kept alive by the caller until cleanup
+	bytes := make([]byte, len(s)+1)
+	copy(bytes, s)
+	bytes[len(s)] = 0
+
+	ptr := uintptr(unsafe.Pointer(&bytes[0]))
+
+	// Return cleanup that keeps the bytes alive
+	// The caller must call this after the C call completes
+	cleanup := func() {
+		// Keep bytes alive by referencing it
+		_ = bytes
+	}
+
+	return ptr, cleanup
+}
+
+// NewLoreString converts a Go string to LoreString
+func NewLoreString(s string) (LoreString, func()) {
+	if s == "" {
+		return LoreString{ptr: 0, Length: 0}, func() {}
+	}
+
+	p, cleanup := allocateCString(s)
+	return LoreString{
+		ptr:    p,
+		Length: uint64(len(s)),
+	}, cleanup
+}
+
+// NewLoreStringArray converts []string to LoreStringArrayFFI
+func NewLoreStringArray(strs []string) (LoreStringArrayFFI, func()) {
+	if len(strs) == 0 {
+		return LoreStringArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Allocate Go array of LoreString
+	cStrings := make([]LoreString, len(strs))
+	cleanups := make([]func(), 0, len(strs))
+
+	// Fill the array
+	for i, s := range strs {
+		cStr, cleanup := NewLoreString(s)
+		cleanups = append(cleanups, cleanup)
+		cStrings[i] = cStr
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&cStrings[0]))
+
+	cleanup := func() {
+		// Keep cStrings alive
+		_ = cStrings
+		for _, c := range cleanups {
+			c()
+		}
+	}
+
+	return LoreStringArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(strs)),
+	}, cleanup
+}
+
+// NewLoreUint8Array converts []bool to LoreUint8ArrayFFI
+func NewLoreUint8Array(values []bool) (LoreUint8ArrayFFI, func()) {
+	if len(values) == 0 {
+		return LoreUint8ArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+    // cast bools as uint8, these are memory compatible
+	boolsAsUint8s := unsafe.Slice((*uint8)(unsafe.Pointer(&values[0])), len(values))
+	// Allocate Go array of uint8
+	uint8s := make([]uint8, len(values))
+	copy(uint8s, boolsAsUint8s)
+
+	arrayPtr := uintptr(unsafe.Pointer(&uint8s[0]))
+
+	cleanup := func() {
+		// Keep uint8s alive
+		_ = uint8s
+	}
+
+	return LoreUint8ArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(values)),
+	}, cleanup
+}
+
+// Newuint8 converts Go bool to C uint8_t
+func Newuint8(b bool) (uint8, func()) {
+	if b {
+		return 1, func() {}
+	}
+	return 0, func() {}
+}

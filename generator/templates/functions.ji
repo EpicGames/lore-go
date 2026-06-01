@@ -1,0 +1,257 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package native
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"unsafe"
+
+	"github.com/ebitengine/purego"
+	"github.com/EpicGames/lore-go/types"
+)
+
+// Library handle and function pointers
+var (
+	libHandle               uintptr
+	libErr                  error
+	libOnce                 sync.Once
+	loreLogConfigureFunc     func(logConfigPtr uintptr) int32
+	loreShutdownFunc         func() int32
+	loreVersionFunc          func() uintptr
+	{% for function_name, function_args in symbols.functions.items() %}
+		{% if function_name not in ignored_functions and "async" not in function_name %}
+            {{ camel_case(function_name) }}Func loreFuncWithCallback
+		{% endif %}
+	{% endfor %}
+)
+
+// ensureLibrary loads the native library on first call. Concurrent callers
+// block until loading completes; subsequent calls are a single atomic read.
+func ensureLibrary() error {
+	libOnce.Do(func() { libErr = initLibrary() })
+	return libErr
+}
+
+// initLibrary loads the Lore library and function pointers.
+// Search order:
+//  1. LORE_LIB_PATH env var (use this for go run / go test)
+//  2. Next to the compiled executable (for deployed binaries)
+//  3. Next to the resolved executable (follows symlinks, for deployed binaries invoked via symlink)
+func initLibrary() error {
+	var searchPaths []string
+
+	// 1. Check environment variable first
+	if envPath := os.Getenv("LORE_LIB_PATH"); envPath != "" {
+		searchPaths = append(searchPaths, envPath)
+	}
+
+	// 2. Check next to the compiled executable
+	exePath, exeErr := os.Executable()
+	if exeErr == nil {
+		searchPaths = append(searchPaths, filepath.Join(filepath.Dir(exePath), nativeLibraryFileName()))
+	}
+
+	// 3. Check next to the resolved executable (follows symlinks)
+	if exeErr == nil {
+		if resolved, err := filepath.EvalSymlinks(exePath); err == nil && resolved != exePath {
+			searchPaths = append(searchPaths, filepath.Join(filepath.Dir(resolved), nativeLibraryFileName()))
+		}
+	}
+
+	if len(searchPaths) == 0 {
+		return fmt.Errorf("no library path found for platform %s", runtime.GOOS)
+	}
+
+	var lastErr error
+	for _, path := range searchPaths {
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+		libHandle, lastErr = loadLibrary(path)
+		if lastErr == nil {
+			break
+		}
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("failed to load library from any search path: %w", lastErr)
+	}
+	if libHandle == 0 {
+		return fmt.Errorf("native library %s not found in any search path: %v", nativeLibraryFileName(), searchPaths)
+	}
+
+	{% for function_name, function_args in symbols.functions.items() %}
+		{% if function_name not in ignored_functions and "async" not in function_name %}
+            purego.RegisterLibFunc(&{{ camel_case(function_name) }}Func, libHandle, "{{ function_name }}")
+		{% endif %}
+	{% endfor %}
+
+    purego.RegisterLibFunc(&loreLogConfigureFunc, libHandle, "lore_log_configure")
+    purego.RegisterLibFunc(&loreShutdownFunc, libHandle, "lore_shutdown")
+    purego.RegisterLibFunc(&loreVersionFunc, libHandle, "lore_version")
+
+	return nil
+}
+
+// Callback registry to keep Go functions alive while the C library is making
+// callbacks for them. sync.Map is used (rather than map+mutex) because the
+// trampoline reads from this on every event — 100k+ events per
+// repository_dump call — and we want lock-free reads on the hot path. Writes
+// (Store on registration, Delete on END) are rare and don't contend.
+var (
+	callbackRegistry sync.Map      // map[uint64]*callbackData
+	nextCallbackID   atomic.Uint64 // monotonic, starts at 1 after first Add
+)
+
+// eventCallbackFuncPtr is the C-callable function pointer for our trampoline.
+// purego.NewCallback consumes a slot in a fixed-size table (max 2000 across
+// the whole process) and the slot is *never released*, so we must register
+// exactly once at init — registering per-call would leak slots and panic
+// after ~2000 lore_* invocations.
+var eventCallbackFuncPtr uintptr
+
+func init() {
+	eventCallbackFuncPtr = purego.NewCallback(eventCallbackTrampoline)
+}
+
+// callbackData stores the user's callback and context
+type callbackData struct {
+	callback    types.LoreEventCallback
+	userContext uint64
+}
+
+// eventCallbackTrampoline is the C-callable callback function
+// This must match the C signature: void (*func)(const struct lore_event_t *event, uint64_t user_context)
+// Note: Returns uintptr to satisfy purego.NewCallback requirements on Windows (C void functions return 0)
+func eventCallbackTrampoline(eventPtr uintptr, callbackID uint64) uintptr {
+	v, exists := callbackRegistry.Load(callbackID)
+	if !exists {
+		return 0
+	}
+	data := v.(*callbackData)
+
+	// Cast the C event pointer to our Go type
+	event := (*types.LoreEventFFI)(unsafe.Pointer(eventPtr))
+
+	// Call the user's callback
+	data.callback(event, data.userContext)
+
+	// END signals callback termination — drop the registry entry so the
+	// user's closure (and anything it captures) becomes GC-eligible.
+	if event.Tag == types.LoreEventTag_END {
+		callbackRegistry.Delete(callbackID)
+	}
+
+	return 0 // C void function returns 0
+}
+
+// callLoreFunction is a generic helper that handles the common boilerplate for all Lore function calls.
+// It takes a pointer to the function variable (not the value) so the variable is read AFTER
+// ensureLibrary() has loaded the library and registered all function pointers.
+func callLoreFunction[TArgs any](
+	loreFuncPtr *loreFuncWithCallback,
+	globals *types.LoreGlobalArgsFFI,
+	args *TArgs,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+
+	// Register the callback. atomic.Uint64.Add returns the post-increment
+	// value, so the first call here gets ID=1 (matching the original
+	// semantics where nextCallbackID started at 1).
+	callbackID := nextCallbackID.Add(1)
+	callbackRegistry.Store(callbackID, &callbackData{
+		callback:    config.Callback,
+		userContext: config.UserContext,
+	})
+
+	// Reuse the package-level trampoline pointer — see eventCallbackFuncPtr
+	// comment for why this MUST be created once, not per call.
+	cCallbackConfig := types.LoreEventCallbackConfigFFI{
+		UserContext: callbackID,
+		FuncPtr:     eventCallbackFuncPtr,
+	}
+
+	// Convert all pointers to uintptr for FFI call
+	globalsPtr := uintptr(unsafe.Pointer(globals))
+	argsPtr := uintptr(unsafe.Pointer(args))
+	callbackConfigPtr := uintptr(unsafe.Pointer(&cCallbackConfig))
+	callbackUserContext := uintptr(cCallbackConfig.UserContext)
+	callbackFuncPtrValue := cCallbackConfig.FuncPtr
+
+	result := callLoreFuncWithCallback(
+		*loreFuncPtr,
+		globalsPtr,
+		argsPtr,
+		callbackConfigPtr,
+		callbackUserContext,
+		callbackFuncPtrValue,
+	)
+
+	// Keep all pointers alive until after the FFI call completes
+	runtime.KeepAlive(globals)
+	runtime.KeepAlive(args)
+	runtime.KeepAlive(cCallbackConfig)
+
+	return result, nil
+}
+
+{% for function_name, function_args in symbols.functions.items() %}
+    {% if function_name not in ignored_functions and "async" not in function_name %}
+		{% if function_name in symbols.functions_comments %}
+			/* {{ "\n".join(symbols.functions_comments[function_name]) }} */
+		{% endif %}
+        func {{ pascal_case(function_name.removeprefix("lore_")) }}(
+          globals *types.LoreGlobalArgsFFI,
+          args *types.{{ pascal_case(function_args.removesuffix("_t")) }}FFI,
+          config *types.LoreEventCallbackConfig,
+        ) (int32, error) {
+			return callLoreFunction(&{{ camel_case(function_name) }}Func, globals, args, config)
+		}
+    {% endif %}
+{% endfor %}
+
+func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+	result := loreLogConfigureFunc(uintptr(unsafe.Pointer(logConfig)))
+	runtime.KeepAlive(logConfig)
+	return result, nil
+}
+
+func Shutdown() (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+	result := loreShutdownFunc()
+	return result, nil
+}
+
+func Version() (string, error) {
+	if err := ensureLibrary(); err != nil {
+		return "", err
+	}
+	
+	cString := loreVersionFunc()
+	
+	// find the char* string null terminator
+	p := (*byte)(unsafe.Pointer(cString))
+	length := 0
+	for {
+		if *(*byte)(unsafe.Add(unsafe.Pointer(p), length)) == 0 {
+			break
+		}
+		length++
+	}
+	bytes := unsafe.Slice((*byte)(unsafe.Pointer(cString)), length)
+
+	return string(bytes), nil
+}

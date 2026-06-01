@@ -1,0 +1,12 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package types
+
+{% for enum_name, enum_values in symbols.enums.items() %}
+    type {{pascal_case(enum_name.removesuffix("_t"))}} uint32
+    const (
+        {% for value in enum_values %}
+            {{pascal_case(enum_name.removesuffix("_t"))}}_{{value}} {{pascal_case(enum_name.removesuffix("_t"))}} = {{loop.index - 1}}
+        {% endfor %}
+    )
+{% endfor %}

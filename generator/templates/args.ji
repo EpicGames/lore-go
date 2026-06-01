@@ -1,0 +1,84 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+package types
+
+{% for struct_type, struct_fields in symbols.args.items() %}
+    type {{ pascal_case(struct_type.removesuffix("_t")) }} struct {
+      {% for field in struct_fields %}
+          {% if field.0 in cTypesThatNeedCustomBuilder %}
+              {% set field_type = cTypesThatNeedCustomBuilder[field.0] %}
+          {% elif field.0 in cToGoTypeMap %}
+              {% set field_type = cToGoTypeMap[field.0] %}
+          {% elif field.0.endswith("_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% else %}
+              {% set field_type = field.0 %}
+          {% endif %}
+          {% if field.3 %}
+            /* {{ "\n".join(field.3) }} */
+          {% endif %}
+          {% if field.2 != 0 %}
+              {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+          {% else %}
+              {{pascal_case(field.1)}} {{ field_type }}
+          {% endif %}
+      {% endfor %}
+    }
+
+    type {{ pascal_case(struct_type.removesuffix("_t")) }}FFI struct {
+      {% for field in struct_fields %}
+          {% if field.0 in cToGoFFITypeMap %}
+              {% set field_type = cToGoFFITypeMap[field.0] %}
+          {% elif field.0 in cToGoTypeMap %}
+              {% set field_type = cToGoTypeMap[field.0] %}
+          {% elif field.0.endswith("_array_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) + "FFI" %}
+          {% elif field.0.endswith("_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% else %}
+              {% set field_type = field.0 %}
+          {% endif %}
+          {% if field.3 %}
+            /* {{ "\n".join(field.3) }} */
+          {% endif %}
+          {% if field.2 != 0 %}
+              {{pascal_case(field.1)}} [{{field.2}}]{{ field_type }}
+          {% else %}
+              {{pascal_case(field.1)}} {{ field_type }}
+          {% endif %}
+      {% endfor %}
+    }
+
+    func New{{ pascal_case(struct_type.removesuffix("_t")) }}(opts {{ pascal_case(struct_type.removesuffix("_t")) }}) ({{ pascal_case(struct_type.removesuffix("_t")) }}FFI, func()) {
+      {% for field in struct_fields %}
+          {% if field.0 in cToGoTypeMap %}
+              {% set field_type = cToGoTypeMap[field.0] %}
+          {% elif field.0.endswith("_t") %}
+              {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
+          {% else %}
+              {% set field_type = field.0 %}
+          {% endif %}
+          {% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
+              val{{ pascal_case(field.1) }}, cleanup{{ pascal_case(field.1) }} := New{{ field_type }}(opts.{{ pascal_case(field.1) }})
+          {% endif %}
+      {% endfor %}
+
+      cleanup := func() {
+        {% for field in struct_fields %}
+            {% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
+                cleanup{{ pascal_case(field.1) }}()
+            {% endif %}
+        {% endfor %}
+      }
+
+      return {{ pascal_case(struct_type.removesuffix("_t")) }}FFI{
+        {% for field in struct_fields %}
+            {% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
+                {{ pascal_case(field.1) }}: val{{ pascal_case(field.1) }},
+            {% else %}
+                {{ pascal_case(field.1) }}: opts.{{ pascal_case(field.1) }},
+            {% endif %}
+        {% endfor %}
+      }, cleanup
+    }
+{% endfor %}
