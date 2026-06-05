@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1064,8 +1065,8 @@ func TestLoreFileUnstage(t *testing.T) {
 		t.Fatal("No FILE_UNSTAGE_END event received")
 	}
 
-	if unstageCountData.FileDiscardedCount != 1 {
-		t.Errorf("Expected FileDiscardedCount=1, got %d", unstageCountData.FileDiscardedCount)
+	if unstageCountData.FileUnstagedCount != 1 {
+		t.Errorf("Expected FileUnstagedCount=1, got %d", unstageCountData.FileUnstagedCount)
 	}
 
 	if unstageCountData.TotalCount != 1 {
@@ -3504,5 +3505,96 @@ func TestLoreBranchInfoStackMultiElement(t *testing.T) {
 			t.Errorf("duplicate branch in stack at indices %d and %d", prev, i)
 		}
 		seen[bp.Branch] = i
+	}
+}
+
+// TestLoreRepositoryStatusParallel reproduces the JS SDK test
+// "should support multiple parallel Lore calls" (lore-native.test.ts) against
+// the Go FFI bindings.
+func TestLoreRepositoryStatusParallel(t *testing.T) {
+	globals := setupTestRepository(t)
+
+	// Stage a random file so status has something to report, mirroring
+	// stageRandomFile() in the JS test.
+	staged := createFileWithContents(t, globals.RepositoryPath.String(), "parallel-staged.txt", "staged content")
+	stageFiles(t, &globals, []string{staged})
+
+	const calls = 200
+
+	type callResult struct {
+		result         int32
+		err            error
+		fileEventCount int
+		errorMessages  []string
+	}
+	results := make([]callResult, calls)
+
+	var wg sync.WaitGroup
+	wg.Add(calls)
+
+	for i := 0; i < calls; i++ {
+		go func(idx int) {
+			defer wg.Done()
+
+			// Each goroutine gets its own args and callback, but they all
+			// share the single `globals` (and therefore the single C-allocated
+			// repository path string) — exactly as the JS test shares one
+			// globalArgs across every parallel call.
+			args, cleanupArgs := types.NewLoreRepositoryStatusArgs(types.LoreRepositoryStatusArgs{
+				Staged: true,
+				Scan:   true,
+			})
+			defer cleanupArgs()
+
+			r := &results[idx]
+			callback := func(event *types.LoreEventFFI, userContext uint64) {
+				switch event.Tag {
+				case types.LoreEventTag_REPOSITORY_STATUS_FILE:
+					if _, ok := event.GetData().(*types.LoreRepositoryStatusFileEventDataFFI); ok {
+						r.fileEventCount++
+					}
+				case types.LoreEventTag_ERROR:
+					if errData, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+						r.errorMessages = append(r.errorMessages, errData.ErrorInner.String())
+					}
+				}
+			}
+
+			result, err := RepositoryStatus(&globals, &args, &types.LoreEventCallbackConfig{
+				Callback:    callback,
+				UserContext: uint64(idx + 1),
+			})
+			r.result = result
+			r.err = err
+		}(i)
+	}
+
+	wg.Wait()
+
+	succeeded := 0
+	withFileEvents := 0
+	for i := range results {
+		r := &results[i]
+		if r.err != nil {
+			t.Errorf("call %d: RepositoryStatus returned error: %v (errorMessages=%v)", i, r.err, r.errorMessages)
+			continue
+		}
+		if r.result != 0 {
+			t.Errorf("call %d: RepositoryStatus returned non-zero result %d (errorMessages=%v)", i, r.result, r.errorMessages)
+			continue
+		}
+		succeeded++
+		if r.fileEventCount > 0 {
+			withFileEvents++
+		} else {
+			t.Errorf("call %d: succeeded but produced no file events", i)
+		}
+	}
+
+	if succeeded != calls {
+		t.Errorf("expected all %d parallel calls to succeed, got %d", calls, succeeded)
+	}
+	if withFileEvents != calls {
+		t.Errorf("expected all %d parallel calls to produce file events, got %d", calls, withFileEvents)
 	}
 }
