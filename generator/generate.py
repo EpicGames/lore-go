@@ -73,6 +73,8 @@ def copy_lib_to_target_dir():
         sys.exit(f"unsupported platform found: {SYSTEM}")
     dst_lib = os.path.join(SDK_DIR, lib_name)
 
+    os.makedirs(os.path.dirname(dst_lib), exist_ok=True)
+
     print(f"Copying lore library to {dst_lib}")
     shutil.copy(
         src_lib,
