@@ -788,11 +788,11 @@ func TestLoreBranchCreate(t *testing.T) {
 	}
 }
 
-func TestLoreBranchDelete(t *testing.T) {
+func TestLoreBranchArchive(t *testing.T) {
 	globals := setupTestRepository(t)
 
 	// Create a new branch
-	branchName := "branch-to-delete"
+	branchName := "branch-to-archive"
 	createArgs, cleanupCreateArgs := types.NewLoreBranchCreateArgs(types.LoreBranchCreateArgs{
 		Branch: branchName,
 	})
@@ -830,26 +830,26 @@ func TestLoreBranchDelete(t *testing.T) {
 		t.Fatalf("LoreBranchSwitch returned non-zero result: %d", result)
 	}
 
-	// Delete the branch
-	deleteArgs, cleanupDeleteArgs := types.NewLoreBranchDeleteArgs(types.LoreBranchDeleteArgs{
+	// Archive the branch
+	archiveArgs, cleanupArchiveArgs := types.NewLoreBranchArchiveArgs(types.LoreBranchArchiveArgs{
 		Branch: branchName,
 	})
-	defer cleanupDeleteArgs()
+	defer cleanupArchiveArgs()
 
-	result, err = BranchDelete(&globals, &deleteArgs, &types.LoreEventCallbackConfig{
+	result, err = BranchArchive(&globals, &archiveArgs, &types.LoreEventCallbackConfig{
 		Callback:    func(event *types.LoreEventFFI, userContext uint64) {},
 		UserContext: 0,
 	})
 
 	if err != nil {
-		t.Fatalf("LoreBranchDelete failed: %v", err)
+		t.Fatalf("LoreBranchArchive failed: %v", err)
 	}
 
 	if result != 0 {
-		t.Fatalf("LoreBranchDelete returned non-zero result: %d", result)
+		t.Fatalf("LoreBranchArchive returned non-zero result: %d", result)
 	}
 
-	// List branches to verify the deleted branch is gone
+	// List branches to verify the archived branch is gone
 	listArgs, cleanupListArgs := types.NewLoreBranchListArgs(types.LoreBranchListArgs{})
 	defer cleanupListArgs()
 
@@ -875,10 +875,10 @@ func TestLoreBranchDelete(t *testing.T) {
 		t.Fatalf("LoreBranchList returned non-zero result: %d", result)
 	}
 
-	// Verify the deleted branch is not in the list
+	// Verify the archived branch is not in the list
 	for _, name := range branchNames {
 		if name == branchName {
-			t.Errorf("Deleted branch '%s' still exists in branch list", branchName)
+			t.Errorf("Archived branch '%s' still exists in branch list", branchName)
 		}
 	}
 
