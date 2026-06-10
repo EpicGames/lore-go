@@ -22,6 +22,7 @@ var (
 	libOnce                 sync.Once
 	loreLogConfigureFunc     func(logConfigPtr uintptr) int32
 	loreShutdownFunc         func() int32
+	loreSetThreadLimitFunc   func(count uintptr) int32
 	loreVersionFunc          func() uintptr
 	{% for function_name, function_args in symbols.functions.items() %}
 		{% if function_name not in ignored_functions and "async" not in function_name %}
@@ -93,6 +94,7 @@ func initLibrary() error {
 
     purego.RegisterLibFunc(&loreLogConfigureFunc, libHandle, "lore_log_configure")
     purego.RegisterLibFunc(&loreShutdownFunc, libHandle, "lore_shutdown")
+    purego.RegisterLibFunc(&loreSetThreadLimitFunc, libHandle, "lore_set_thread_limit")
     purego.RegisterLibFunc(&loreVersionFunc, libHandle, "lore_version")
 
 	return nil
@@ -232,6 +234,14 @@ func Shutdown() (int32, error) {
 		return -1, err
 	}
 	result := loreShutdownFunc()
+	return result, nil
+}
+
+func SetThreadLimit(count uintptr) (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+	result := loreSetThreadLimitFunc(count)
 	return result, nil
 }
 

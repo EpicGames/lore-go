@@ -411,6 +411,14 @@ func Shutdown() (int32, error) {
 	return returnCode, nil
 }
 
+// SetThreadLimit limits the total number of threads Lore sizes its pools for.
+// Must be called before the first Lore operation. Returns 0 if the limit was
+// applied, or 1 if it had already been set (or the runtime was already
+// running) — the latter is not treated as an error.
+func SetThreadLimit(count uintptr) (int32, error) {
+	return native.SetThreadLimit(count)
+}
+
 // Version returns the Lore library version string.
 func Version() (string, error) {
 	return native.Version()
