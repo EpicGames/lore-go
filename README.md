@@ -1,4 +1,12 @@
-# Lore Go SDK - Quick Start
+# Lore Go SDK 
+
+## About
+This repository contains tools to exend Lore with Go. 
+
+Lore is an open source version control system that is designed for unprecedented scalability of both data and teams. It is optimized for projects that combine code with large binary assets, including games and entertainment, and caters for the needs of developers and artists alike. 
+
+For full Lore documentation, architecture details, and contribution guidelines, visit the [main Lore repository](https://github.com/EpicGames/lore).
+
 
 ## Install
 
@@ -76,9 +84,9 @@ _, err := lore.RepositoryStatus(&globals, &args).
 
 For comprehensive examples, see [examples/fluent/fluent.go](examples/fluent/fluent.go) (fluent) and [examples/native/native.go](examples/native/native.go) (low-level).
 
-# Contributing
+## Contributing
 
-## Set up your dev environment
+### Set up your dev environment
 
 1. Clone the Lore Go SDK repository:
 
@@ -99,11 +107,11 @@ source .venv/bin/activate
 uv pip install jinja2 pycparser
 ```
 
-## Get the Lore library
+### Get the Lore library
 
 The SDK binds against the Lore C library. Pick one of the two options below depending on whether you're also modifying the Lore core.
 
-### Option A — build the library from Lore source
+#### Option A — build the library from Lore source
 
 Use this when you're changing the Lore C/Rust core alongside the Go SDK.
 
@@ -113,13 +121,13 @@ Use this when you're changing the Lore C/Rust core alongside the Go SDK.
 cargo build --release
 ```
 
-### Option B — fetch a pre-built Lore library
+#### Option B — fetch a pre-built Lore library
 
 Use this when you only need to develop the Go SDK against an existing Lore version.
 
 1. Download the header and binaries from [Lore's repository](https://github.com/EpicGames/lore) release page.
 
-## Generate the Go bindings
+### Generate the Go bindings
 
 1. Point `LORE_BUILD_PATH` at the library directory from the previous section:
 
@@ -144,7 +152,7 @@ go build -C lore_go
 
 4. Any edits you now make under `lore_go/` are picked up by re-running `go build`. If you change anything under `generator/templates/` or pull a new Lore pre-built binary, re-run step 3 to regenerate the bindings.
 
-## Run the examples
+### Run the examples
 
 With the dev environment set up, a Lore library available, and the Go bindings generated, run an example from the repository root:
 
@@ -157,12 +165,12 @@ examples/fluent/fluent
 
 To run the low-level native example instead, swap `fluent` for `native`.
 
-## Run the test suite
+### Run the test suite
 
 ```bash
 go test -C lore_go ./... -v
 ```
 
-# Releasing
+## Releasing
 
 The project is released using the `Release Lore Go SDK` GitHub Action. The workflow runs `validate-cr.yml` to generate the SDK against the requested Lore version (with `LORE_RELEASE_BASE_URL` baked into `cmd/fetch-lore-lib/version.go`), then commits the result and tags it.
