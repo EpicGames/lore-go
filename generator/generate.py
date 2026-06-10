@@ -21,14 +21,24 @@ from common.find_lorelib import (
     _wheel_lib_name,
 )
 
-LORE_VERSION = os.environ.get("LORE_VERSION")
+# LORE_VERSION_TAG carries the full, un-normalized version (e.g. "v0.8.2-nightly")
+# used to build the runtime artifact path; callers that strip LORE_VERSION down to
+# a bare "0.8.2" for find_lorelib can pass the original here. Falls back to
+# LORE_VERSION.
+LORE_VERSION = os.environ.get("LORE_VERSION_TAG") or os.environ.get("LORE_VERSION")
 LORE_REVISION = os.environ.get("LORE_REVISION")
+LORE_SIBLING_REVISION = os.environ.get("SIBLING_REVISION")
 LORE_BRANCH = os.environ.get("LORE_BRANCH")
+LORE_SIBLING_BRANCH = os.environ.get("SIBLING_BRANCH")
 LORE_NAME = os.environ.get("LORE_NAME")
 LORE_RELEASE_BASE_URL = os.environ.get(
     "LORE_RELEASE_BASE_URL",
     "https://github.com/EpicGames/lore/releases/download",
 )
+# Runtime fetch scheme (see fetch_native_version.ji). Defaults match the
+# historical behavior: a raw, short-named direct download.
+LORE_ARTIFACT_FORMAT = os.environ.get("LORE_ARTIFACT_FORMAT", "direct")
+LORE_ARTIFACT_NAMING = os.environ.get("LORE_ARTIFACT_NAMING", "short")
 
 SCRIPT_DIR = os.path.dirname(__file__)
 HEADER_FILE = os.path.join(SCRIPT_DIR, "../lore/include/lore.h")
@@ -107,9 +117,13 @@ template = jinja_env.get_template("fetch_native_version.ji")
 content = template.render(
     lore_version=LORE_VERSION or "0.0.0",
     lore_revision=LORE_REVISION or "",
+    lore_sibling_revision=LORE_SIBLING_REVISION or "",
     lore_branch=LORE_BRANCH or "",
+    lore_sibling_branch=LORE_SIBLING_BRANCH or "",
     lore_name=LORE_NAME or "",
     lore_release_base_url=LORE_RELEASE_BASE_URL,
+    lore_artifact_format=LORE_ARTIFACT_FORMAT,
+    lore_artifact_naming=LORE_ARTIFACT_NAMING,
 )
 os.makedirs(FETCH_NATIVE_DIR, exist_ok=True)
 version_file = os.path.join(FETCH_NATIVE_DIR, "version.go")

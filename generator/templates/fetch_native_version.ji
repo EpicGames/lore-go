@@ -4,9 +4,18 @@
 package main
 
 const (
-	loreVersion        = "{{ lore_version }}"
-	loreRevision       = "{{ lore_revision }}"
-	loreBranch         = "{{ lore_branch }}"
-	loreName           = "{{ lore_name }}"
-	loreReleaseBaseURL = "{{ lore_release_base_url }}"
+	loreVersion         = "{{ lore_version }}"
+	loreRevision        = "{{ lore_revision }}"
+	loreSiblingRevision = "{{ lore_sibling_revision }}"
+	loreBranch          = "{{ lore_branch }}"
+	loreSiblingBranch   = "{{ lore_sibling_branch }}"
+	loreName            = "{{ lore_name }}"
+	loreReleaseBaseURL  = "{{ lore_release_base_url }}"
+	// How the runtime fetcher retrieves the library, baked from the build:
+	//   loreArtifactFormat: "direct" (download a raw .so/.dll/.dylib) or
+	//     "archive" (download a .tar.gz/.zip bundle and extract the lib).
+	//   loreArtifactNaming: "short" (liblore-<tag>-linux-x86_64.so, lore-<tag>.dll)
+	//     or "triple" (rust target triples, e.g. -x86_64-unknown-linux-gnu).
+	loreArtifactFormat = "{{ lore_artifact_format }}"
+	loreArtifactNaming = "{{ lore_artifact_naming }}"
 )
