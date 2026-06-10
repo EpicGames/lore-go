@@ -78,6 +78,36 @@ func TestResolveArtifact(t *testing.T) {
 	}
 }
 
+// The third-party-notices file is named after the remote library (without its
+// extension) and placed next to the local library as
+// <local-lib-basename>.THIRD-PARTY-NOTICES.txt — mirroring the build-time logic.
+func TestNoticesNames(t *testing.T) {
+	cases := []struct {
+		name              string
+		artifact          string
+		local             string
+		wantRemoteNotices string
+		wantLocalNotices  string
+	}{
+		{"linux-x86_64", "liblore-v0.8.1-linux-x86_64.so", "liblore.so",
+			"liblore-v0.8.1-linux-x86_64.THIRD-PARTY-NOTICES.txt", "liblore.THIRD-PARTY-NOTICES.txt"},
+		{"windows", "lore-v0.8.1.dll", "lore.dll",
+			"lore-v0.8.1.THIRD-PARTY-NOTICES.txt", "lore.THIRD-PARTY-NOTICES.txt"},
+		{"oss-nightly-darwin", "liblore-v0.8.2-nightly-129_3612-aarch64-apple-darwin.dylib", "liblore.dylib",
+			"liblore-v0.8.2-nightly-129_3612-aarch64-apple-darwin.THIRD-PARTY-NOTICES.txt", "liblore.THIRD-PARTY-NOTICES.txt"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := noExt(tc.artifact) + ".THIRD-PARTY-NOTICES.txt"; got != tc.wantRemoteNotices {
+				t.Errorf("remote notices = %q, want %q", got, tc.wantRemoteNotices)
+			}
+			if got := noExt(tc.local) + ".THIRD-PARTY-NOTICES.txt"; got != tc.wantLocalNotices {
+				t.Errorf("local notices = %q, want %q", got, tc.wantLocalNotices)
+			}
+		})
+	}
+}
+
 // A feature prerelease build (non-main branch) gets the branch dir suffix on
 // the URL path, while the filename keeps the bare file version.
 func TestDirVersionFeatureBranch(t *testing.T) {

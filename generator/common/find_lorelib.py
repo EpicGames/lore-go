@@ -93,6 +93,17 @@ def _copy_lib():
     shutil.copy(src_lib, dst_lib)
 
 
+def _copy_licenses():
+    # Optional: fetch-lorelib drops Lore license files (Lore_Licenses.txt,
+    # liblore.THIRD-PARTY-NOTICES.txt) into LORE_BUILD_PATH when Lore published
+    # them. Ship them beside the library. Absence is fine -> nothing copied.
+    for name in os.listdir(LORE_BUILD_PATH):
+        if name.endswith(".txt"):
+            shutil.copy(
+                os.path.join(LORE_BUILD_PATH, name), os.path.join(LIB_DIR, name)
+            )
+
+
 def main():
     """Gets the Lore header and library from a pre-built binary or a local build"""
 
@@ -107,6 +118,7 @@ def main():
 
     _copy_header()
     _copy_lib()
+    _copy_licenses()
 
 
 if __name__ == "__main__":

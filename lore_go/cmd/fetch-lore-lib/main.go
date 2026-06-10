@@ -371,6 +371,44 @@ func writeVersion(dir, versionTag string) error {
 	return os.WriteFile(versionFilePath(dir), []byte(versionTag+"\n"), 0o644)
 }
 
+// noExt strips the final extension from a filename (e.g. liblore.dylib ->
+// liblore, liblore-v0.8.1-linux-x86_64.so -> liblore-v0.8.1-linux-x86_64).
+func noExt(name string) string {
+	return strings.TrimSuffix(name, filepath.Ext(name))
+}
+
+// downloadOptional fetches url to destPath best-effort. License files may not
+// exist for every build, so a missing file (or any download error) is logged
+// and ignored rather than failing the run.
+func downloadOptional(url, destPath string) {
+	if err := download(url, destPath); err != nil {
+		fmt.Printf("  (optional) %s not fetched: %v\n", filepath.Base(destPath), err)
+	}
+}
+
+// extractMemberOptional extracts an archive member best-effort, ignoring a
+// missing member or extraction error (used for bundled license files).
+func extractMemberOptional(archivePath, kind, member, destPath string) {
+	if err := extractMember(archivePath, kind, member, destPath); err != nil {
+		fmt.Printf("  (optional) %s not extracted: %v\n", member, err)
+	}
+}
+
+// fetchDirectLicenses downloads the optional license files that sit next to a
+// directly-distributed library in the same remote directory:
+//   - Lore_Licenses.txt              (shared; name kept as-is)
+//   - <remote-lib-basename>.THIRD-PARTY-NOTICES.txt, placed next to the library
+//     as <local-lib-basename>.THIRD-PARTY-NOTICES.txt (e.g. liblore.THIRD-PARTY-NOTICES.txt)
+//
+// Both are optional — a build typically ships one or the other.
+func fetchDirectLicenses(dirURL string, platform *platformInfo, outputDir string) {
+	downloadOptional(dirURL+"/Lore_Licenses.txt", filepath.Join(outputDir, "Lore_Licenses.txt"))
+
+	remoteNotices := noExt(platform.artifactName) + ".THIRD-PARTY-NOTICES.txt"
+	localNotices := noExt(platform.localName) + ".THIRD-PARTY-NOTICES.txt"
+	downloadOptional(dirURL+"/"+remoteNotices, filepath.Join(outputDir, localNotices))
+}
+
 func main() {
 	outputDir := flag.String("o", ".", "output directory for the native library")
 	targetOS := flag.String("os", runtime.GOOS, "target OS (e.g. linux, darwin, windows)")
@@ -420,9 +458,8 @@ func main() {
 				"Error: no Lore release base URL configured. Set LORE_RELEASE_BASE_URL or rebuild the SDK with $LORE_RELEASE_BASE_URL set.")
 			os.Exit(1)
 		}
-		url := fmt.Sprintf("%s/%s/%s",
-			strings.TrimRight(baseURL, "/"),
-			dirVersion, platform.artifactName)
+		dirURL := fmt.Sprintf("%s/%s", strings.TrimRight(baseURL, "/"), dirVersion)
+		url := fmt.Sprintf("%s/%s", dirURL, platform.artifactName)
 
 		fmt.Printf("Downloading Lore %s for %s/%s...\n", fileVersion, *targetOS, *targetArch)
 		fmt.Printf("  URL: %s\n", url)
@@ -433,6 +470,8 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
 				os.Exit(1)
 			}
+			// License files ship as separate files alongside the library.
+			fetchDirectLicenses(dirURL, platform, *outputDir)
 		} else {
 			tmp, err := downloadToTemp(url, "lore-lib-*."+platform.archiveKind)
 			if err != nil {
@@ -444,6 +483,9 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Extract failed: %v\n", err)
 				os.Exit(1)
 			}
+			// License files are bundled inside the release archive.
+			extractMemberOptional(tmp, platform.archiveKind, "LICENSE.txt", filepath.Join(*outputDir, "LICENSE.txt"))
+			extractMemberOptional(tmp, platform.archiveKind, "THIRD-PARTY-NOTICES.txt", filepath.Join(*outputDir, "THIRD-PARTY-NOTICES.txt"))
 		}
 	}
 
