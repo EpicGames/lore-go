@@ -29,7 +29,7 @@ Epic doesn't pursue legal action against researchers acting in good faith under 
 
 ## Scope
 
-This file covers the `github.ol.epicgames.net/ucs/urc-go-sdk` Go module and its
+This file covers the `github.com/EpicGames/lore-go` Go module and its
 platform binaries. Vulnerabilities in the underlying Lore wire protocol,
 `lore-capi`, or `loreserver` are also in scope — mention which component is
 affected.

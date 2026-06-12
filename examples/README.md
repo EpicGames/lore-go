@@ -4,7 +4,7 @@ This directory contains example applications demonstrating how to use the Lore G
 
 ## Prerequisites
 
-Each example requires the Lore native library. Run `go generate` to fetch it from Artifactory before building:
+Each example requires the Lore native library. Run `go generate` to fetch the library before building:
 
 ```bash
 # From the examples directory
