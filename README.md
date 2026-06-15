@@ -1,9 +1,10 @@
-# Lore Go SDK 
+# Lore Go SDK
 
 ## About
-This repository contains tools to exend Lore with Go. 
 
-Lore is an open source version control system that is designed for unprecedented scalability of both data and teams. It is optimized for projects that combine code with large binary assets, including games and entertainment, and caters for the needs of developers and artists alike. 
+This repository contains the Go SDK for integrating with Lore.
+
+Lore is an open source version control system that is designed for unprecedented scalability of both data and teams. It is optimized for projects that combine code with large binary assets, including games and entertainment, and caters to the needs of developers and artists alike.
 
 For full Lore documentation, architecture details, and contribution guidelines, visit the [main Lore repository](https://github.com/EpicGames/lore).
 
@@ -14,14 +15,6 @@ For full Lore documentation, architecture details, and contribution guidelines, 
 
 ```bash
 go get github.com/EpicGames/lore-go@latest
-```
-
-### Nightly Build
-
-Nightly builds are published as tagged versions of the form `v<X.Y.Z>-nightly-<REV>`. Pin a specific nightly with:
-
-```bash
-go get github.com/EpicGames/lore-go@v0.8.2-nightly-3496
 ```
 
 ### Install the Lore native library
@@ -125,7 +118,7 @@ cargo build --release
 
 Use this when you only need to develop the Go SDK against an existing Lore version.
 
-1. Download the header and binaries from [Lore's repository](https://github.com/EpicGames/lore) release page.
+1. Download the header and binaries from the [Lore repository](https://github.com/EpicGames/lore) release page.
 
 ### Generate the Go bindings
 
@@ -170,7 +163,3 @@ To run the low-level native example instead, swap `fluent` for `native`.
 ```bash
 go test -C lore_go ./... -v
 ```
-
-## Releasing
-
-The project is released using the `Release Lore Go SDK` GitHub Action. The workflow runs `validate-cr.yml` to generate the SDK against the requested Lore version (with `LORE_RELEASE_BASE_URL` baked into `cmd/fetch-lore-lib/version.go`), then commits the result and tags it.
