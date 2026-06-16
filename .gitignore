@@ -1,0 +1,8 @@
+native/darwin/*.dylib
+native/linux_amd64/*.so
+native/linux_arm64/*.so
+native/windows/*.dll
+lib/darwin/*.dylib
+lib/linux_amd64/*.so
+lib/linux_arm64/*.so
+lib/windows/*.dll
