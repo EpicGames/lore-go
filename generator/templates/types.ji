@@ -34,11 +34,11 @@ func (arr {{ arr.ffi_class }}) Get(index int) {{ arr.element_field_type }} {
 }
 
 func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
-  if arr.{{ arr.ptr_field_pascal }} == 0 {
-    panic("cannot access FFI data outside the callback function")
-  }
   if arr.Count == 0 {
     return nil
+  }
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("cannot access FFI data outside the callback function")
   }
   cDataSlice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
   result := make([]{{ arr.element_field_type }}, arr.Count)
@@ -97,6 +97,8 @@ func New{{ arr.array_class }}(arr []{{ arr.element_field_type }}) ({{ arr.ffi_cl
                   {% set field_type = cToGoFFITypeMap[field.0] %}
               {% elif field.0 in cToGoTypeMap %}
                   {% set field_type = cToGoTypeMap[field.0] %}
+              {% elif field.0.endswith("_array_t") %}
+                  {% set field_type = pascal_case(field.0.removesuffix("_t")) + "FFI" %}
               {% elif field.0.endswith("_t") %}
                   {% set field_type = pascal_case(field.0.removesuffix("_t")) %}
               {% else %}
@@ -144,14 +146,14 @@ func New{{ arr.array_class }}(arr []{{ arr.element_field_type }}) ({{ arr.ffi_cl
 			{% else %}
 				{% set field_type = field.0 %}
 			{% endif %}
-			{% if field.0 in cTypesThatNeedCustomBuilder %}
+			{% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
 				val{{ pascal_case(field.1) }}, cleanup{{ pascal_case(field.1) }} := New{{ field_type }}(opts.{{ pascal_case(field.1) }})
 			{% endif %}
 		  {% endfor %}
 
 		  cleanup := func() {
 			{% for field in struct_fields %}
-				{% if field.0 in cTypesThatNeedCustomBuilder %}
+				{% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
 					cleanup{{ pascal_case(field.1) }}()
 				{% endif %}
 			{% endfor %}
@@ -159,7 +161,7 @@ func New{{ arr.array_class }}(arr []{{ arr.element_field_type }}) ({{ arr.ffi_cl
 
 		  return {{ pascal_case(struct_type.removesuffix("_t")) }}FFI{
 			{% for field in struct_fields %}
-				{% if field.0 in cTypesThatNeedCustomBuilder %}
+				{% if field.0 in cTypesThatNeedCustomBuilder or field.0.endswith("_array_t") %}
 					{{ pascal_case(field.1) }}: val{{ pascal_case(field.1) }},
 				{% else %}
 					{{ pascal_case(field.1) }}: opts.{{ pascal_case(field.1) }},
