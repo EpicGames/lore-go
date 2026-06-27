@@ -69,14 +69,14 @@ type LoreProgressEventData struct {
 	Unused uint32
 }
 type LoreErrorEventDataFFI struct {
-	/* The error code, matching one of the FFI error codes. */
+	/* The error code, matching one of the error codes. */
 	ErrorType uint32
 	/* The underlying error message. */
 	ErrorInner LoreString
 }
 
 type LoreErrorEventData struct {
-	/* The error code, matching one of the FFI error codes. */
+	/* The error code, matching one of the error codes. */
 	ErrorType uint32
 	/* The underlying error message. */
 	ErrorInner string
@@ -84,11 +84,21 @@ type LoreErrorEventData struct {
 type LoreCompleteEventDataFFI struct {
 	/* The completion status code of the operation. */
 	Status int32
+	/* The error detail for the operation. The empty default detail on
+	success; the populated detail on failure. `#[serde(default)]` lets an
+	older payload that lacks this field deserialize: the detail then reads
+	back as the empty default with an empty trace list. */
+	Error LoreErrorDetailFFI
 }
 
 type LoreCompleteEventData struct {
 	/* The completion status code of the operation. */
 	Status int32
+	/* The error detail for the operation. The empty default detail on
+	success; the populated detail on failure. `#[serde(default)]` lets an
+	older payload that lacks this field deserialize: the detail then reads
+	back as the empty default with an empty trace list. */
+	Error LoreErrorDetail
 }
 type LoreMetadataEventDataFFI struct {
 	/* The metadata key. */
@@ -1892,22 +1902,26 @@ type LoreLinkEntryEventData struct {
 	/* Link flags. */
 	Flags uint32
 }
+type LoreLockFileAcquireBeginEventDataFFI struct {
+	/* Number of acquire entries that follow. */
+	Count uint64
+	/* Whether the entries that follow were already owned. */
+	Ignored uint8
+}
+
+type LoreLockFileAcquireBeginEventData struct {
+	/* Number of acquire entries that follow. */
+	Count uint64
+	/* Whether the entries that follow were already owned. */
+	Ignored bool
+}
 type LoreLockFileAcquireEventDataFFI struct {
-	/* Path whose lock was acquired. */
+	/* The path whose lock is being acquired. */
 	Path LoreString
 }
 
 type LoreLockFileAcquireEventData struct {
-	/* Path whose lock was acquired. */
-	Path string
-}
-type LoreLockFileAcquireIgnoreEventDataFFI struct {
-	/* Path that was skipped. */
-	Path LoreString
-}
-
-type LoreLockFileAcquireIgnoreEventData struct {
-	/* Path that was skipped. */
+	/* The path whose lock is being acquired. */
 	Path string
 }
 type LoreLockFileStatusBeginEventDataFFI struct {
@@ -1966,23 +1980,27 @@ type LoreLockFileQueryEventData struct {
 	/* Timestamp recorded when the lock was acquired. */
 	LockedAt uint64
 }
+type LoreLockFileReleaseBeginEventDataFFI struct {
+	/* Number of release entries that follow. */
+	Count uint64
+	/* Whether no matching lock was found to release. */
+	NotFound uint8
+}
+
+type LoreLockFileReleaseBeginEventData struct {
+	/* Number of release entries that follow. */
+	Count uint64
+	/* Whether no matching lock was found to release. */
+	NotFound bool
+}
 type LoreLockFileReleaseEventDataFFI struct {
-	/* Path whose lock was released. */
+	/* The path whose lock is being released. */
 	Path LoreString
 }
 
 type LoreLockFileReleaseEventData struct {
-	/* Path whose lock was released. */
+	/* The path whose lock is being released. */
 	Path string
-}
-type LoreLockFileReleaseNotFoundEventDataFFI struct {
-	/* Placeholder field; carries no meaningful value. */
-	Unused uint32
-}
-
-type LoreLockFileReleaseNotFoundEventData struct {
-	/* Placeholder field; carries no meaningful value. */
-	Unused uint32
 }
 type LoreMetadataClearFileEventDataFFI struct {
 	/* Path of the file whose metadata was cleared. */
@@ -3644,6 +3662,137 @@ type LoreRevisionTreeCloseCompleteEventData struct {
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
+type LoreStorageMutableLoadItemCompleteEventDataFFI struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The value stored for the key. */
+	Value LoreHash
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreStorageMutableLoadItemCompleteEventData struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The value stored for the key. */
+	Value LoreHash
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+type LoreStorageMutableStoreItemCompleteEventDataFFI struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreStorageMutableStoreItemCompleteEventData struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+type LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The value the key held before the swap. */
+	Previous LoreHash
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreStorageMutableCompareAndSwapItemCompleteEventData struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The value the key held before the swap. */
+	Previous LoreHash
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+type LoreStorageMutableListEntryEventDataFFI struct {
+	/* Correlation id of the listing item. */
+	Id uint64
+	/* The key of this entry. */
+	Key LoreHash
+	/* The value stored for the key. */
+	Value LoreHash
+}
+
+type LoreStorageMutableListEntryEventData struct {
+	/* Correlation id of the listing item. */
+	Id uint64
+	/* The key of this entry. */
+	Key LoreHash
+	/* The value stored for the key. */
+	Value LoreHash
+}
+type LoreStorageMutableListItemCompleteEventDataFFI struct {
+	/* Correlation id of the listing item. */
+	Id uint64
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreStorageMutableListItemCompleteEventData struct {
+	/* Correlation id of the listing item. */
+	Id uint64
+	/* The outcome for the item. */
+	ErrorCode LoreErrorCode
+}
+type LoreEvictionBeginEventDataFFI struct {
+	/* Fragment capacity the pass is reducing the store toward. */
+	TargetFragments uint64
+}
+
+type LoreEvictionBeginEventData struct {
+	/* Fragment capacity the pass is reducing the store toward. */
+	TargetFragments uint64
+}
+type LoreEvictionProgressEventDataFFI struct {
+	/* Fragments evicted from this bucket. */
+	Evicted uint64
+}
+
+type LoreEvictionProgressEventData struct {
+	/* Fragments evicted from this bucket. */
+	Evicted uint64
+}
+type LoreEvictionEndEventDataFFI struct {
+	/* Total fragments evicted across the pass. */
+	TotalEvicted uint64
+}
+
+type LoreEvictionEndEventData struct {
+	/* Total fragments evicted across the pass. */
+	TotalEvicted uint64
+}
+type LoreCompactionBeginEventDataFFI struct {
+	/* Store size in bytes the pass is reducing the store toward. */
+	TargetBytes uint64
+}
+
+type LoreCompactionBeginEventData struct {
+	/* Store size in bytes the pass is reducing the store toward. */
+	TargetBytes uint64
+}
+type LoreCompactionProgressEventDataFFI struct {
+	/* Bytes reclaimed from this group. */
+	CompactedBytes uint64
+}
+
+type LoreCompactionProgressEventData struct {
+	/* Bytes reclaimed from this group. */
+	CompactedBytes uint64
+}
+type LoreCompactionEndEventDataFFI struct {
+	/* Total bytes reclaimed across the pass. */
+	TotalCompactedBytes uint64
+}
+
+type LoreCompactionEndEventData struct {
+	/* Total bytes reclaimed across the pass. */
+	TotalCompactedBytes uint64
+}
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -4125,13 +4274,13 @@ func (e *LoreEventFFI) asLinkEntryEventDataFFI() *LoreLinkEntryEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLinkEntryEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asLockFileAcquireBeginEventDataFFI() *LoreLockFileAcquireBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreLockFileAcquireBeginEventDataFFI)(unionPtr)
+}
 func (e *LoreEventFFI) asLockFileAcquireEventDataFFI() *LoreLockFileAcquireEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLockFileAcquireEventDataFFI)(unionPtr)
-}
-func (e *LoreEventFFI) asLockFileAcquireIgnoreEventDataFFI() *LoreLockFileAcquireIgnoreEventDataFFI {
-	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
-	return (*LoreLockFileAcquireIgnoreEventDataFFI)(unionPtr)
 }
 func (e *LoreEventFFI) asLockFileStatusBeginEventDataFFI() *LoreLockFileStatusBeginEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -4149,13 +4298,13 @@ func (e *LoreEventFFI) asLockFileQueryEventDataFFI() *LoreLockFileQueryEventData
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLockFileQueryEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asLockFileReleaseBeginEventDataFFI() *LoreLockFileReleaseBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreLockFileReleaseBeginEventDataFFI)(unionPtr)
+}
 func (e *LoreEventFFI) asLockFileReleaseEventDataFFI() *LoreLockFileReleaseEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLockFileReleaseEventDataFFI)(unionPtr)
-}
-func (e *LoreEventFFI) asLockFileReleaseNotFoundEventDataFFI() *LoreLockFileReleaseNotFoundEventDataFFI {
-	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
-	return (*LoreLockFileReleaseNotFoundEventDataFFI)(unionPtr)
 }
 func (e *LoreEventFFI) asMetadataClearFileEventDataFFI() *LoreMetadataClearFileEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -4497,6 +4646,50 @@ func (e *LoreEventFFI) asRevisionTreeCloseCompleteEventDataFFI() *LoreRevisionTr
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreRevisionTreeCloseCompleteEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asStorageMutableLoadItemCompleteEventDataFFI() *LoreStorageMutableLoadItemCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageMutableLoadItemCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asStorageMutableStoreItemCompleteEventDataFFI() *LoreStorageMutableStoreItemCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageMutableStoreItemCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asStorageMutableCompareAndSwapItemCompleteEventDataFFI() *LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asStorageMutableListEntryEventDataFFI() *LoreStorageMutableListEntryEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageMutableListEntryEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asStorageMutableListItemCompleteEventDataFFI() *LoreStorageMutableListItemCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageMutableListItemCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asEvictionBeginEventDataFFI() *LoreEvictionBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreEvictionBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asEvictionProgressEventDataFFI() *LoreEvictionProgressEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreEvictionProgressEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asEvictionEndEventDataFFI() *LoreEvictionEndEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreEvictionEndEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asCompactionBeginEventDataFFI() *LoreCompactionBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreCompactionBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asCompactionProgressEventDataFFI() *LoreCompactionProgressEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreCompactionProgressEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asCompactionEndEventDataFFI() *LoreCompactionEndEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreCompactionEndEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -4740,10 +4933,10 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asLinkChangeEventDataFFI()
 	case LoreEventTag_LINK_ENTRY:
 		return e.asLinkEntryEventDataFFI()
+	case LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN:
+		return e.asLockFileAcquireBeginEventDataFFI()
 	case LoreEventTag_LOCK_FILE_ACQUIRE:
 		return e.asLockFileAcquireEventDataFFI()
-	case LoreEventTag_LOCK_FILE_ACQUIRE_IGNORE:
-		return e.asLockFileAcquireIgnoreEventDataFFI()
 	case LoreEventTag_LOCK_FILE_STATUS_BEGIN:
 		return e.asLockFileStatusBeginEventDataFFI()
 	case LoreEventTag_LOCK_FILE_STATUS:
@@ -4752,10 +4945,10 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asLockFileQueryBeginEventDataFFI()
 	case LoreEventTag_LOCK_FILE_QUERY:
 		return e.asLockFileQueryEventDataFFI()
+	case LoreEventTag_LOCK_FILE_RELEASE_BEGIN:
+		return e.asLockFileReleaseBeginEventDataFFI()
 	case LoreEventTag_LOCK_FILE_RELEASE:
 		return e.asLockFileReleaseEventDataFFI()
-	case LoreEventTag_LOCK_FILE_RELEASE_NOT_FOUND:
-		return e.asLockFileReleaseNotFoundEventDataFFI()
 	case LoreEventTag_METADATA_CLEAR_FILE:
 		return e.asMetadataClearFileEventDataFFI()
 	case LoreEventTag_METADATA_CLEAR_REVISION:
@@ -4926,6 +5119,28 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asRevisionTreeCommitCompleteEventDataFFI()
 	case LoreEventTag_REVISION_TREE_CLOSE_COMPLETE:
 		return e.asRevisionTreeCloseCompleteEventDataFFI()
+	case LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE:
+		return e.asStorageMutableLoadItemCompleteEventDataFFI()
+	case LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE:
+		return e.asStorageMutableStoreItemCompleteEventDataFFI()
+	case LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE:
+		return e.asStorageMutableCompareAndSwapItemCompleteEventDataFFI()
+	case LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY:
+		return e.asStorageMutableListEntryEventDataFFI()
+	case LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE:
+		return e.asStorageMutableListItemCompleteEventDataFFI()
+	case LoreEventTag_EVICTION_BEGIN:
+		return e.asEvictionBeginEventDataFFI()
+	case LoreEventTag_EVICTION_PROGRESS:
+		return e.asEvictionProgressEventDataFFI()
+	case LoreEventTag_EVICTION_END:
+		return e.asEvictionEndEventDataFFI()
+	case LoreEventTag_COMPACTION_BEGIN:
+		return e.asCompactionBeginEventDataFFI()
+	case LoreEventTag_COMPACTION_PROGRESS:
+		return e.asCompactionProgressEventDataFFI()
+	case LoreEventTag_COMPACTION_END:
+		return e.asCompactionEndEventDataFFI()
 	default:
 		return nil
 	}
@@ -4945,6 +5160,7 @@ func (e *LoreErrorEventDataFFI) Clone() LoreErrorEventData {
 func (e *LoreCompleteEventDataFFI) Clone() LoreCompleteEventData {
 	return LoreCompleteEventData{
 		Status: e.Status,
+		Error:  e.Error.Clone(),
 	}
 }
 func (e *LoreMetadataEventDataFFI) Clone() LoreMetadataEventData {
@@ -5725,13 +5941,14 @@ func (e *LoreLinkEntryEventDataFFI) Clone() LoreLinkEntryEventData {
 		Flags:      e.Flags,
 	}
 }
-func (e *LoreLockFileAcquireEventDataFFI) Clone() LoreLockFileAcquireEventData {
-	return LoreLockFileAcquireEventData{
-		Path: e.Path.Clone(),
+func (e *LoreLockFileAcquireBeginEventDataFFI) Clone() LoreLockFileAcquireBeginEventData {
+	return LoreLockFileAcquireBeginEventData{
+		Count:   e.Count,
+		Ignored: e.Ignored != 0,
 	}
 }
-func (e *LoreLockFileAcquireIgnoreEventDataFFI) Clone() LoreLockFileAcquireIgnoreEventData {
-	return LoreLockFileAcquireIgnoreEventData{
+func (e *LoreLockFileAcquireEventDataFFI) Clone() LoreLockFileAcquireEventData {
+	return LoreLockFileAcquireEventData{
 		Path: e.Path.Clone(),
 	}
 }
@@ -5760,14 +5977,15 @@ func (e *LoreLockFileQueryEventDataFFI) Clone() LoreLockFileQueryEventData {
 		LockedAt: e.LockedAt,
 	}
 }
+func (e *LoreLockFileReleaseBeginEventDataFFI) Clone() LoreLockFileReleaseBeginEventData {
+	return LoreLockFileReleaseBeginEventData{
+		Count:    e.Count,
+		NotFound: e.NotFound != 0,
+	}
+}
 func (e *LoreLockFileReleaseEventDataFFI) Clone() LoreLockFileReleaseEventData {
 	return LoreLockFileReleaseEventData{
 		Path: e.Path.Clone(),
-	}
-}
-func (e *LoreLockFileReleaseNotFoundEventDataFFI) Clone() LoreLockFileReleaseNotFoundEventData {
-	return LoreLockFileReleaseNotFoundEventData{
-		Unused: e.Unused,
 	}
 }
 func (e *LoreMetadataClearFileEventDataFFI) Clone() LoreMetadataClearFileEventData {
@@ -6418,6 +6636,69 @@ func (e *LoreRevisionTreeCloseCompleteEventDataFFI) Clone() LoreRevisionTreeClos
 		ErrorCode: e.ErrorCode,
 	}
 }
+func (e *LoreStorageMutableLoadItemCompleteEventDataFFI) Clone() LoreStorageMutableLoadItemCompleteEventData {
+	return LoreStorageMutableLoadItemCompleteEventData{
+		Id:        e.Id,
+		Value:     e.Value,
+		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreStorageMutableStoreItemCompleteEventDataFFI) Clone() LoreStorageMutableStoreItemCompleteEventData {
+	return LoreStorageMutableStoreItemCompleteEventData{
+		Id:        e.Id,
+		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI) Clone() LoreStorageMutableCompareAndSwapItemCompleteEventData {
+	return LoreStorageMutableCompareAndSwapItemCompleteEventData{
+		Id:        e.Id,
+		Previous:  e.Previous,
+		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreStorageMutableListEntryEventDataFFI) Clone() LoreStorageMutableListEntryEventData {
+	return LoreStorageMutableListEntryEventData{
+		Id:    e.Id,
+		Key:   e.Key,
+		Value: e.Value,
+	}
+}
+func (e *LoreStorageMutableListItemCompleteEventDataFFI) Clone() LoreStorageMutableListItemCompleteEventData {
+	return LoreStorageMutableListItemCompleteEventData{
+		Id:        e.Id,
+		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreEvictionBeginEventDataFFI) Clone() LoreEvictionBeginEventData {
+	return LoreEvictionBeginEventData{
+		TargetFragments: e.TargetFragments,
+	}
+}
+func (e *LoreEvictionProgressEventDataFFI) Clone() LoreEvictionProgressEventData {
+	return LoreEvictionProgressEventData{
+		Evicted: e.Evicted,
+	}
+}
+func (e *LoreEvictionEndEventDataFFI) Clone() LoreEvictionEndEventData {
+	return LoreEvictionEndEventData{
+		TotalEvicted: e.TotalEvicted,
+	}
+}
+func (e *LoreCompactionBeginEventDataFFI) Clone() LoreCompactionBeginEventData {
+	return LoreCompactionBeginEventData{
+		TargetBytes: e.TargetBytes,
+	}
+}
+func (e *LoreCompactionProgressEventDataFFI) Clone() LoreCompactionProgressEventData {
+	return LoreCompactionProgressEventData{
+		CompactedBytes: e.CompactedBytes,
+	}
+}
+func (e *LoreCompactionEndEventDataFFI) Clone() LoreCompactionEndEventData {
+	return LoreCompactionEndEventData{
+		TotalCompactedBytes: e.TotalCompactedBytes,
+	}
+}
 
 // Clone creates a Go-native copy of the event data
 // This copy is safe to keep after the callback returns
@@ -7023,15 +7304,15 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 			Tag:  e.Tag,
 			Data: e.asLinkEntryEventDataFFI().Clone(),
 		}
+	case LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asLockFileAcquireBeginEventDataFFI().Clone(),
+		}
 	case LoreEventTag_LOCK_FILE_ACQUIRE:
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asLockFileAcquireEventDataFFI().Clone(),
-		}
-	case LoreEventTag_LOCK_FILE_ACQUIRE_IGNORE:
-		return LoreEvent{
-			Tag:  e.Tag,
-			Data: e.asLockFileAcquireIgnoreEventDataFFI().Clone(),
 		}
 	case LoreEventTag_LOCK_FILE_STATUS_BEGIN:
 		return LoreEvent{
@@ -7053,15 +7334,15 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 			Tag:  e.Tag,
 			Data: e.asLockFileQueryEventDataFFI().Clone(),
 		}
+	case LoreEventTag_LOCK_FILE_RELEASE_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asLockFileReleaseBeginEventDataFFI().Clone(),
+		}
 	case LoreEventTag_LOCK_FILE_RELEASE:
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asLockFileReleaseEventDataFFI().Clone(),
-		}
-	case LoreEventTag_LOCK_FILE_RELEASE_NOT_FOUND:
-		return LoreEvent{
-			Tag:  e.Tag,
-			Data: e.asLockFileReleaseNotFoundEventDataFFI().Clone(),
 		}
 	case LoreEventTag_METADATA_CLEAR_FILE:
 		return LoreEvent{
@@ -7487,6 +7768,61 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asRevisionTreeCloseCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageMutableLoadItemCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageMutableStoreItemCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageMutableCompareAndSwapItemCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageMutableListEntryEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageMutableListItemCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_EVICTION_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asEvictionBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_EVICTION_PROGRESS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asEvictionProgressEventDataFFI().Clone(),
+		}
+	case LoreEventTag_EVICTION_END:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asEvictionEndEventDataFFI().Clone(),
+		}
+	case LoreEventTag_COMPACTION_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asCompactionBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_COMPACTION_PROGRESS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asCompactionProgressEventDataFFI().Clone(),
+		}
+	case LoreEventTag_COMPACTION_END:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asCompactionEndEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{

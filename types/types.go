@@ -8,6 +8,70 @@ import (
 	"unsafe"
 )
 
+type LoreTraceLocationArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreTraceLocationArray = []LoreTraceLocation
+
+func (arr LoreTraceLocationArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreTraceLocationArrayFFI) Get(index int) LoreTraceLocation {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreTraceLocation)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreTraceLocationArrayFFI) Clone() []LoreTraceLocation {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreTraceLocation)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreTraceLocation, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreTraceLocationArray(arr []LoreTraceLocation) (LoreTraceLocationArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreTraceLocationArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreTraceLocationFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreTraceLocation(arr[i])
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		// Keep ffiArray alive
+		_ = ffiArray
+	}
+
+	return LoreTraceLocationArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreInstanceIdArrayFFI struct {
 	Ptr   uintptr
 	Count uint64
@@ -31,11 +95,11 @@ func (arr LoreInstanceIdArrayFFI) Get(index int) LoreInstanceId {
 }
 
 func (arr LoreInstanceIdArrayFFI) Clone() []LoreInstanceId {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreInstanceId)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreInstanceId, arr.Count)
@@ -88,11 +152,11 @@ func (arr LoreBranchPointArrayFFI) Get(index int) LoreBranchPoint {
 }
 
 func (arr LoreBranchPointArrayFFI) Clone() []LoreBranchPoint {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreBranchPoint)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreBranchPoint, arr.Count)
@@ -152,11 +216,11 @@ func (arr LoreMetadataTypeArrayFFI) Get(index int) LoreMetadataType {
 }
 
 func (arr LoreMetadataTypeArrayFFI) Clone() []LoreMetadataType {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreMetadataType)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreMetadataType, arr.Count)
@@ -209,11 +273,11 @@ func (arr LoreUint32ArrayFFI) Get(index int) uint32 {
 }
 
 func (arr LoreUint32ArrayFFI) Clone() []uint32 {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*uint32)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]uint32, arr.Count)
@@ -266,11 +330,11 @@ func (arr LoreStoragePutItemArrayFFI) Get(index int) LoreStoragePutItem {
 }
 
 func (arr LoreStoragePutItemArrayFFI) Clone() []LoreStoragePutItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStoragePutItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStoragePutItem, arr.Count)
@@ -330,11 +394,11 @@ func (arr LoreStorageGetItemArrayFFI) Get(index int) LoreStorageGetItem {
 }
 
 func (arr LoreStorageGetItemArrayFFI) Clone() []LoreStorageGetItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetItem, arr.Count)
@@ -394,11 +458,11 @@ func (arr LoreStorageGetMetadataItemArrayFFI) Get(index int) LoreStorageGetMetad
 }
 
 func (arr LoreStorageGetMetadataItemArrayFFI) Clone() []LoreStorageGetMetadataItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetMetadataItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetMetadataItem, arr.Count)
@@ -458,11 +522,11 @@ func (arr LoreStorageObliterateItemArrayFFI) Get(index int) LoreStorageObliterat
 }
 
 func (arr LoreStorageObliterateItemArrayFFI) Clone() []LoreStorageObliterateItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageObliterateItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageObliterateItem, arr.Count)
@@ -499,6 +563,262 @@ func NewLoreStorageObliterateItemArray(arr []LoreStorageObliterateItem) (LoreSto
 	}, cleanup
 }
 
+type LoreStorageMutableLoadItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageMutableLoadItemArray = []LoreStorageMutableLoadItem
+
+func (arr LoreStorageMutableLoadItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageMutableLoadItemArrayFFI) Get(index int) LoreStorageMutableLoadItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStorageMutableLoadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageMutableLoadItemArrayFFI) Clone() []LoreStorageMutableLoadItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageMutableLoadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageMutableLoadItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageMutableLoadItemArray(arr []LoreStorageMutableLoadItem) (LoreStorageMutableLoadItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageMutableLoadItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageMutableLoadItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageMutableLoadItem(arr[i])
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		// Keep ffiArray alive
+		_ = ffiArray
+	}
+
+	return LoreStorageMutableLoadItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreStorageMutableStoreItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageMutableStoreItemArray = []LoreStorageMutableStoreItem
+
+func (arr LoreStorageMutableStoreItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageMutableStoreItemArrayFFI) Get(index int) LoreStorageMutableStoreItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStorageMutableStoreItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageMutableStoreItemArrayFFI) Clone() []LoreStorageMutableStoreItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageMutableStoreItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageMutableStoreItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageMutableStoreItemArray(arr []LoreStorageMutableStoreItem) (LoreStorageMutableStoreItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageMutableStoreItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageMutableStoreItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageMutableStoreItem(arr[i])
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		// Keep ffiArray alive
+		_ = ffiArray
+	}
+
+	return LoreStorageMutableStoreItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreStorageMutableCompareAndSwapItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageMutableCompareAndSwapItemArray = []LoreStorageMutableCompareAndSwapItem
+
+func (arr LoreStorageMutableCompareAndSwapItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageMutableCompareAndSwapItemArrayFFI) Get(index int) LoreStorageMutableCompareAndSwapItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStorageMutableCompareAndSwapItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageMutableCompareAndSwapItemArrayFFI) Clone() []LoreStorageMutableCompareAndSwapItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageMutableCompareAndSwapItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageMutableCompareAndSwapItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageMutableCompareAndSwapItemArray(arr []LoreStorageMutableCompareAndSwapItem) (LoreStorageMutableCompareAndSwapItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageMutableCompareAndSwapItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageMutableCompareAndSwapItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageMutableCompareAndSwapItem(arr[i])
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		// Keep ffiArray alive
+		_ = ffiArray
+	}
+
+	return LoreStorageMutableCompareAndSwapItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreStorageMutableListItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageMutableListItemArray = []LoreStorageMutableListItem
+
+func (arr LoreStorageMutableListItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageMutableListItemArrayFFI) Get(index int) LoreStorageMutableListItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStorageMutableListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageMutableListItemArrayFFI) Clone() []LoreStorageMutableListItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageMutableListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageMutableListItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageMutableListItemArray(arr []LoreStorageMutableListItem) (LoreStorageMutableListItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageMutableListItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageMutableListItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageMutableListItem(arr[i])
+	}
+
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		// Keep ffiArray alive
+		_ = ffiArray
+	}
+
+	return LoreStorageMutableListItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreStorageCopyItemArrayFFI struct {
 	Ptr   uintptr
 	Count uint64
@@ -522,11 +842,11 @@ func (arr LoreStorageCopyItemArrayFFI) Get(index int) LoreStorageCopyItem {
 }
 
 func (arr LoreStorageCopyItemArrayFFI) Clone() []LoreStorageCopyItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageCopyItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageCopyItem, arr.Count)
@@ -586,11 +906,11 @@ func (arr LoreStoragePutFileItemArrayFFI) Get(index int) LoreStoragePutFileItem 
 }
 
 func (arr LoreStoragePutFileItemArrayFFI) Clone() []LoreStoragePutFileItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStoragePutFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStoragePutFileItem, arr.Count)
@@ -650,11 +970,11 @@ func (arr LoreStorageGetFileItemArrayFFI) Get(index int) LoreStorageGetFileItem 
 }
 
 func (arr LoreStorageGetFileItemArrayFFI) Clone() []LoreStorageGetFileItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetFileItem, arr.Count)
@@ -714,11 +1034,11 @@ func (arr LoreStorageUploadItemArrayFFI) Get(index int) LoreStorageUploadItem {
 }
 
 func (arr LoreStorageUploadItemArrayFFI) Clone() []LoreStorageUploadItem {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageUploadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageUploadItem, arr.Count)
@@ -753,6 +1073,102 @@ func NewLoreStorageUploadItemArray(arr []LoreStorageUploadItem) (LoreStorageUplo
 		Ptr:   arrayPtr,
 		Count: uint64(len(arr)),
 	}, cleanup
+}
+
+type LoreTraceLocationFFI struct {
+	/* The source file path. */
+	File LoreString
+	/* The line number in the source file. */
+	Line uint32
+	/* The column number in the source file. */
+	Column uint32
+	/* The context describing the operation at this location, or an empty
+	string when the location has none. */
+	Context LoreString
+}
+
+type LoreTraceLocation struct {
+	/* The source file path. */
+	File string
+	/* The line number in the source file. */
+	Line uint32
+	/* The column number in the source file. */
+	Column uint32
+	/* The context describing the operation at this location, or an empty
+	string when the location has none. */
+	Context string
+}
+
+func NewLoreTraceLocation(opts LoreTraceLocation) (LoreTraceLocationFFI, func()) {
+	valFile, cleanupFile := NewLoreString(opts.File)
+	valContext, cleanupContext := NewLoreString(opts.Context)
+
+	cleanup := func() {
+		cleanupFile()
+		cleanupContext()
+	}
+
+	return LoreTraceLocationFFI{
+		File:    valFile,
+		Line:    opts.Line,
+		Column:  opts.Column,
+		Context: valContext,
+	}, cleanup
+}
+
+func (e *LoreTraceLocationFFI) Clone() LoreTraceLocation {
+	return LoreTraceLocation{
+		File:    e.File.Clone(),
+		Line:    e.Line,
+		Column:  e.Column,
+		Context: e.Context.Clone(),
+	}
+}
+
+type LoreErrorDetailFFI struct {
+	/* The error's error code. `0` on success; `-1` for an internal error. */
+	ErrorCode int32
+	/* The error message, taken from the error's `Display` output. Empty on
+	success. */
+	Message LoreString
+	/* The captured trace, one location per trace entry. Empty when
+	`track-locations` is off or the error carries no trace. */
+	TraceLocations LoreTraceLocationArrayFFI
+}
+
+type LoreErrorDetail struct {
+	/* The error's error code. `0` on success; `-1` for an internal error. */
+	ErrorCode int32
+	/* The error message, taken from the error's `Display` output. Empty on
+	success. */
+	Message string
+	/* The captured trace, one location per trace entry. Empty when
+	`track-locations` is off or the error carries no trace. */
+	TraceLocations LoreTraceLocationArray
+}
+
+func NewLoreErrorDetail(opts LoreErrorDetail) (LoreErrorDetailFFI, func()) {
+	valMessage, cleanupMessage := NewLoreString(opts.Message)
+	valTraceLocations, cleanupTraceLocations := NewLoreTraceLocationArray(opts.TraceLocations)
+
+	cleanup := func() {
+		cleanupMessage()
+		cleanupTraceLocations()
+	}
+
+	return LoreErrorDetailFFI{
+		ErrorCode:      opts.ErrorCode,
+		Message:        valMessage,
+		TraceLocations: valTraceLocations,
+	}, cleanup
+}
+
+func (e *LoreErrorDetailFFI) Clone() LoreErrorDetail {
+	return LoreErrorDetail{
+		ErrorCode:      e.ErrorCode,
+		Message:        e.Message.Clone(),
+		TraceLocations: e.TraceLocations.Clone(),
+	}
 }
 
 type LoreBranchPointFFI struct {
@@ -1561,6 +1977,194 @@ func (e *LoreStorageObliterateItemFFI) Clone() LoreStorageObliterateItem {
 		Id:        e.Id,
 		Partition: e.Partition,
 		Address:   e.Address,
+	}
+}
+
+type LoreStorageMutableLoadItemFFI struct {
+	/* Caller-chosen id echoed back in `MUTABLE_LOAD_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to read from; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to read */
+	Key LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+type LoreStorageMutableLoadItem struct {
+	/* Caller-chosen id echoed back in `MUTABLE_LOAD_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to read from; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to read */
+	Key LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+func NewLoreStorageMutableLoadItem(opts LoreStorageMutableLoadItem) (LoreStorageMutableLoadItemFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreStorageMutableLoadItemFFI{
+		Id:        opts.Id,
+		Partition: opts.Partition,
+		Key:       opts.Key,
+		KeyType:   opts.KeyType,
+	}, cleanup
+}
+
+func (e *LoreStorageMutableLoadItemFFI) Clone() LoreStorageMutableLoadItem {
+	return LoreStorageMutableLoadItem{
+		Id:        e.Id,
+		Partition: e.Partition,
+		Key:       e.Key,
+		KeyType:   e.KeyType,
+	}
+}
+
+type LoreStorageMutableStoreItemFFI struct {
+	/* Caller-chosen id echoed back in `MUTABLE_STORE_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to write to; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to write */
+	Key LoreHash
+	/* Value to store; the null value (`Hash::default()`) removes the key */
+	Value LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+type LoreStorageMutableStoreItem struct {
+	/* Caller-chosen id echoed back in `MUTABLE_STORE_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to write to; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to write */
+	Key LoreHash
+	/* Value to store; the null value (`Hash::default()`) removes the key */
+	Value LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+func NewLoreStorageMutableStoreItem(opts LoreStorageMutableStoreItem) (LoreStorageMutableStoreItemFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreStorageMutableStoreItemFFI{
+		Id:        opts.Id,
+		Partition: opts.Partition,
+		Key:       opts.Key,
+		Value:     opts.Value,
+		KeyType:   opts.KeyType,
+	}, cleanup
+}
+
+func (e *LoreStorageMutableStoreItemFFI) Clone() LoreStorageMutableStoreItem {
+	return LoreStorageMutableStoreItem{
+		Id:        e.Id,
+		Partition: e.Partition,
+		Key:       e.Key,
+		Value:     e.Value,
+		KeyType:   e.KeyType,
+	}
+}
+
+type LoreStorageMutableCompareAndSwapItemFFI struct {
+	/* Caller-chosen id echoed back in `MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to act on; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to swap */
+	Key LoreHash
+	/* Value the key must currently hold for the swap to take effect (null matches an absent key) */
+	Expected LoreHash
+	/* Value to store when the swap takes effect; the null value removes the key */
+	Value LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+type LoreStorageMutableCompareAndSwapItem struct {
+	/* Caller-chosen id echoed back in `MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition (repository) to act on; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Key to swap */
+	Key LoreHash
+	/* Value the key must currently hold for the swap to take effect (null matches an absent key) */
+	Expected LoreHash
+	/* Value to store when the swap takes effect; the null value removes the key */
+	Value LoreHash
+	/* Kind of value the key refers to */
+	KeyType LoreKeyType
+}
+
+func NewLoreStorageMutableCompareAndSwapItem(opts LoreStorageMutableCompareAndSwapItem) (LoreStorageMutableCompareAndSwapItemFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreStorageMutableCompareAndSwapItemFFI{
+		Id:        opts.Id,
+		Partition: opts.Partition,
+		Key:       opts.Key,
+		Expected:  opts.Expected,
+		Value:     opts.Value,
+		KeyType:   opts.KeyType,
+	}, cleanup
+}
+
+func (e *LoreStorageMutableCompareAndSwapItemFFI) Clone() LoreStorageMutableCompareAndSwapItem {
+	return LoreStorageMutableCompareAndSwapItem{
+		Id:        e.Id,
+		Partition: e.Partition,
+		Key:       e.Key,
+		Expected:  e.Expected,
+		Value:     e.Value,
+		KeyType:   e.KeyType,
+	}
+}
+
+type LoreStorageMutableListItemFFI struct {
+	/* Caller-chosen id echoed back on every entry and the terminal event */
+	Id uint64
+	/* Partition (repository) to list; the zero/default partition lists every accessible partition */
+	Partition LorePartition
+	/* Kind of value to list */
+	KeyType LoreKeyType
+}
+
+type LoreStorageMutableListItem struct {
+	/* Caller-chosen id echoed back on every entry and the terminal event */
+	Id uint64
+	/* Partition (repository) to list; the zero/default partition lists every accessible partition */
+	Partition LorePartition
+	/* Kind of value to list */
+	KeyType LoreKeyType
+}
+
+func NewLoreStorageMutableListItem(opts LoreStorageMutableListItem) (LoreStorageMutableListItemFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreStorageMutableListItemFFI{
+		Id:        opts.Id,
+		Partition: opts.Partition,
+		KeyType:   opts.KeyType,
+	}, cleanup
+}
+
+func (e *LoreStorageMutableListItemFFI) Clone() LoreStorageMutableListItem {
+	return LoreStorageMutableListItem{
+		Id:        e.Id,
+		Partition: e.Partition,
+		KeyType:   e.KeyType,
 	}
 }
 

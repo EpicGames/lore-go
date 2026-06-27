@@ -384,8 +384,8 @@ Events are delivered via the callback as `lore_event_t`. Use the `tag` field to 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Auth Events
@@ -415,8 +415,8 @@ Events are delivered via the callback as `lore_event_t`. Use the `tag` field to 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Auth Events
@@ -448,8 +448,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Auth Events
@@ -481,8 +481,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func AuthLogout(
 	globals *types.LoreGlobalArgsFFI,
@@ -508,8 +508,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func AuthClear(
 	globals *types.LoreGlobalArgsFFI,
@@ -540,8 +540,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Auth Events
@@ -573,8 +573,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Auth Events
@@ -607,8 +607,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -640,8 +640,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -673,8 +673,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -713,8 +713,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -746,8 +746,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -779,8 +779,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -812,8 +812,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -847,8 +847,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -882,8 +882,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -916,8 +916,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -964,8 +964,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -998,8 +998,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1032,8 +1032,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1066,8 +1066,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1101,8 +1101,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1145,8 +1145,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1185,8 +1185,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1218,8 +1218,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Branch Events
@@ -1297,8 +1297,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1330,8 +1330,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1363,8 +1363,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1396,8 +1396,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1429,8 +1429,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1462,8 +1462,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1495,8 +1495,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1528,8 +1528,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func FileMetadataSet(
 	globals *types.LoreGlobalArgsFFI,
@@ -1555,8 +1555,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1594,8 +1594,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1632,8 +1632,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1670,8 +1670,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1706,8 +1706,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1745,8 +1745,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1783,8 +1783,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func FileDirtyMove(
 	globals *types.LoreGlobalArgsFFI,
@@ -1813,8 +1813,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func FileDirtyCopy(
 	globals *types.LoreGlobalArgsFFI,
@@ -1840,8 +1840,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1877,8 +1877,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1910,8 +1910,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1943,8 +1943,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## File Events
@@ -1972,8 +1972,8 @@ func FileDump(
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Dependency Events
@@ -2003,8 +2003,8 @@ func FileDependencyAdd(
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Dependency Events
@@ -2034,8 +2034,8 @@ func FileDependencyRemove(
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Dependency Events
@@ -2071,8 +2071,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Lock Events
@@ -2105,8 +2105,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Lock Events
@@ -2139,8 +2139,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Lock Events
@@ -2173,8 +2173,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Lock Events
@@ -2207,8 +2207,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Link Events
@@ -2242,8 +2242,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Link Events
@@ -2275,8 +2275,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Link Events
@@ -2308,8 +2308,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Link Events
@@ -2341,8 +2341,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2382,8 +2382,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2415,8 +2415,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2451,8 +2451,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2484,8 +2484,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func RepositoryFlush(
 	globals *types.LoreGlobalArgsFFI,
@@ -2511,8 +2511,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func RepositoryGc(
 	globals *types.LoreGlobalArgsFFI,
@@ -2542,8 +2542,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func RepositoryRelease(
 	globals *types.LoreGlobalArgsFFI,
@@ -2569,8 +2569,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Layer Events
@@ -2602,8 +2602,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func LayerRemove(
 	globals *types.LoreGlobalArgsFFI,
@@ -2629,8 +2629,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Layer Events
@@ -2662,8 +2662,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2695,8 +2695,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2730,8 +2730,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2763,8 +2763,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Repository Events
@@ -2799,8 +2799,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -2837,8 +2837,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -2871,8 +2871,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -2906,8 +2906,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -2940,8 +2940,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -2973,8 +2973,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -3007,8 +3007,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -3055,8 +3055,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -3088,8 +3088,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -3121,8 +3121,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revision Events
@@ -3154,8 +3154,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func RevisionMetadataSet(
 	globals *types.LoreGlobalArgsFFI,
@@ -3181,8 +3181,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Sync Events
@@ -3229,8 +3229,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3273,8 +3273,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3308,8 +3308,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3342,8 +3342,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3377,8 +3377,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3411,8 +3411,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3445,8 +3445,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Revert Events
@@ -3479,8 +3479,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Shared Store Events
@@ -3512,8 +3512,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Shared Store Events
@@ -3545,8 +3545,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func SharedStoreSetUseAutomatically(
 	globals *types.LoreGlobalArgsFFI,
@@ -3566,8 +3566,8 @@ func SharedStoreSetUseAutomatically(
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_STORAGE_OPENED` | `lore_storage_opened_event_data_t` | Emitted on success carrying the opened handle id |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted on failure (invalid mode, invalid path, cache construction error) |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` on success, `status: 1` otherwise | */
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` on success or the error code on failure | */
 func StorageOpen(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStorageOpenArgsFFI,
@@ -3586,8 +3586,8 @@ func StorageOpen(
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_STORAGE_PUT_ITEM_COMPLETE` | `lore_storage_put_item_complete_event_data_t` | Emitted once per input item — success or failure |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Aggregate error when any item failed |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
 func StoragePut(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStoragePutArgsFFI,
@@ -3608,7 +3608,8 @@ func StoragePut(
 | `LORE_EVENT_STORAGE_GET_HEADER` | `lore_storage_get_header_event_data_t` | Size of the item's reassembled content, emitted before any DATA events |
 | `LORE_EVENT_STORAGE_GET_DATA` | `lore_storage_get_data_event_data_t` | Payload bytes — valid only during the callback invocation |
 | `LORE_EVENT_STORAGE_GET_ITEM_COMPLETE` | `lore_storage_get_item_complete_event_data_t` | Terminal per-item event |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
 func StorageGet(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStorageGetArgsFFI,
@@ -3661,7 +3662,8 @@ payload bytes. Each item's terminal event carries the resolved `Fragment` (`flag
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_STORAGE_GET_METADATA_ITEM_COMPLETE` | `lore_storage_get_metadata_item_complete_event_data_t` | Per-item terminal event |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
 func StorageGetMetadata(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStorageGetMetadataArgsFFI,
@@ -3685,6 +3687,100 @@ func StorageObliterate(
 		globals:  globals,
 		args:     args,
 		execFunc: native.StorageObliterate,
+	}
+}
+
+/* Read one or more mutable key values.
+
+Each item acts on the local mutable store by default, or the remote mutable store when
+`globals.remote` is set (or the handle was opened remote-bound), over the shared storage
+session.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE` | `lore_storage_mutable_load_item_complete_event_data_t` | Per-item terminal event carrying the value; `error_code == ADDRESS_NOT_FOUND` on a miss |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+func StorageMutableLoad(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStorageMutableLoadArgsFFI,
+) *LoreCall[types.LoreStorageMutableLoadArgsFFI] {
+	return &LoreCall[types.LoreStorageMutableLoadArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.StorageMutableLoad,
+	}
+}
+
+/* Write one or more mutable key-value pairs. Storing the null value removes the key.
+
+Each item acts on the local mutable store by default, or the remote mutable store when
+`globals.remote` is set (or the handle was opened remote-bound), over the shared storage
+session.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_MUTABLE_STORE_ITEM_COMPLETE` | `lore_storage_mutable_store_item_complete_event_data_t` | Per-item terminal event |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+func StorageMutableStore(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStorageMutableStoreArgsFFI,
+) *LoreCall[types.LoreStorageMutableStoreArgsFFI] {
+	return &LoreCall[types.LoreStorageMutableStoreArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.StorageMutableStore,
+	}
+}
+
+/* Conditionally swap one or more mutable key values. Each item updates the key to `value` when
+its current value matches `expected`, and reports the value the key held before the swap.
+
+Each item acts on the local mutable store by default, or the remote mutable store when
+`globals.remote` is set (or the handle was opened remote-bound), over the shared storage
+session.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE` | `lore_storage_mutable_compare_and_swap_item_complete_event_data_t` | Per-item terminal event carrying `previous`; the swap took effect when `previous == expected` |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+func StorageMutableCompareAndSwap(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStorageMutableCompareAndSwapArgsFFI,
+) *LoreCall[types.LoreStorageMutableCompareAndSwapArgsFFI] {
+	return &LoreCall[types.LoreStorageMutableCompareAndSwapArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.StorageMutableCompareAndSwap,
+	}
+}
+
+/* List the mutable key-value pairs of a given type for one or more partitions.
+
+Acts on the local mutable store only; a remote-targeted call (`globals.remote`, or a
+remote-bound handle) is rejected with `INVALID_ARGUMENTS`. A zero/default partition lists
+every partition the caller can access.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_MUTABLE_LIST_ENTRY` | `lore_storage_mutable_list_entry_event_data_t` | One `(key, value)` pair, emitted before the item's terminal event |
+| `LORE_EVENT_STORAGE_MUTABLE_LIST_ITEM_COMPLETE` | `lore_storage_mutable_list_item_complete_event_data_t` | Per-item terminal event |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status: 0` iff every item succeeded | */
+func StorageMutableList(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStorageMutableListArgsFFI,
+) *LoreCall[types.LoreStorageMutableListArgsFFI] {
+	return &LoreCall[types.LoreStorageMutableListArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.StorageMutableList,
 	}
 }
 
@@ -3768,8 +3864,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func ServiceStart(
 	globals *types.LoreGlobalArgsFFI,
@@ -3795,8 +3891,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
 func ServiceStop(
 	globals *types.LoreGlobalArgsFFI,
@@ -3822,8 +3918,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Notification Events
@@ -3860,8 +3956,8 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
-| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted when an error occurs |
-| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end (`status: 0` success, `status: 1` failure) |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
 | `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
 
 ## Notification Events

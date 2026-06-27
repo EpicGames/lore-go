@@ -27,8 +27,8 @@ type LoreGlobalArgs struct {
 	SearchLimit uint32
 	/* Allow matching to the nearest matching revision when a perfect match is not available */
 	SearchNearest bool
-	/* Run store compaction and eviction in the background */
-	Gc bool
+	/* Prevent the automatic incremental/step GC for this operation; it otherwise runs in the background on write operations. `repository gc` always runs a full pass regardless */
+	NoGc bool
 	/* Use in-memory stores instead of file-backed stores. No store data is
 	read from or written to the .urc/immutable/ and .urc/mutable/ directories. */
 	InMemory bool
@@ -77,8 +77,8 @@ type LoreGlobalArgsFFI struct {
 	SearchLimit uint32
 	/* Allow matching to the nearest matching revision when a perfect match is not available */
 	SearchNearest uint8
-	/* Run store compaction and eviction in the background */
-	Gc uint8
+	/* Prevent the automatic incremental/step GC for this operation; it otherwise runs in the background on write operations. `repository gc` always runs a full pass regardless */
+	NoGc uint8
 	/* Use in-memory stores instead of file-backed stores. No store data is
 	read from or written to the .urc/immutable/ and .urc/mutable/ directories. */
 	InMemory uint8
@@ -113,7 +113,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valDryRun, cleanupDryRun := Newuint8(opts.DryRun)
 	valNoAtime, cleanupNoAtime := Newuint8(opts.NoAtime)
 	valSearchNearest, cleanupSearchNearest := Newuint8(opts.SearchNearest)
-	valGc, cleanupGc := Newuint8(opts.Gc)
+	valNoGc, cleanupNoGc := Newuint8(opts.NoGc)
 	valInMemory, cleanupInMemory := Newuint8(opts.InMemory)
 	valStoreKeepAlive, cleanupStoreKeepAlive := Newuint8(opts.StoreKeepAlive)
 	valSyncData, cleanupSyncData := Newuint8(opts.SyncData)
@@ -130,7 +130,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		cleanupDryRun()
 		cleanupNoAtime()
 		cleanupSearchNearest()
-		cleanupGc()
+		cleanupNoGc()
 		cleanupInMemory()
 		cleanupStoreKeepAlive()
 		cleanupSyncData()
@@ -150,7 +150,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		MaxConnections:        opts.MaxConnections,
 		SearchLimit:           opts.SearchLimit,
 		SearchNearest:         valSearchNearest,
-		Gc:                    valGc,
+		NoGc:                  valNoGc,
 		InMemory:              valInMemory,
 		FileCountLimit:        opts.FileCountLimit,
 		FileSizeLimit:         opts.FileSizeLimit,
@@ -2683,6 +2683,8 @@ type LoreRevisionCommitArgs struct {
 	LayerPaths []string
 	/* Array of messages corresponding to each layer path (parallel array with `layer_paths`) */
 	LayerMessages []string
+	/* Emit per-fragment write stats during the commit */
+	Stats bool
 }
 
 type LoreRevisionCommitArgsFFI struct {
@@ -2700,6 +2702,8 @@ type LoreRevisionCommitArgsFFI struct {
 	LayerPaths LoreStringArrayFFI
 	/* Array of messages corresponding to each layer path (parallel array with `layer_paths`) */
 	LayerMessages LoreStringArrayFFI
+	/* Emit per-fragment write stats during the commit */
+	Stats uint8
 }
 
 func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitArgsFFI, func()) {
@@ -2710,6 +2714,7 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 	valLayer, cleanupLayer := NewLoreString(opts.Layer)
 	valLayerPaths, cleanupLayerPaths := NewLoreStringArray(opts.LayerPaths)
 	valLayerMessages, cleanupLayerMessages := NewLoreStringArray(opts.LayerMessages)
+	valStats, cleanupStats := Newuint8(opts.Stats)
 
 	cleanup := func() {
 		cleanupMessage()
@@ -2719,6 +2724,7 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 		cleanupLayer()
 		cleanupLayerPaths()
 		cleanupLayerMessages()
+		cleanupStats()
 	}
 
 	return LoreRevisionCommitArgsFFI{
@@ -2729,6 +2735,7 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 		Layer:         valLayer,
 		LayerPaths:    valLayerPaths,
 		LayerMessages: valLayerMessages,
+		Stats:         valStats,
 	}, cleanup
 }
 
@@ -3344,11 +3351,12 @@ type LoreStorageOpenArgs struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig bool
-	/* Soft cap on total immutable-store bytes (compactor target); honored only when `globals.gc`
-	is set. `0` selects the default; shared disk backends inherit the first opener's value */
+	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
+	incremental background GC for the handle; `0` then selects the default. Shared disk backends
+	inherit the first opener's value */
 	CacheTargetBytes uint64
-	/* Soft cap on immutable-store fragment count (evictor target); honored only when `globals.gc`
-	is set. `0` selects the default */
+	/* Soft cap on immutable-store fragment count (evictor target). A non-zero cache target enables
+	incremental background GC for the handle; `0` then selects the default */
 	CacheTargetFragments uint64
 }
 
@@ -3361,11 +3369,12 @@ type LoreStorageOpenArgsFFI struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig uint8
-	/* Soft cap on total immutable-store bytes (compactor target); honored only when `globals.gc`
-	is set. `0` selects the default; shared disk backends inherit the first opener's value */
+	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
+	incremental background GC for the handle; `0` then selects the default. Shared disk backends
+	inherit the first opener's value */
 	CacheTargetBytes uint64
-	/* Soft cap on immutable-store fragment count (evictor target); honored only when `globals.gc`
-	is set. `0` selects the default */
+	/* Soft cap on immutable-store fragment count (evictor target). A non-zero cache target enables
+	incremental background GC for the handle; `0` then selects the default */
 	CacheTargetFragments uint64
 }
 
@@ -3533,6 +3542,114 @@ func NewLoreStorageObliterateArgs(opts LoreStorageObliterateArgs) (LoreStorageOb
 	}
 
 	return LoreStorageObliterateArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStorageMutableLoadArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to read; each runs independently and emits its own `MUTABLE_LOAD_ITEM_COMPLETE` */
+	Items LoreStorageMutableLoadItemArray
+}
+
+type LoreStorageMutableLoadArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to read; each runs independently and emits its own `MUTABLE_LOAD_ITEM_COMPLETE` */
+	Items LoreStorageMutableLoadItemArrayFFI
+}
+
+func NewLoreStorageMutableLoadArgs(opts LoreStorageMutableLoadArgs) (LoreStorageMutableLoadArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageMutableLoadItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageMutableLoadArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStorageMutableStoreArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Key-value pairs to write; each runs independently and emits its own `MUTABLE_STORE_ITEM_COMPLETE` */
+	Items LoreStorageMutableStoreItemArray
+}
+
+type LoreStorageMutableStoreArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Key-value pairs to write; each runs independently and emits its own `MUTABLE_STORE_ITEM_COMPLETE` */
+	Items LoreStorageMutableStoreItemArrayFFI
+}
+
+func NewLoreStorageMutableStoreArgs(opts LoreStorageMutableStoreArgs) (LoreStorageMutableStoreArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageMutableStoreItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageMutableStoreArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStorageMutableCompareAndSwapArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Swaps to perform; each runs independently and emits its own `MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE` */
+	Items LoreStorageMutableCompareAndSwapItemArray
+}
+
+type LoreStorageMutableCompareAndSwapArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Swaps to perform; each runs independently and emits its own `MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE` */
+	Items LoreStorageMutableCompareAndSwapItemArrayFFI
+}
+
+func NewLoreStorageMutableCompareAndSwapArgs(opts LoreStorageMutableCompareAndSwapArgs) (LoreStorageMutableCompareAndSwapArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageMutableCompareAndSwapItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageMutableCompareAndSwapArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStorageMutableListArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Listings to perform; each runs independently and emits its own entries and terminal event */
+	Items LoreStorageMutableListItemArray
+}
+
+type LoreStorageMutableListArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Listings to perform; each runs independently and emits its own entries and terminal event */
+	Items LoreStorageMutableListItemArrayFFI
+}
+
+func NewLoreStorageMutableListArgs(opts LoreStorageMutableListArgs) (LoreStorageMutableListArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageMutableListItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageMutableListArgsFFI{
 		Handle: opts.Handle,
 		Items:  valItems,
 	}, cleanup
