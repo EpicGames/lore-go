@@ -25,6 +25,45 @@ func (e *LoreError) Error() string {
 	return fmt.Sprintf("Lore operation failed with code %d", e.ReturnCode)
 }
 
+// terminalEventRecorder accumulates error context from the terminal events of a
+// Lore operation. It records the message of every ERROR event, and the error
+// message of a failed COMPLETE event (non-zero status). The COMPLETE message is
+// only surfaced when no ERROR events were recorded, so an explicit error always
+// takes precedence over the generic completion failure.
+type terminalEventRecorder struct {
+	errorMessages []string
+	completeError string
+}
+
+// record inspects an event and captures any terminal error context from it.
+func (r *terminalEventRecorder) record(event *types.LoreEventFFI) {
+	switch event.Tag {
+	case types.LoreEventTag_ERROR:
+		if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+			r.errorMessages = append(r.errorMessages, data.ErrorInner.String())
+		}
+	case types.LoreEventTag_COMPLETE:
+		if data, ok := event.GetData().(*types.LoreCompleteEventDataFFI); ok {
+			if data.Status != 0 {
+				r.completeError = data.Error.Message.String()
+			}
+		}
+	}
+}
+
+// messages returns the error messages for a LoreError: the recorded ERROR event
+// messages when any were seen, otherwise the failed COMPLETE event's error
+// message when one is present.
+func (r *terminalEventRecorder) messages() []string {
+	if len(r.errorMessages) > 0 {
+		return r.errorMessages
+	}
+	if r.completeError != "" {
+		return []string{r.completeError}
+	}
+	return nil
+}
+
 // ErrCallbackSet is returned when Collect() or AsyncIter() is called on a LoreCall that has a callback set.
 var ErrCallbackSet = fmt.Errorf("Collect() or AsyncIter() cannot be used with Callback(); use Wait() instead")
 
@@ -189,19 +228,15 @@ func (c *LoreCall[TArgs]) Wait() (int32, error) {
 	}
 	c.started = true
 
-	var errorMessages []string
+	var recorder terminalEventRecorder
 
 	callbackConfig := &types.LoreEventCallbackConfig{
 		Callback: func(event *types.LoreEventFFI, userContext uint64) {
 			// Invoke global callbacks first
 			invokeGlobalCallbacks(event, userContext)
 
-			// Collect error messages from ERROR events
-			if event.Tag == types.LoreEventTag_ERROR {
-				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-					errorMessages = append(errorMessages, data.ErrorInner.String())
-				}
-			}
+			// Record terminal error context (ERROR and failed COMPLETE events)
+			recorder.record(event)
 
 			// Call user's callback if set and event passes filter
 			if c.callback != nil {
@@ -223,7 +258,7 @@ func (c *LoreCall[TArgs]) Wait() (int32, error) {
 	if returnCode != 0 {
 		return returnCode, &LoreError{
 			ReturnCode: returnCode,
-			Messages:   errorMessages,
+			Messages:   recorder.messages(),
 		}
 	}
 
@@ -245,19 +280,15 @@ func (c *LoreCall[TArgs]) Collect() ([]types.LoreEvent, error) {
 	c.started = true
 
 	var events []types.LoreEvent
-	var errorMessages []string
+	var recorder terminalEventRecorder
 
 	callbackConfig := &types.LoreEventCallbackConfig{
 		Callback: func(event *types.LoreEventFFI, userContext uint64) {
 			// Invoke global callbacks first
 			invokeGlobalCallbacks(event, userContext)
 
-			// Collect error messages from ERROR events
-			if event.Tag == types.LoreEventTag_ERROR {
-				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-					errorMessages = append(errorMessages, data.ErrorInner.String())
-				}
-			}
+			// Record terminal error context (ERROR and failed COMPLETE events)
+			recorder.record(event)
 
 			// Collect event if it passes filter
 			if len(c.filterTypes) == 0 {
@@ -277,7 +308,7 @@ func (c *LoreCall[TArgs]) Collect() ([]types.LoreEvent, error) {
 	if returnCode != 0 {
 		return events, &LoreError{
 			ReturnCode: returnCode,
-			Messages:   errorMessages,
+			Messages:   recorder.messages(),
 		}
 	}
 
@@ -325,19 +356,15 @@ func (c *LoreCall[TArgs]) AsyncIter() (<-chan types.LoreEvent, <-chan error) {
 		defer close(eventCh)
 		defer close(errCh)
 
-		var errorMessages []string
+		var recorder terminalEventRecorder
 
 		callbackConfig := &types.LoreEventCallbackConfig{
 			Callback: func(event *types.LoreEventFFI, userContext uint64) {
 				// Invoke global callbacks first
 				invokeGlobalCallbacks(event, userContext)
 
-				// Collect error messages from ERROR events
-				if event.Tag == types.LoreEventTag_ERROR {
-					if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-						errorMessages = append(errorMessages, data.ErrorInner.String())
-					}
-				}
+				// Record terminal error context (ERROR and failed COMPLETE events)
+				recorder.record(event)
 
 				// Send event if it passes filter
 				if len(c.filterTypes) == 0 {
@@ -358,7 +385,7 @@ func (c *LoreCall[TArgs]) AsyncIter() (<-chan types.LoreEvent, <-chan error) {
 		if returnCode != 0 {
 			errCh <- &LoreError{
 				ReturnCode: returnCode,
-				Messages:   errorMessages,
+				Messages:   recorder.messages(),
 			}
 			return
 		}
