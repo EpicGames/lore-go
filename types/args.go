@@ -4117,7 +4117,7 @@ type LoreRevisionTreeNodeInfoArgs struct {
 	Id uint64
 	/* Loaded revision-tree handle to read from */
 	Handle LoreRevisionTree
-	/* Node whose record is fetched; the root id also yields `root_info` */
+	/* Node whose record is fetched */
 	NodeId uint32
 }
 
@@ -4126,7 +4126,7 @@ type LoreRevisionTreeNodeInfoArgsFFI struct {
 	Id uint64
 	/* Loaded revision-tree handle to read from */
 	Handle LoreRevisionTree
-	/* Node whose record is fetched; the root id also yields `root_info` */
+	/* Node whose record is fetched */
 	NodeId uint32
 }
 
@@ -4139,6 +4139,31 @@ func NewLoreRevisionTreeNodeInfoArgs(opts LoreRevisionTreeNodeInfoArgs) (LoreRev
 		Id:     opts.Id,
 		Handle: opts.Handle,
 		NodeId: opts.NodeId,
+	}, cleanup
+}
+
+type LoreRevisionTreeInfoArgs struct {
+	/* Per-call correlation id echoed back in events */
+	Id uint64
+	/* Loaded revision-tree handle whose revision metadata is fetched */
+	Handle LoreRevisionTree
+}
+
+type LoreRevisionTreeInfoArgsFFI struct {
+	/* Per-call correlation id echoed back in events */
+	Id uint64
+	/* Loaded revision-tree handle whose revision metadata is fetched */
+	Handle LoreRevisionTree
+}
+
+func NewLoreRevisionTreeInfoArgs(opts LoreRevisionTreeInfoArgs) (LoreRevisionTreeInfoArgsFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreRevisionTreeInfoArgsFFI{
+		Id:     opts.Id,
+		Handle: opts.Handle,
 	}, cleanup
 }
 

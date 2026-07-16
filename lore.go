@@ -25,6 +25,45 @@ func (e *LoreError) Error() string {
 	return fmt.Sprintf("Lore operation failed with code %d", e.ReturnCode)
 }
 
+// terminalEventRecorder accumulates error context from the terminal events of a
+// Lore operation. It records the message of every ERROR event, and the error
+// message of a failed COMPLETE event (non-zero status). The COMPLETE message is
+// only surfaced when no ERROR events were recorded, so an explicit error always
+// takes precedence over the generic completion failure.
+type terminalEventRecorder struct {
+	errorMessages []string
+	completeError string
+}
+
+// record inspects an event and captures any terminal error context from it.
+func (r *terminalEventRecorder) record(event *types.LoreEventFFI) {
+	switch event.Tag {
+	case types.LoreEventTag_ERROR:
+		if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
+			r.errorMessages = append(r.errorMessages, data.ErrorInner.String())
+		}
+	case types.LoreEventTag_COMPLETE:
+		if data, ok := event.GetData().(*types.LoreCompleteEventDataFFI); ok {
+			if data.Status != 0 {
+				r.completeError = data.Error.Message.String()
+			}
+		}
+	}
+}
+
+// messages returns the error messages for a LoreError: the recorded ERROR event
+// messages when any were seen, otherwise the failed COMPLETE event's error
+// message when one is present.
+func (r *terminalEventRecorder) messages() []string {
+	if len(r.errorMessages) > 0 {
+		return r.errorMessages
+	}
+	if r.completeError != "" {
+		return []string{r.completeError}
+	}
+	return nil
+}
+
 // ErrCallbackSet is returned when Collect() or AsyncIter() is called on a LoreCall that has a callback set.
 var ErrCallbackSet = fmt.Errorf("Collect() or AsyncIter() cannot be used with Callback(); use Wait() instead")
 
@@ -189,19 +228,15 @@ func (c *LoreCall[TArgs]) Wait() (int32, error) {
 	}
 	c.started = true
 
-	var errorMessages []string
+	var recorder terminalEventRecorder
 
 	callbackConfig := &types.LoreEventCallbackConfig{
 		Callback: func(event *types.LoreEventFFI, userContext uint64) {
 			// Invoke global callbacks first
 			invokeGlobalCallbacks(event, userContext)
 
-			// Collect error messages from ERROR events
-			if event.Tag == types.LoreEventTag_ERROR {
-				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-					errorMessages = append(errorMessages, data.ErrorInner.String())
-				}
-			}
+			// Record terminal error context (ERROR and failed COMPLETE events)
+			recorder.record(event)
 
 			// Call user's callback if set and event passes filter
 			if c.callback != nil {
@@ -223,7 +258,7 @@ func (c *LoreCall[TArgs]) Wait() (int32, error) {
 	if returnCode != 0 {
 		return returnCode, &LoreError{
 			ReturnCode: returnCode,
-			Messages:   errorMessages,
+			Messages:   recorder.messages(),
 		}
 	}
 
@@ -245,19 +280,15 @@ func (c *LoreCall[TArgs]) Collect() ([]types.LoreEvent, error) {
 	c.started = true
 
 	var events []types.LoreEvent
-	var errorMessages []string
+	var recorder terminalEventRecorder
 
 	callbackConfig := &types.LoreEventCallbackConfig{
 		Callback: func(event *types.LoreEventFFI, userContext uint64) {
 			// Invoke global callbacks first
 			invokeGlobalCallbacks(event, userContext)
 
-			// Collect error messages from ERROR events
-			if event.Tag == types.LoreEventTag_ERROR {
-				if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-					errorMessages = append(errorMessages, data.ErrorInner.String())
-				}
-			}
+			// Record terminal error context (ERROR and failed COMPLETE events)
+			recorder.record(event)
 
 			// Collect event if it passes filter
 			if len(c.filterTypes) == 0 {
@@ -277,7 +308,7 @@ func (c *LoreCall[TArgs]) Collect() ([]types.LoreEvent, error) {
 	if returnCode != 0 {
 		return events, &LoreError{
 			ReturnCode: returnCode,
-			Messages:   errorMessages,
+			Messages:   recorder.messages(),
 		}
 	}
 
@@ -325,19 +356,15 @@ func (c *LoreCall[TArgs]) AsyncIter() (<-chan types.LoreEvent, <-chan error) {
 		defer close(eventCh)
 		defer close(errCh)
 
-		var errorMessages []string
+		var recorder terminalEventRecorder
 
 		callbackConfig := &types.LoreEventCallbackConfig{
 			Callback: func(event *types.LoreEventFFI, userContext uint64) {
 				// Invoke global callbacks first
 				invokeGlobalCallbacks(event, userContext)
 
-				// Collect error messages from ERROR events
-				if event.Tag == types.LoreEventTag_ERROR {
-					if data, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-						errorMessages = append(errorMessages, data.ErrorInner.String())
-					}
-				}
+				// Record terminal error context (ERROR and failed COMPLETE events)
+				recorder.record(event)
 
 				// Send event if it passes filter
 				if len(c.filterTypes) == 0 {
@@ -358,7 +385,7 @@ func (c *LoreCall[TArgs]) AsyncIter() (<-chan types.LoreEvent, <-chan error) {
 		if returnCode != 0 {
 			errCh <- &LoreError{
 				ReturnCode: returnCode,
-				Messages:   errorMessages,
+				Messages:   recorder.messages(),
 			}
 			return
 		}
@@ -4060,6 +4087,127 @@ func RepositoryConfigGet(
 		globals:  globals,
 		args:     args,
 		execFunc: native.RepositoryConfigGet,
+	}
+}
+
+/* Open a memory-based revision tree handle on the given
+`(store, repository, revision_hash)` tuple. `revision_hash == 0` opens an
+empty tree suitable for committing an initial revision.
+
+| Terminal event                       | Payload                                | Notes                                              |
+|--------------------------------------|----------------------------------------|----------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_LOADED`    | `lore_revision_tree_loaded_event_data_t` | Emitted on success carrying the opened handle id | */
+func RevisionTreeLoad(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeLoadArgsFFI,
+) *LoreCall[types.LoreRevisionTreeLoadArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeLoadArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeLoad,
+	}
+}
+
+/* Release a memory-based revision tree handle.
+
+Subsequent calls against the same handle return `InvalidArguments`. The
+call blocks until every in-flight op on the handle has paired its
+decrement.
+
+| Terminal event                              | Payload                                       | Notes                                              |
+|---------------------------------------------|-----------------------------------------------|----------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_CLOSE_COMPLETE`   | `lore_revision_tree_close_complete_event_data_t` | Emitted on success carrying the caller id       | */
+func RevisionTreeClose(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeCloseArgsFFI,
+) *LoreCall[types.LoreRevisionTreeCloseArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeCloseArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeClose,
+	}
+}
+
+/* Resolve a UTF-8 path against a loaded revision tree to a node id. An empty
+path resolves to the root node.
+
+| Terminal event                                       | Payload                                             | Notes                                                       |
+|------------------------------------------------------|-----------------------------------------------------|-------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_RESOLVE_PATH_COMPLETE`     | `lore_revision_tree_resolve_path_complete_event_data_t` | Carries the resolved node id and the per-call outcome   | */
+func RevisionTreeResolvePath(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeResolvePathArgsFFI,
+) *LoreCall[types.LoreRevisionTreeResolvePathArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeResolvePathArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeResolvePath,
+	}
+}
+
+/* Stream the children of a directory node in a loaded revision tree.
+
+| Terminal event                       | Payload                                | Notes                                                          |
+|--------------------------------------|----------------------------------------|----------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_CHILD`     | `lore_revision_tree_child_event_data_t` | One per child; an empty directory emits none before `Complete` | */
+func RevisionTreeListChildren(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeListChildrenArgsFFI,
+) *LoreCall[types.LoreRevisionTreeListChildrenArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeListChildrenArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeListChildren,
+	}
+}
+
+/* Fetch the per-node record for a single node id in a loaded revision tree.
+
+| Terminal event                          | Payload                                     | Notes                                                          |
+|-----------------------------------------|---------------------------------------------|----------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_NODE_INFO`    | `lore_revision_tree_node_info_event_data_t` | Carries the node record, uniform across every node id (revision metadata: `lore_revision_tree_info`) | */
+func RevisionTreeNodeInfo(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeNodeInfoArgsFFI,
+) *LoreCall[types.LoreRevisionTreeNodeInfoArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeNodeInfoArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeNodeInfo,
+	}
+}
+
+/* Fetch the loaded revision's record-level metadata (parents, creation
+timestamp, author identity, metadata key count). Revision-scoped — no node id.
+
+| Terminal event                     | Payload                                | Notes                                                   |
+|------------------------------------|----------------------------------------|---------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_INFO`    | `lore_revision_tree_info_event_data_t` | Carries the revision record metadata for the handle     | */
+func RevisionTreeInfo(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeInfoArgsFFI,
+) *LoreCall[types.LoreRevisionTreeInfoArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeInfoArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeInfo,
+	}
+}
+
+/* Reconstruct the full UTF-8 path for a node id by walking parent pointers,
+relative to the handle's own tree root.
+
+| Terminal event                       | Payload                                     | Notes                                                  |
+|--------------------------------------|---------------------------------------------|--------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_NODE_PATH` | `lore_revision_tree_node_path_event_data_t` | Carries the path; the root resolves to the empty path  | */
+func RevisionTreeNodePath(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeNodePathArgsFFI,
+) *LoreCall[types.LoreRevisionTreeNodePathArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeNodePathArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeNodePath,
 	}
 }
 

@@ -3508,20 +3508,17 @@ func TestLoreBranchInfoStackMultiElement(t *testing.T) {
 	}
 }
 
-// TestLoreRepositoryStatusParallel reproduces the JS SDK test
-// "should support multiple parallel Lore calls" (lore-native.test.ts) against
-// the Go FFI bindings.
 func TestLoreRepositoryStatusParallel(t *testing.T) {
 	globals := setupTestRepository(t)
 
-	// Stage a random file so status has something to report, mirroring
-	// stageRandomFile() in the JS test.
+	// Stage a random file so status has something to report
 	staged := createFileWithContents(t, globals.RepositoryPath.String(), "parallel-staged.txt", "staged content")
 	stageFiles(t, &globals, []string{staged})
 
 	const calls = 200
 
 	type callResult struct {
+		done           bool
 		result         int32
 		err            error
 		fileEventCount int
@@ -3536,26 +3533,23 @@ func TestLoreRepositoryStatusParallel(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 
-			// Each goroutine gets its own args and callback, but they all
-			// share the single `globals` (and therefore the single C-allocated
-			// repository path string) — exactly as the JS test shares one
-			// globalArgs across every parallel call.
 			args, cleanupArgs := types.NewLoreRepositoryStatusArgs(types.LoreRepositoryStatusArgs{
 				Staged: true,
 				Scan:   true,
 			})
 			defer cleanupArgs()
 
-			r := &results[idx]
+			var fileEventCount int
+			var errorMessages []string
 			callback := func(event *types.LoreEventFFI, userContext uint64) {
 				switch event.Tag {
 				case types.LoreEventTag_REPOSITORY_STATUS_FILE:
 					if _, ok := event.GetData().(*types.LoreRepositoryStatusFileEventDataFFI); ok {
-						r.fileEventCount++
+						fileEventCount++
 					}
 				case types.LoreEventTag_ERROR:
 					if errData, ok := event.GetData().(*types.LoreErrorEventDataFFI); ok {
-						r.errorMessages = append(r.errorMessages, errData.ErrorInner.String())
+						errorMessages = append(errorMessages, errData.ErrorInner.String())
 					}
 				}
 			}
@@ -3564,8 +3558,14 @@ func TestLoreRepositoryStatusParallel(t *testing.T) {
 				Callback:    callback,
 				UserContext: uint64(idx + 1),
 			})
-			r.result = result
-			r.err = err
+
+			results[idx] = callResult{
+				done:           true,
+				result:         result,
+				err:            err,
+				fileEventCount: fileEventCount,
+				errorMessages:  errorMessages,
+			}
 		}(i)
 	}
 
@@ -3575,6 +3575,10 @@ func TestLoreRepositoryStatusParallel(t *testing.T) {
 	withFileEvents := 0
 	for i := range results {
 		r := &results[i]
+		if !r.done {
+			t.Errorf("call %d: goroutine never recorded a result", i)
+			continue
+		}
 		if r.err != nil {
 			t.Errorf("call %d: RepositoryStatus returned error: %v (errorMessages=%v)", i, r.err, r.errorMessages)
 			continue

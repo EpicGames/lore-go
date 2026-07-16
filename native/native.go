@@ -145,6 +145,13 @@ var (
 	loreRepositoryInstancePruneFunc        loreFuncWithCallback
 	loreRepositoryUpdatePathFunc           loreFuncWithCallback
 	loreRepositoryConfigGetFunc            loreFuncWithCallback
+	loreRevisionTreeLoadFunc               loreFuncWithCallback
+	loreRevisionTreeCloseFunc              loreFuncWithCallback
+	loreRevisionTreeResolvePathFunc        loreFuncWithCallback
+	loreRevisionTreeListChildrenFunc       loreFuncWithCallback
+	loreRevisionTreeNodeInfoFunc           loreFuncWithCallback
+	loreRevisionTreeInfoFunc               loreFuncWithCallback
+	loreRevisionTreeNodePathFunc           loreFuncWithCallback
 )
 
 // ensureLibrary loads the native library on first call. Concurrent callers
@@ -323,6 +330,13 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreRepositoryInstancePruneFunc, libHandle, "lore_repository_instance_prune")
 	purego.RegisterLibFunc(&loreRepositoryUpdatePathFunc, libHandle, "lore_repository_update_path")
 	purego.RegisterLibFunc(&loreRepositoryConfigGetFunc, libHandle, "lore_repository_config_get")
+	purego.RegisterLibFunc(&loreRevisionTreeLoadFunc, libHandle, "lore_revision_tree_load")
+	purego.RegisterLibFunc(&loreRevisionTreeCloseFunc, libHandle, "lore_revision_tree_close")
+	purego.RegisterLibFunc(&loreRevisionTreeResolvePathFunc, libHandle, "lore_revision_tree_resolve_path")
+	purego.RegisterLibFunc(&loreRevisionTreeListChildrenFunc, libHandle, "lore_revision_tree_list_children")
+	purego.RegisterLibFunc(&loreRevisionTreeNodeInfoFunc, libHandle, "lore_revision_tree_node_info")
+	purego.RegisterLibFunc(&loreRevisionTreeInfoFunc, libHandle, "lore_revision_tree_info")
+	purego.RegisterLibFunc(&loreRevisionTreeNodePathFunc, libHandle, "lore_revision_tree_node_path")
 
 	purego.RegisterLibFunc(&loreLogConfigureFunc, libHandle, "lore_log_configure")
 	purego.RegisterLibFunc(&loreShutdownFunc, libHandle, "lore_shutdown")
@@ -3766,6 +3780,106 @@ func RepositoryConfigGet(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreRepositoryConfigGetFunc, globals, args, config)
+}
+
+/* Open a memory-based revision tree handle on the given
+`(store, repository, revision_hash)` tuple. `revision_hash == 0` opens an
+empty tree suitable for committing an initial revision.
+
+| Terminal event                       | Payload                                | Notes                                              |
+|--------------------------------------|----------------------------------------|----------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_LOADED`    | `lore_revision_tree_loaded_event_data_t` | Emitted on success carrying the opened handle id | */
+func RevisionTreeLoad(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeLoadArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeLoadFunc, globals, args, config)
+}
+
+/* Release a memory-based revision tree handle.
+
+Subsequent calls against the same handle return `InvalidArguments`. The
+call blocks until every in-flight op on the handle has paired its
+decrement.
+
+| Terminal event                              | Payload                                       | Notes                                              |
+|---------------------------------------------|-----------------------------------------------|----------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_CLOSE_COMPLETE`   | `lore_revision_tree_close_complete_event_data_t` | Emitted on success carrying the caller id       | */
+func RevisionTreeClose(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeCloseArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeCloseFunc, globals, args, config)
+}
+
+/* Resolve a UTF-8 path against a loaded revision tree to a node id. An empty
+path resolves to the root node.
+
+| Terminal event                                       | Payload                                             | Notes                                                       |
+|------------------------------------------------------|-----------------------------------------------------|-------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_RESOLVE_PATH_COMPLETE`     | `lore_revision_tree_resolve_path_complete_event_data_t` | Carries the resolved node id and the per-call outcome   | */
+func RevisionTreeResolvePath(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeResolvePathArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeResolvePathFunc, globals, args, config)
+}
+
+/* Stream the children of a directory node in a loaded revision tree.
+
+| Terminal event                       | Payload                                | Notes                                                          |
+|--------------------------------------|----------------------------------------|----------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_CHILD`     | `lore_revision_tree_child_event_data_t` | One per child; an empty directory emits none before `Complete` | */
+func RevisionTreeListChildren(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeListChildrenArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeListChildrenFunc, globals, args, config)
+}
+
+/* Fetch the per-node record for a single node id in a loaded revision tree.
+
+| Terminal event                          | Payload                                     | Notes                                                          |
+|-----------------------------------------|---------------------------------------------|----------------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_NODE_INFO`    | `lore_revision_tree_node_info_event_data_t` | Carries the node record, uniform across every node id (revision metadata: `lore_revision_tree_info`) | */
+func RevisionTreeNodeInfo(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeNodeInfoArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeNodeInfoFunc, globals, args, config)
+}
+
+/* Fetch the loaded revision's record-level metadata (parents, creation
+timestamp, author identity, metadata key count). Revision-scoped — no node id.
+
+| Terminal event                     | Payload                                | Notes                                                   |
+|------------------------------------|----------------------------------------|---------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_INFO`    | `lore_revision_tree_info_event_data_t` | Carries the revision record metadata for the handle     | */
+func RevisionTreeInfo(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeInfoArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeInfoFunc, globals, args, config)
+}
+
+/* Reconstruct the full UTF-8 path for a node id by walking parent pointers,
+relative to the handle's own tree root.
+
+| Terminal event                       | Payload                                     | Notes                                                  |
+|--------------------------------------|---------------------------------------------|--------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_NODE_PATH` | `lore_revision_tree_node_path_event_data_t` | Carries the path; the root resolves to the empty path  | */
+func RevisionTreeNodePath(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeNodePathArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeNodePathFunc, globals, args, config)
 }
 
 func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {

@@ -3415,6 +3415,10 @@ type LoreRevisionTreeResolvePathCompleteEventDataFFI struct {
 	Id uint64
 	/* The resolved node. */
 	NodeId uint32
+	/* Repository the resolved node belongs to. */
+	Repository LoreRepositoryId
+	/* Revision the resolved node belongs to. */
+	Revision LoreHash
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
@@ -3424,6 +3428,10 @@ type LoreRevisionTreeResolvePathCompleteEventData struct {
 	Id uint64
 	/* The resolved node. */
 	NodeId uint32
+	/* Repository the resolved node belongs to. */
+	Repository LoreRepositoryId
+	/* Revision the resolved node belongs to. */
+	Revision LoreHash
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
@@ -3473,6 +3481,10 @@ type LoreRevisionTreeNodeInfoEventDataFFI struct {
 	Id uint64
 	/* The queried node. */
 	NodeId uint32
+	/* Repository the node belongs to. */
+	Repository LoreRepositoryId
+	/* Revision the node belongs to. */
+	Revision LoreHash
 	/* The name of the node. */
 	Name LoreString
 	/* The parent node. */
@@ -3487,8 +3499,8 @@ type LoreRevisionTreeNodeInfoEventDataFFI struct {
 	Address LoreAddress
 	/* The preserved file id of the node. */
 	FileId LoreContext
-	/* Root metadata, valid only when the node is the revision root. */
-	RootInfo LoreRevisionTreeRootInfoDataFFI
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
 }
 
 type LoreRevisionTreeNodeInfoEventData struct {
@@ -3496,6 +3508,10 @@ type LoreRevisionTreeNodeInfoEventData struct {
 	Id uint64
 	/* The queried node. */
 	NodeId uint32
+	/* Repository the node belongs to. */
+	Repository LoreRepositoryId
+	/* Revision the node belongs to. */
+	Revision LoreHash
 	/* The name of the node. */
 	Name string
 	/* The parent node. */
@@ -3510,12 +3526,16 @@ type LoreRevisionTreeNodeInfoEventData struct {
 	Address LoreAddress
 	/* The preserved file id of the node. */
 	FileId LoreContext
-	/* Root metadata, valid only when the node is the revision root. */
-	RootInfo LoreRevisionTreeRootInfoData
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeNodePathEventDataFFI struct {
 	/* Correlation id of the originating call. */
 	Id uint64
+	/* Repository the path was reconstructed in. */
+	Repository LoreRepositoryId
+	/* Revision the path was reconstructed in. */
+	Revision LoreHash
 	/* The reconstructed path from the root to the queried node. */
 	Path LoreString
 	/* The outcome of the call. */
@@ -3525,6 +3545,10 @@ type LoreRevisionTreeNodePathEventDataFFI struct {
 type LoreRevisionTreeNodePathEventData struct {
 	/* Correlation id of the originating call. */
 	Id uint64
+	/* Repository the path was reconstructed in. */
+	Repository LoreRepositoryId
+	/* Revision the path was reconstructed in. */
+	Revision LoreHash
 	/* The reconstructed path from the root to the queried node. */
 	Path string
 	/* The outcome of the call. */
@@ -3659,6 +3683,64 @@ type LoreRevisionTreeCloseCompleteEventDataFFI struct {
 type LoreRevisionTreeCloseCompleteEventData struct {
 	/* Correlation id of the originating call. */
 	Id uint64
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
+}
+type LoreRevisionTreeListChildrenBeginEventDataFFI struct {
+	/* Correlation id of the originating call. */
+	Id uint64
+	/* Repository the listed children belong to. */
+	Repository LoreRepositoryId
+	/* Revision the listed children belong to. */
+	Revision LoreHash
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreRevisionTreeListChildrenBeginEventData struct {
+	/* Correlation id of the originating call. */
+	Id uint64
+	/* Repository the listed children belong to. */
+	Repository LoreRepositoryId
+	/* Revision the listed children belong to. */
+	Revision LoreHash
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
+}
+type LoreRevisionTreeInfoEventDataFFI struct {
+	/* Correlation id of the originating call. */
+	Id uint64
+	/* Repository the revision belongs to. */
+	Repository LoreRepositoryId
+	/* The loaded revision. */
+	Revision LoreHash
+	/* The parent revision signatures. */
+	Parent [2]LoreHash
+	/* The time the revision was created. */
+	CreationTimestamp int64
+	/* The identity of the revision's author. */
+	AuthorIdentity LoreString
+	/* The number of metadata keys on the revision. */
+	MetadataKeyCount uint32
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreRevisionTreeInfoEventData struct {
+	/* Correlation id of the originating call. */
+	Id uint64
+	/* Repository the revision belongs to. */
+	Repository LoreRepositoryId
+	/* The loaded revision. */
+	Revision LoreHash
+	/* The parent revision signatures. */
+	Parent [2]LoreHash
+	/* The time the revision was created. */
+	CreationTimestamp int64
+	/* The identity of the revision's author. */
+	AuthorIdentity string
+	/* The number of metadata keys on the revision. */
+	MetadataKeyCount uint32
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
@@ -4646,6 +4728,14 @@ func (e *LoreEventFFI) asRevisionTreeCloseCompleteEventDataFFI() *LoreRevisionTr
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreRevisionTreeCloseCompleteEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asRevisionTreeListChildrenBeginEventDataFFI() *LoreRevisionTreeListChildrenBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRevisionTreeListChildrenBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRevisionTreeInfoEventDataFFI() *LoreRevisionTreeInfoEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRevisionTreeInfoEventDataFFI)(unionPtr)
+}
 func (e *LoreEventFFI) asStorageMutableLoadItemCompleteEventDataFFI() *LoreStorageMutableLoadItemCompleteEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreStorageMutableLoadItemCompleteEventDataFFI)(unionPtr)
@@ -5119,6 +5209,10 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asRevisionTreeCommitCompleteEventDataFFI()
 	case LoreEventTag_REVISION_TREE_CLOSE_COMPLETE:
 		return e.asRevisionTreeCloseCompleteEventDataFFI()
+	case LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN:
+		return e.asRevisionTreeListChildrenBeginEventDataFFI()
+	case LoreEventTag_REVISION_TREE_INFO:
+		return e.asRevisionTreeInfoEventDataFFI()
 	case LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE:
 		return e.asStorageMutableLoadItemCompleteEventDataFFI()
 	case LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE:
@@ -6542,9 +6636,11 @@ func (e *LoreRevisionTreeLoadedEventDataFFI) Clone() LoreRevisionTreeLoadedEvent
 }
 func (e *LoreRevisionTreeResolvePathCompleteEventDataFFI) Clone() LoreRevisionTreeResolvePathCompleteEventData {
 	return LoreRevisionTreeResolvePathCompleteEventData{
-		Id:        e.Id,
-		NodeId:    e.NodeId,
-		ErrorCode: e.ErrorCode,
+		Id:         e.Id,
+		NodeId:     e.NodeId,
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		ErrorCode:  e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeChildEventDataFFI) Clone() LoreRevisionTreeChildEventData {
@@ -6562,23 +6658,27 @@ func (e *LoreRevisionTreeChildEventDataFFI) Clone() LoreRevisionTreeChildEventDa
 }
 func (e *LoreRevisionTreeNodeInfoEventDataFFI) Clone() LoreRevisionTreeNodeInfoEventData {
 	return LoreRevisionTreeNodeInfoEventData{
-		Id:       e.Id,
-		NodeId:   e.NodeId,
-		Name:     e.Name.Clone(),
-		ParentId: e.ParentId,
-		Kind:     e.Kind,
-		Mode:     e.Mode,
-		Size:     e.Size,
-		Address:  e.Address,
-		FileId:   e.FileId,
-		RootInfo: e.RootInfo.Clone(),
+		Id:         e.Id,
+		NodeId:     e.NodeId,
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		Name:       e.Name.Clone(),
+		ParentId:   e.ParentId,
+		Kind:       e.Kind,
+		Mode:       e.Mode,
+		Size:       e.Size,
+		Address:    e.Address,
+		FileId:     e.FileId,
+		ErrorCode:  e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeNodePathEventDataFFI) Clone() LoreRevisionTreeNodePathEventData {
 	return LoreRevisionTreeNodePathEventData{
-		Id:        e.Id,
-		Path:      e.Path.Clone(),
-		ErrorCode: e.ErrorCode,
+		Id:         e.Id,
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		Path:       e.Path.Clone(),
+		ErrorCode:  e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeAddCompleteEventDataFFI) Clone() LoreRevisionTreeAddCompleteEventData {
@@ -6634,6 +6734,29 @@ func (e *LoreRevisionTreeCloseCompleteEventDataFFI) Clone() LoreRevisionTreeClos
 	return LoreRevisionTreeCloseCompleteEventData{
 		Id:        e.Id,
 		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreRevisionTreeListChildrenBeginEventDataFFI) Clone() LoreRevisionTreeListChildrenBeginEventData {
+	return LoreRevisionTreeListChildrenBeginEventData{
+		Id:         e.Id,
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		ErrorCode:  e.ErrorCode,
+	}
+}
+func (e *LoreRevisionTreeInfoEventDataFFI) Clone() LoreRevisionTreeInfoEventData {
+	return LoreRevisionTreeInfoEventData{
+		Id:         e.Id,
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		Parent: [2]LoreHash{
+			e.Parent[0].Clone(),
+			e.Parent[1].Clone(),
+		},
+		CreationTimestamp: e.CreationTimestamp,
+		AuthorIdentity:    e.AuthorIdentity.Clone(),
+		MetadataKeyCount:  e.MetadataKeyCount,
+		ErrorCode:         e.ErrorCode,
 	}
 }
 func (e *LoreStorageMutableLoadItemCompleteEventDataFFI) Clone() LoreStorageMutableLoadItemCompleteEventData {
@@ -7768,6 +7891,16 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asRevisionTreeCloseCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRevisionTreeListChildrenBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REVISION_TREE_INFO:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRevisionTreeInfoEventDataFFI().Clone(),
 		}
 	case LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE:
 		return LoreEvent{

@@ -1667,63 +1667,6 @@ func (e *LoreRevisionCommitCountDataFFI) Clone() LoreRevisionCommitCountData {
 	}
 }
 
-type LoreRevisionTreeRootInfoDataFFI struct {
-	/* 1 when the inline fields carry root data; 0 otherwise. */
-	IsRoot uint8
-	/* The parent revision signatures. */
-	Parent [2]LoreHash
-	/* The time the revision was created. */
-	CreationTimestamp int64
-	/* The identity of the revision's author. */
-	AuthorIdentity LoreString
-	/* The number of metadata keys on the revision. */
-	MetadataKeyCount uint32
-}
-
-type LoreRevisionTreeRootInfoData struct {
-	/* 1 when the inline fields carry root data; 0 otherwise. */
-	IsRoot bool
-	/* The parent revision signatures. */
-	Parent [2]LoreHash
-	/* The time the revision was created. */
-	CreationTimestamp int64
-	/* The identity of the revision's author. */
-	AuthorIdentity string
-	/* The number of metadata keys on the revision. */
-	MetadataKeyCount uint32
-}
-
-func NewLoreRevisionTreeRootInfoData(opts LoreRevisionTreeRootInfoData) (LoreRevisionTreeRootInfoDataFFI, func()) {
-	valIsRoot, cleanupIsRoot := Newuint8(opts.IsRoot)
-	valAuthorIdentity, cleanupAuthorIdentity := NewLoreString(opts.AuthorIdentity)
-
-	cleanup := func() {
-		cleanupIsRoot()
-		cleanupAuthorIdentity()
-	}
-
-	return LoreRevisionTreeRootInfoDataFFI{
-		IsRoot:            valIsRoot,
-		Parent:            opts.Parent,
-		CreationTimestamp: opts.CreationTimestamp,
-		AuthorIdentity:    valAuthorIdentity,
-		MetadataKeyCount:  opts.MetadataKeyCount,
-	}, cleanup
-}
-
-func (e *LoreRevisionTreeRootInfoDataFFI) Clone() LoreRevisionTreeRootInfoData {
-	return LoreRevisionTreeRootInfoData{
-		IsRoot: e.IsRoot != 0,
-		Parent: [2]LoreHash{
-			e.Parent[0].Clone(),
-			e.Parent[1].Clone(),
-		},
-		CreationTimestamp: e.CreationTimestamp,
-		AuthorIdentity:    e.AuthorIdentity.Clone(),
-		MetadataKeyCount:  e.MetadataKeyCount,
-	}
-}
-
 type LoreStorageRemoteConfigFFI struct {
 	/* gRPC endpoint of the peer storage service; authenticated with the open call's `globals.identity` */
 	RemoteUrl LoreString
