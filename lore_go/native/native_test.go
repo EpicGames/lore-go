@@ -3515,6 +3515,28 @@ func TestLoreRepositoryStatusParallel(t *testing.T) {
 	staged := createFileWithContents(t, globals.RepositoryPath.String(), "parallel-staged.txt", "staged content")
 	stageFiles(t, &globals, []string{staged})
 
+	// Reconcile once, single-threaded, before going parallel. A Scan status
+	// walks the filesystem and persists refreshed dirty flags back into the
+	// staged state (rewriting the shared staged anchor + mtime cache in the
+	// mutable store).
+	{
+		reconcileArgs, cleanupReconcile := types.NewLoreRepositoryStatusArgs(types.LoreRepositoryStatusArgs{
+			Staged: true,
+			Scan:   true,
+		})
+		result, err := RepositoryStatus(&globals, &reconcileArgs, &types.LoreEventCallbackConfig{
+			Callback:    func(event *types.LoreEventFFI, userContext uint64) {},
+			UserContext: 1,
+		})
+		cleanupReconcile()
+		if err != nil {
+			t.Fatalf("reconcile RepositoryStatus failed: %v", err)
+		}
+		if result != 0 {
+			t.Fatalf("reconcile RepositoryStatus returned non-zero result: %d", result)
+		}
+	}
+
 	const calls = 200
 
 	type callResult struct {
@@ -3533,9 +3555,12 @@ func TestLoreRepositoryStatusParallel(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 
+			// Read-only: no Scan, so these calls never write the shared
+			// staged anchor / mtime cache. They read the staged state the
+			// single reconcile pass above already settled.
 			args, cleanupArgs := types.NewLoreRepositoryStatusArgs(types.LoreRepositoryStatusArgs{
 				Staged: true,
-				Scan:   true,
+				Scan:   false,
 			})
 			defer cleanupArgs()
 
