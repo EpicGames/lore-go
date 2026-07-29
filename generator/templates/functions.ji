@@ -181,6 +181,13 @@ func callLoreFunction[TArgs any](
 		FuncPtr:     eventCallbackFuncPtr,
 	}
 
+	// Pin every struct the native side will read.
+	var pinner runtime.Pinner
+	defer pinner.Unpin()
+	pinner.Pin(globals)
+	pinner.Pin(args)
+	pinner.Pin(&cCallbackConfig)
+
 	// Convert all pointers to uintptr for FFI call
 	globalsPtr := uintptr(unsafe.Pointer(globals))
 	argsPtr := uintptr(unsafe.Pointer(args))
@@ -196,11 +203,6 @@ func callLoreFunction[TArgs any](
 		callbackUserContext,
 		callbackFuncPtrValue,
 	)
-
-	// Keep all pointers alive until after the FFI call completes
-	runtime.KeepAlive(globals)
-	runtime.KeepAlive(args)
-	runtime.KeepAlive(cCallbackConfig)
 
 	return result, nil
 }
@@ -224,8 +226,10 @@ func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {
 	if err := ensureLibrary(); err != nil {
 		return -1, err
 	}
+	var pinner runtime.Pinner
+	defer pinner.Unpin()
+	pinner.Pin(logConfig)
 	result := loreLogConfigureFunc(uintptr(unsafe.Pointer(logConfig)))
-	runtime.KeepAlive(logConfig)
 	return result, nil
 }
 

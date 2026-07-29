@@ -5,6 +5,7 @@ package types
 import (
   "encoding/hex"
   "fmt"
+  "runtime"
   "unsafe"
 )
 
@@ -60,25 +61,29 @@ func New{{ arr.array_class }}(arr []{{ arr.element_field_type }}) ({{ arr.ffi_cl
     ffiArray[i], cleanups[i] = New{{ arr.element_field_type }}(arr[i])
   }
 
+  // Pin the buffer so it can be neither moved nor freed while the call is in flight.
+  var pinner runtime.Pinner
+  pinner.Pin(&ffiArray[0])
   arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
   cleanup := func() {
     for _, c := range cleanups {
       c()
     }
-    // Keep ffiArray alive
-    _ = ffiArray
+    pinner.Unpin()
   }
   {% else %}
   // Element type is FFI-compatible (primitive, enum, or alias); copy directly.
   ffiArray := make([]{{ arr.element_field_type }}, len(arr))
   copy(ffiArray, arr)
 
+  // Pin the buffer so it can be neither moved nor freed while the call is in flight.
+  var pinner runtime.Pinner
+  pinner.Pin(&ffiArray[0])
   arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
   cleanup := func() {
-    // Keep ffiArray alive
-    _ = ffiArray
+    pinner.Unpin()
   }
   {% endif %}
 
@@ -430,11 +435,13 @@ func NewLoreBinary(data LoreBinary) (LoreBinaryFFI, func()) {
 	bytes := make([]byte, len(data))
 	copy(bytes, data)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&bytes[0])
 	ptr := uintptr(unsafe.Pointer(&bytes[0]))
 
 	cleanup := func() {
-		// Keep bytes alive by referencing it
-		_ = bytes
+		pinner.Unpin()
 	}
 
 	return LoreBinaryFFI{
@@ -604,25 +611,24 @@ func readCString(ptr uintptr, length int) string {
 }
 
 // allocateCString allocates a C string from a Go string
-// Returns the pointer and a cleanup function (which is a no-op since Go manages the memory)
+// Returns the pointer and a cleanup function that releases the pin
 func allocateCString(s string) (uintptr, func()) {
 	if s == "" {
 		return 0, func() {}
 	}
 
 	// Allocate Go memory with null terminator
-	// The slice will be kept alive by the caller until cleanup
 	bytes := make([]byte, len(s)+1)
 	copy(bytes, s)
 	bytes[len(s)] = 0
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&bytes[0])
 	ptr := uintptr(unsafe.Pointer(&bytes[0]))
 
-	// Return cleanup that keeps the bytes alive
-	// The caller must call this after the C call completes
 	cleanup := func() {
-		// Keep bytes alive by referencing it
-		_ = bytes
+		pinner.Unpin()
 	}
 
 	return ptr, cleanup
@@ -658,11 +664,14 @@ func NewLoreStringArray(strs []string) (LoreStringArrayFFI, func()) {
 		cStrings[i] = cStr
 	}
 
+	// Pins the LoreString array itself; each element's own cleanup unpins the
+	// character buffer it points at.
+	var pinner runtime.Pinner
+	pinner.Pin(&cStrings[0])
 	arrayPtr := uintptr(unsafe.Pointer(&cStrings[0]))
 
 	cleanup := func() {
-		// Keep cStrings alive
-		_ = cStrings
+		pinner.Unpin()
 		for _, c := range cleanups {
 			c()
 		}
@@ -686,11 +695,13 @@ func NewLoreUint8Array(values []bool) (LoreUint8ArrayFFI, func()) {
 	uint8s := make([]uint8, len(values))
 	copy(uint8s, boolsAsUint8s)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&uint8s[0])
 	arrayPtr := uintptr(unsafe.Pointer(&uint8s[0]))
 
 	cleanup := func() {
-		// Keep uint8s alive
-		_ = uint8s
+		pinner.Unpin()
 	}
 
 	return LoreUint8ArrayFFI{
