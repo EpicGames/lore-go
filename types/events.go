@@ -3875,6 +3875,19 @@ type LoreCompactionEndEventData struct {
 	/* Total bytes reclaimed across the pass. */
 	TotalCompactedBytes uint64
 }
+type LoreRevisionTreeBatchCompleteEventDataFFI struct {
+	/* Correlation id of the originating call */
+	Id uint64
+	/* The outcome of the call as a whole */
+	ErrorCode LoreErrorCode
+}
+
+type LoreRevisionTreeBatchCompleteEventData struct {
+	/* Correlation id of the originating call */
+	Id uint64
+	/* The outcome of the call as a whole */
+	ErrorCode LoreErrorCode
+}
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -4780,6 +4793,10 @@ func (e *LoreEventFFI) asCompactionEndEventDataFFI() *LoreCompactionEndEventData
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreCompactionEndEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asRevisionTreeBatchCompleteEventDataFFI() *LoreRevisionTreeBatchCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRevisionTreeBatchCompleteEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -5235,6 +5252,8 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asCompactionProgressEventDataFFI()
 	case LoreEventTag_COMPACTION_END:
 		return e.asCompactionEndEventDataFFI()
+	case LoreEventTag_REVISION_TREE_BATCH_COMPLETE:
+		return e.asRevisionTreeBatchCompleteEventDataFFI()
 	default:
 		return nil
 	}
@@ -6822,6 +6841,12 @@ func (e *LoreCompactionEndEventDataFFI) Clone() LoreCompactionEndEventData {
 		TotalCompactedBytes: e.TotalCompactedBytes,
 	}
 }
+func (e *LoreRevisionTreeBatchCompleteEventDataFFI) Clone() LoreRevisionTreeBatchCompleteEventData {
+	return LoreRevisionTreeBatchCompleteEventData{
+		Id:        e.Id,
+		ErrorCode: e.ErrorCode,
+	}
+}
 
 // Clone creates a Go-native copy of the event data
 // This copy is safe to keep after the callback returns
@@ -7956,6 +7981,11 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asCompactionEndEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REVISION_TREE_BATCH_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRevisionTreeBatchCompleteEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{

@@ -309,4 +309,5 @@ const (
 	LoreEventTag_COMPACTION_BEGIN                               LoreEventTag = 223
 	LoreEventTag_COMPACTION_PROGRESS                            LoreEventTag = 224
 	LoreEventTag_COMPACTION_END                                 LoreEventTag = 225
+	LoreEventTag_REVISION_TREE_BATCH_COMPLETE                   LoreEventTag = 226
 )

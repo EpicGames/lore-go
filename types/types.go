@@ -5,6 +5,7 @@ package types
 import (
 	"encoding/hex"
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
@@ -56,14 +57,16 @@ func NewLoreTraceLocationArray(arr []LoreTraceLocation) (LoreTraceLocationArrayF
 		ffiArray[i], cleanups[i] = NewLoreTraceLocation(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreTraceLocationArrayFFI{
@@ -116,11 +119,13 @@ func NewLoreInstanceIdArray(arr []LoreInstanceId) (LoreInstanceIdArrayFFI, func(
 	ffiArray := make([]LoreInstanceId, len(arr))
 	copy(ffiArray, arr)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreInstanceIdArrayFFI{
@@ -177,14 +182,16 @@ func NewLoreBranchPointArray(arr []LoreBranchPoint) (LoreBranchPointArrayFFI, fu
 		ffiArray[i], cleanups[i] = NewLoreBranchPoint(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreBranchPointArrayFFI{
@@ -237,11 +244,13 @@ func NewLoreMetadataTypeArray(arr []LoreMetadataType) (LoreMetadataTypeArrayFFI,
 	ffiArray := make([]LoreMetadataType, len(arr))
 	copy(ffiArray, arr)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreMetadataTypeArrayFFI{
@@ -294,11 +303,13 @@ func NewLoreUint32Array(arr []uint32) (LoreUint32ArrayFFI, func()) {
 	ffiArray := make([]uint32, len(arr))
 	copy(ffiArray, arr)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreUint32ArrayFFI{
@@ -355,14 +366,16 @@ func NewLoreStoragePutItemArray(arr []LoreStoragePutItem) (LoreStoragePutItemArr
 		ffiArray[i], cleanups[i] = NewLoreStoragePutItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStoragePutItemArrayFFI{
@@ -419,14 +432,16 @@ func NewLoreStorageGetItemArray(arr []LoreStorageGetItem) (LoreStorageGetItemArr
 		ffiArray[i], cleanups[i] = NewLoreStorageGetItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageGetItemArrayFFI{
@@ -483,14 +498,16 @@ func NewLoreStorageGetMetadataItemArray(arr []LoreStorageGetMetadataItem) (LoreS
 		ffiArray[i], cleanups[i] = NewLoreStorageGetMetadataItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageGetMetadataItemArrayFFI{
@@ -547,14 +564,16 @@ func NewLoreStorageObliterateItemArray(arr []LoreStorageObliterateItem) (LoreSto
 		ffiArray[i], cleanups[i] = NewLoreStorageObliterateItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageObliterateItemArrayFFI{
@@ -611,14 +630,16 @@ func NewLoreStorageMutableLoadItemArray(arr []LoreStorageMutableLoadItem) (LoreS
 		ffiArray[i], cleanups[i] = NewLoreStorageMutableLoadItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageMutableLoadItemArrayFFI{
@@ -675,14 +696,16 @@ func NewLoreStorageMutableStoreItemArray(arr []LoreStorageMutableStoreItem) (Lor
 		ffiArray[i], cleanups[i] = NewLoreStorageMutableStoreItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageMutableStoreItemArrayFFI{
@@ -739,14 +762,16 @@ func NewLoreStorageMutableCompareAndSwapItemArray(arr []LoreStorageMutableCompar
 		ffiArray[i], cleanups[i] = NewLoreStorageMutableCompareAndSwapItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageMutableCompareAndSwapItemArrayFFI{
@@ -803,14 +828,16 @@ func NewLoreStorageMutableListItemArray(arr []LoreStorageMutableListItem) (LoreS
 		ffiArray[i], cleanups[i] = NewLoreStorageMutableListItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageMutableListItemArrayFFI{
@@ -867,14 +894,16 @@ func NewLoreStorageCopyItemArray(arr []LoreStorageCopyItem) (LoreStorageCopyItem
 		ffiArray[i], cleanups[i] = NewLoreStorageCopyItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageCopyItemArrayFFI{
@@ -931,14 +960,16 @@ func NewLoreStoragePutFileItemArray(arr []LoreStoragePutFileItem) (LoreStoragePu
 		ffiArray[i], cleanups[i] = NewLoreStoragePutFileItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStoragePutFileItemArrayFFI{
@@ -995,14 +1026,16 @@ func NewLoreStorageGetFileItemArray(arr []LoreStorageGetFileItem) (LoreStorageGe
 		ffiArray[i], cleanups[i] = NewLoreStorageGetFileItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageGetFileItemArrayFFI{
@@ -1059,17 +1092,85 @@ func NewLoreStorageUploadItemArray(arr []LoreStorageUploadItem) (LoreStorageUplo
 		ffiArray[i], cleanups[i] = NewLoreStorageUploadItem(arr[i])
 	}
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
 	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
 
 	cleanup := func() {
 		for _, c := range cleanups {
 			c()
 		}
-		// Keep ffiArray alive
-		_ = ffiArray
+		pinner.Unpin()
 	}
 
 	return LoreStorageUploadItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeAddEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeAddEntryArray = []LoreRevisionTreeAddEntry
+
+func (arr LoreRevisionTreeAddEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeAddEntryArrayFFI) Get(index int) LoreRevisionTreeAddEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeAddEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeAddEntryArrayFFI) Clone() []LoreRevisionTreeAddEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeAddEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeAddEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeAddEntryArray(arr []LoreRevisionTreeAddEntry) (LoreRevisionTreeAddEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeAddEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeAddEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeAddEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeAddEntryArrayFFI{
 		Ptr:   arrayPtr,
 		Count: uint64(len(arr)),
 	}, cleanup
@@ -2431,6 +2532,78 @@ func (e *LoreRevisionTreeFFI) Clone() LoreRevisionTree {
 	}
 }
 
+type LoreRevisionTreeAddEntryFFI struct {
+	/* Caller-chosen id echoed back in this entry's `ADD_COMPLETE` */
+	Id uint64
+	/* Parent for the new node; the invalid-node sentinel selects `parent_entry` */
+	ParentNodeId uint32
+	/* Index of an earlier entry in this batch whose new node is the parent;
+	read only when `parent_node_id` is the invalid-node sentinel */
+	ParentEntry uint32
+	/* UTF-8 name of the new child within its parent */
+	Name LoreString
+	/* `LoreNodeType` encoding: `DIRECTORY = 0`, `FILE = 1`, `LINK = 2` */
+	Kind uint32
+	/* POSIX permission bits for the new node */
+	Mode uint16
+	/* Content size in bytes (leaf nodes); `0` for a directory */
+	Size uint64
+	/* Content address `(hash, file_id context)` of the new node */
+	Address LoreAddress
+}
+
+type LoreRevisionTreeAddEntry struct {
+	/* Caller-chosen id echoed back in this entry's `ADD_COMPLETE` */
+	Id uint64
+	/* Parent for the new node; the invalid-node sentinel selects `parent_entry` */
+	ParentNodeId uint32
+	/* Index of an earlier entry in this batch whose new node is the parent;
+	read only when `parent_node_id` is the invalid-node sentinel */
+	ParentEntry uint32
+	/* UTF-8 name of the new child within its parent */
+	Name string
+	/* `LoreNodeType` encoding: `DIRECTORY = 0`, `FILE = 1`, `LINK = 2` */
+	Kind uint32
+	/* POSIX permission bits for the new node */
+	Mode uint16
+	/* Content size in bytes (leaf nodes); `0` for a directory */
+	Size uint64
+	/* Content address `(hash, file_id context)` of the new node */
+	Address LoreAddress
+}
+
+func NewLoreRevisionTreeAddEntry(opts LoreRevisionTreeAddEntry) (LoreRevisionTreeAddEntryFFI, func()) {
+	valName, cleanupName := NewLoreString(opts.Name)
+
+	cleanup := func() {
+		cleanupName()
+	}
+
+	return LoreRevisionTreeAddEntryFFI{
+		Id:           opts.Id,
+		ParentNodeId: opts.ParentNodeId,
+		ParentEntry:  opts.ParentEntry,
+		Name:         valName,
+		Kind:         opts.Kind,
+		Mode:         opts.Mode,
+		Size:         opts.Size,
+		Address:      opts.Address,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeAddEntryFFI) Clone() LoreRevisionTreeAddEntry {
+	return LoreRevisionTreeAddEntry{
+		Id:           e.Id,
+		ParentNodeId: e.ParentNodeId,
+		ParentEntry:  e.ParentEntry,
+		Name:         e.Name.Clone(),
+		Kind:         e.Kind,
+		Mode:         e.Mode,
+		Size:         e.Size,
+		Address:      e.Address,
+	}
+}
+
 type LoreRevisionTreeCommitOptionsFFI struct {
 	/* Also upload the new revision to remote (local-only by default) */
 	RemoteWrite uint8
@@ -2697,11 +2870,13 @@ func NewLoreBinary(data LoreBinary) (LoreBinaryFFI, func()) {
 	bytes := make([]byte, len(data))
 	copy(bytes, data)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&bytes[0])
 	ptr := uintptr(unsafe.Pointer(&bytes[0]))
 
 	cleanup := func() {
-		// Keep bytes alive by referencing it
-		_ = bytes
+		pinner.Unpin()
 	}
 
 	return LoreBinaryFFI{
@@ -2872,25 +3047,24 @@ func readCString(ptr uintptr, length int) string {
 }
 
 // allocateCString allocates a C string from a Go string
-// Returns the pointer and a cleanup function (which is a no-op since Go manages the memory)
+// Returns the pointer and a cleanup function that releases the pin
 func allocateCString(s string) (uintptr, func()) {
 	if s == "" {
 		return 0, func() {}
 	}
 
 	// Allocate Go memory with null terminator
-	// The slice will be kept alive by the caller until cleanup
 	bytes := make([]byte, len(s)+1)
 	copy(bytes, s)
 	bytes[len(s)] = 0
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&bytes[0])
 	ptr := uintptr(unsafe.Pointer(&bytes[0]))
 
-	// Return cleanup that keeps the bytes alive
-	// The caller must call this after the C call completes
 	cleanup := func() {
-		// Keep bytes alive by referencing it
-		_ = bytes
+		pinner.Unpin()
 	}
 
 	return ptr, cleanup
@@ -2926,11 +3100,14 @@ func NewLoreStringArray(strs []string) (LoreStringArrayFFI, func()) {
 		cStrings[i] = cStr
 	}
 
+	// Pins the LoreString array itself; each element's own cleanup unpins the
+	// character buffer it points at.
+	var pinner runtime.Pinner
+	pinner.Pin(&cStrings[0])
 	arrayPtr := uintptr(unsafe.Pointer(&cStrings[0]))
 
 	cleanup := func() {
-		// Keep cStrings alive
-		_ = cStrings
+		pinner.Unpin()
 		for _, c := range cleanups {
 			c()
 		}
@@ -2954,11 +3131,13 @@ func NewLoreUint8Array(values []bool) (LoreUint8ArrayFFI, func()) {
 	uint8s := make([]uint8, len(values))
 	copy(uint8s, boolsAsUint8s)
 
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&uint8s[0])
 	arrayPtr := uintptr(unsafe.Pointer(&uint8s[0]))
 
 	cleanup := func() {
-		// Keep uint8s alive
-		_ = uint8s
+		pinner.Unpin()
 	}
 
 	return LoreUint8ArrayFFI{

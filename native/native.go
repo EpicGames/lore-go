@@ -152,6 +152,7 @@ var (
 	loreRevisionTreeNodeInfoFunc           loreFuncWithCallback
 	loreRevisionTreeInfoFunc               loreFuncWithCallback
 	loreRevisionTreeNodePathFunc           loreFuncWithCallback
+	loreRevisionTreeAddFunc                loreFuncWithCallback
 )
 
 // ensureLibrary loads the native library on first call. Concurrent callers
@@ -337,6 +338,7 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreRevisionTreeNodeInfoFunc, libHandle, "lore_revision_tree_node_info")
 	purego.RegisterLibFunc(&loreRevisionTreeInfoFunc, libHandle, "lore_revision_tree_info")
 	purego.RegisterLibFunc(&loreRevisionTreeNodePathFunc, libHandle, "lore_revision_tree_node_path")
+	purego.RegisterLibFunc(&loreRevisionTreeAddFunc, libHandle, "lore_revision_tree_add")
 
 	purego.RegisterLibFunc(&loreLogConfigureFunc, libHandle, "lore_log_configure")
 	purego.RegisterLibFunc(&loreShutdownFunc, libHandle, "lore_shutdown")
@@ -427,6 +429,13 @@ func callLoreFunction[TArgs any](
 		FuncPtr:     eventCallbackFuncPtr,
 	}
 
+	// Pin every struct the native side will read.
+	var pinner runtime.Pinner
+	defer pinner.Unpin()
+	pinner.Pin(globals)
+	pinner.Pin(args)
+	pinner.Pin(&cCallbackConfig)
+
 	// Convert all pointers to uintptr for FFI call
 	globalsPtr := uintptr(unsafe.Pointer(globals))
 	argsPtr := uintptr(unsafe.Pointer(args))
@@ -442,11 +451,6 @@ func callLoreFunction[TArgs any](
 		callbackUserContext,
 		callbackFuncPtrValue,
 	)
-
-	// Keep all pointers alive until after the FFI call completes
-	runtime.KeepAlive(globals)
-	runtime.KeepAlive(args)
-	runtime.KeepAlive(cCallbackConfig)
 
 	return result, nil
 }
@@ -3882,12 +3886,38 @@ func RevisionTreeNodePath(
 	return callLoreFunction(&loreRevisionTreeNodePathFunc, globals, args, config)
 }
 
+/* Add a batch of nodes to a loaded revision tree. An entry parents onto an
+existing node or onto an earlier entry, so one call builds a subtree. Every
+entry is checked before any node is created, so one bad entry rejects the
+call and creates nothing; the reason names the offending entry's batch index,
+which a caller leaving `id` at zero has no other way to identify. A failure
+after those checks pass is internal and may leave part of the batch created.
+
+A link entry's target revision is not resolved here, so a link naming a
+revision that cannot be read is accepted and fails only when something later
+reads through it. Entries under separate parents are created concurrently,
+but allocating a node slot is serialized per loaded tree.
+
+| Terminal event                            | Payload                                          | Notes                                                    |
+|-------------------------------------------|--------------------------------------------------|----------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_ADD_COMPLETE`   | `lore_revision_tree_add_complete_event_data_t`   | One per entry created or individually rejected           |
+| `LORE_EVENT_REVISION_TREE_BATCH_COMPLETE` | `lore_revision_tree_batch_complete_event_data_t` | Exactly one, carrying the call id and the call's outcome | */
+func RevisionTreeAdd(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeAddArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionTreeAddFunc, globals, args, config)
+}
+
 func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {
 	if err := ensureLibrary(); err != nil {
 		return -1, err
 	}
+	var pinner runtime.Pinner
+	defer pinner.Unpin()
+	pinner.Pin(logConfig)
 	result := loreLogConfigureFunc(uintptr(unsafe.Pointer(logConfig)))
-	runtime.KeepAlive(logConfig)
 	return result, nil
 }
 

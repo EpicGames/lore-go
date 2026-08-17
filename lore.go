@@ -4211,6 +4211,33 @@ func RevisionTreeNodePath(
 	}
 }
 
+/* Add a batch of nodes to a loaded revision tree. An entry parents onto an
+existing node or onto an earlier entry, so one call builds a subtree. Every
+entry is checked before any node is created, so one bad entry rejects the
+call and creates nothing; the reason names the offending entry's batch index,
+which a caller leaving `id` at zero has no other way to identify. A failure
+after those checks pass is internal and may leave part of the batch created.
+
+A link entry's target revision is not resolved here, so a link naming a
+revision that cannot be read is accepted and fails only when something later
+reads through it. Entries under separate parents are created concurrently,
+but allocating a node slot is serialized per loaded tree.
+
+| Terminal event                            | Payload                                          | Notes                                                    |
+|-------------------------------------------|--------------------------------------------------|----------------------------------------------------------|
+| `LORE_EVENT_REVISION_TREE_ADD_COMPLETE`   | `lore_revision_tree_add_complete_event_data_t`   | One per entry created or individually rejected           |
+| `LORE_EVENT_REVISION_TREE_BATCH_COMPLETE` | `lore_revision_tree_batch_complete_event_data_t` | Exactly one, carrying the call id and the call's outcome | */
+func RevisionTreeAdd(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionTreeAddArgsFFI,
+) *LoreCall[types.LoreRevisionTreeAddArgsFFI] {
+	return &LoreCall[types.LoreRevisionTreeAddArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionTreeAdd,
+	}
+}
+
 // LogConfigure configures Lore logging.
 func LogConfigure(logConfig *types.LoreLogConfigFFI) (int32, error) {
 	returnCode, err := native.LogConfigure(logConfig)

@@ -5,6 +5,12 @@ package types
 type LoreGlobalArgs struct {
 	/* Repository path */
 	RepositoryPath string
+	/* Directory that relative paths in this call are resolved against. Set it
+	when a call may be executed by another process, such as the Lore
+	service, whose own working directory is unrelated to the caller's. When
+	empty, relative paths resolve against the working directory of the
+	process performing the call. */
+	WorkingDirectory string
 	/* Correlation ID */
 	CorrelationId string
 	/* Identity to use */
@@ -55,6 +61,12 @@ type LoreGlobalArgs struct {
 type LoreGlobalArgsFFI struct {
 	/* Repository path */
 	RepositoryPath LoreString
+	/* Directory that relative paths in this call are resolved against. Set it
+	when a call may be executed by another process, such as the Lore
+	service, whose own working directory is unrelated to the caller's. When
+	empty, relative paths resolve against the working directory of the
+	process performing the call. */
+	WorkingDirectory LoreString
 	/* Correlation ID */
 	CorrelationId LoreString
 	/* Identity to use */
@@ -104,6 +116,7 @@ type LoreGlobalArgsFFI struct {
 
 func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valRepositoryPath, cleanupRepositoryPath := NewLoreString(opts.RepositoryPath)
+	valWorkingDirectory, cleanupWorkingDirectory := NewLoreString(opts.WorkingDirectory)
 	valCorrelationId, cleanupCorrelationId := NewLoreString(opts.CorrelationId)
 	valIdentity, cleanupIdentity := NewLoreString(opts.Identity)
 	valForce, cleanupForce := Newuint8(opts.Force)
@@ -121,6 +134,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 
 	cleanup := func() {
 		cleanupRepositoryPath()
+		cleanupWorkingDirectory()
 		cleanupCorrelationId()
 		cleanupIdentity()
 		cleanupForce()
@@ -139,6 +153,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 
 	return LoreGlobalArgsFFI{
 		RepositoryPath:        valRepositoryPath,
+		WorkingDirectory:      valWorkingDirectory,
 		CorrelationId:         valCorrelationId,
 		Identity:              valIdentity,
 		Force:                 valForce,
@@ -4198,59 +4213,34 @@ func NewLoreRevisionTreeNodePathArgs(opts LoreRevisionTreeNodePathArgs) (LoreRev
 }
 
 type LoreRevisionTreeAddArgs struct {
-	/* Per-call correlation id echoed back in events */
+	/* Per-call correlation id echoed back in `BATCH_COMPLETE` */
 	Id uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Parent node the new child is added under */
-	ParentNodeId uint32
-	/* UTF-8 name of the new child within its parent */
-	Name string
-	/* `NodeKind` encoding: FILE=1, DIRECTORY=2, LINK=3 */
-	Kind uint32
-	/* POSIX permission bits for the new node */
-	Mode uint16
-	/* Content size in bytes (leaf nodes) */
-	Size uint64
-	/* Content address `(hash, file_id context)` of the new node */
-	Address LoreAddress
+	/* Nodes to add; each emits its own `ADD_COMPLETE` */
+	Entries LoreRevisionTreeAddEntryArray
 }
 
 type LoreRevisionTreeAddArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
+	/* Per-call correlation id echoed back in `BATCH_COMPLETE` */
 	Id uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Parent node the new child is added under */
-	ParentNodeId uint32
-	/* UTF-8 name of the new child within its parent */
-	Name LoreString
-	/* `NodeKind` encoding: FILE=1, DIRECTORY=2, LINK=3 */
-	Kind uint32
-	/* POSIX permission bits for the new node */
-	Mode uint16
-	/* Content size in bytes (leaf nodes) */
-	Size uint64
-	/* Content address `(hash, file_id context)` of the new node */
-	Address LoreAddress
+	/* Nodes to add; each emits its own `ADD_COMPLETE` */
+	Entries LoreRevisionTreeAddEntryArrayFFI
 }
 
 func NewLoreRevisionTreeAddArgs(opts LoreRevisionTreeAddArgs) (LoreRevisionTreeAddArgsFFI, func()) {
-	valName, cleanupName := NewLoreString(opts.Name)
+	valEntries, cleanupEntries := NewLoreRevisionTreeAddEntryArray(opts.Entries)
 
 	cleanup := func() {
-		cleanupName()
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeAddArgsFFI{
-		Id:           opts.Id,
-		Handle:       opts.Handle,
-		ParentNodeId: opts.ParentNodeId,
-		Name:         valName,
-		Kind:         opts.Kind,
-		Mode:         opts.Mode,
-		Size:         opts.Size,
-		Address:      opts.Address,
+		Id:      opts.Id,
+		Handle:  opts.Handle,
+		Entries: valEntries,
 	}, cleanup
 }
 
