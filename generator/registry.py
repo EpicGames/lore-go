@@ -74,6 +74,7 @@ SEED_C_TYPES_THAT_NEED_CUSTOM_BUILDER = {
     "lore_uint8_array_t": "[]bool",
     "lore_binary_t": "LoreBinary",
     "lore_bytes_t": "LoreBytes",
+    "lore_metadata_t": "LoreMetadata",
 }
 
 

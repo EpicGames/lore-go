@@ -412,7 +412,7 @@ func TestLoreRevisionHistory(t *testing.T) {
 		if event.Tag == types.LoreEventTag_METADATA {
 			if metadataEvent, ok := event.GetData().(*types.LoreMetadataEventDataFFI); ok {
 				key := metadataEvent.Key.String()
-				if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataTag_STRING {
+				if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataType_STRING {
 					messageStr := metadataEvent.Value.AsLoreString().String()
 					commitMessages = append(commitMessages, messageStr)
 				}
@@ -501,7 +501,7 @@ func TestLoreRevisionAmend(t *testing.T) {
 			if event.Tag == types.LoreEventTag_METADATA {
 				if metadataEvent, ok := event.GetData().(*types.LoreMetadataEventDataFFI); ok {
 					key := metadataEvent.Key.String()
-					if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataTag_STRING {
+					if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataType_STRING {
 						messageStr := metadataEvent.Value.AsLoreString().String()
 						commitMessages = append(commitMessages, messageStr)
 					}
@@ -1196,7 +1196,7 @@ func TestLoreUnicodeSupport(t *testing.T) {
 			if event.Tag == types.LoreEventTag_METADATA {
 				if metadataEvent, ok := event.GetData().(*types.LoreMetadataEventDataFFI); ok {
 					key := metadataEvent.Key.String()
-					if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataTag_STRING {
+					if key == "message" && metadataEvent.Value.Tag == types.LoreMetadataType_STRING {
 						messageStr := metadataEvent.Value.AsLoreString().String()
 						commitMessages = append(commitMessages, messageStr)
 					}
@@ -2331,7 +2331,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify "branch" metadata (CONTEXT type)
 	if branch, ok := metadataEvents["branch"]; ok {
-		if branch.Value.Tag != types.LoreMetadataTag_CONTEXT {
+		if branch.Value.Tag != types.LoreMetadataType_CONTEXT {
 			t.Errorf("Expected branch to have tag CONTEXT, got %d", branch.Value.Tag)
 		} else {
 			ctx := branch.Value.Context
@@ -2343,7 +2343,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify "timestamp" metadata (NUMERIC type)
 	if timestamp, ok := metadataEvents["timestamp"]; ok {
-		if timestamp.Value.Tag != types.LoreMetadataTag_NUMERIC {
+		if timestamp.Value.Tag != types.LoreMetadataType_NUMERIC {
 			t.Errorf("Expected timestamp to have tag NUMERIC, got %d", timestamp.Value.Tag)
 		} else {
 			ts := *timestamp.Value.Numeric
@@ -2359,7 +2359,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify "message" metadata (STRING type, should contain commit message)
 	if message, ok := metadataEvents["message"]; ok {
-		if message.Value.Tag != types.LoreMetadataTag_STRING {
+		if message.Value.Tag != types.LoreMetadataType_STRING {
 			t.Errorf("Expected message to have tag STRING, got %d", message.Value.Tag)
 		} else {
 			msg := *message.Value.String
@@ -2376,7 +2376,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify meta-string metadata
 	if metaString, ok := metadataEvents["meta-string"]; ok {
-		if metaString.Value.Tag != types.LoreMetadataTag_STRING {
+		if metaString.Value.Tag != types.LoreMetadataType_STRING {
 			t.Errorf("Expected meta-string to have tag STRING, got %d", metaString.Value.Tag)
 		} else {
 			value := *metaString.Value.String
@@ -2391,7 +2391,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify meta-file metadata (should be ADDRESS type for binary data)
 	if metaFile, ok := metadataEvents["meta-file"]; ok {
-		if metaFile.Value.Tag != types.LoreMetadataTag_ADDRESS {
+		if metaFile.Value.Tag != types.LoreMetadataType_ADDRESS {
 			t.Errorf("Expected meta-file to have tag ADDRESS, got %d", metaFile.Value.Tag)
 		} else {
 			address := metaFile.Value.Address
@@ -2417,7 +2417,7 @@ func TestLoreRevisionMetadataSetAndList(t *testing.T) {
 
 	// Verify empty-string metadata
 	if emptyString, ok := metadataEvents["empty-string"]; ok {
-		if emptyString.Value.Tag != types.LoreMetadataTag_STRING {
+		if emptyString.Value.Tag != types.LoreMetadataType_STRING {
 			t.Errorf("Expected empty-string to have tag STRING, got %d", emptyString.Value.Tag)
 		} else {
 			value := *emptyString.Value.String
@@ -2742,7 +2742,7 @@ func TestLoreFileMetadataSetAndList(t *testing.T) {
 	// Verify we got the metadata we set
 	found := false
 	for _, m := range metadataEvents {
-		if m.Key == "test-key" && m.Value.Tag == types.LoreMetadataTag_STRING && m.Value.String != nil && *m.Value.String == "test-value" {
+		if m.Key == "test-key" && m.Value.Tag == types.LoreMetadataType_STRING && m.Value.String != nil && *m.Value.String == "test-value" {
 			found = true
 			break
 		}
@@ -3288,6 +3288,269 @@ func TestLoreStoragePutGet(t *testing.T) {
 	})
 	if err != nil || result != 0 {
 		t.Fatalf("LoreStorageClose: err=%v result=%d", err, result)
+	}
+}
+
+// TestLoreRevisionTreeMetadataSetAndGet exercises the only path where Go hands
+// a lore_metadata_t to the library rather than reading one back: the entries of
+// RevisionTreeMetadataSet embed the value by struct, so NewLoreMetadata has to
+// lay the union out exactly as C expects. Every kind is covered, and each
+// value is asserted to survive the round trip through
+// RevisionTreeMetadataGet. The ErrorCode checks matter as much as the payload
+// ones: ErrorCode sits after the union in the get-complete event, so a
+// mis-sized union reads it from the middle of the value.
+func TestLoreRevisionTreeMetadataSetAndGet(t *testing.T) {
+	if libErr != nil {
+		t.Skipf("Lore library not loaded: %v", libErr)
+	}
+
+	globals, cleanupGlobals := types.NewLoreGlobalArgs(types.LoreGlobalArgs{
+		Offline: true,
+	})
+	defer cleanupGlobals()
+
+	openArgs, cleanupOpen := types.NewLoreStorageOpenArgs(types.LoreStorageOpenArgs{
+		InMemory: true,
+	})
+	defer cleanupOpen()
+
+	var storeHandleId uint64
+	result, err := StorageOpen(&globals, &openArgs, &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, _ uint64) {
+			if event.Tag == types.LoreEventTag_STORAGE_OPENED {
+				if d, ok := event.GetData().(*types.LoreStorageOpenedEventDataFFI); ok {
+					storeHandleId = d.HandleId
+				}
+			}
+		},
+		UserContext: 0,
+	})
+	if err != nil || result != 0 {
+		t.Fatalf("LoreStorageOpen: err=%v result=%d", err, result)
+	}
+	if storeHandleId == 0 {
+		t.Fatal("STORAGE_OPENED event not received")
+	}
+
+	var partition types.LorePartition
+	copy(partition.Data[:], "1234567890123456")
+
+	// A zero RevisionHash opens an empty tree, as for an initial commit.
+	loadArgs, cleanupLoad := types.NewLoreRevisionTreeLoadArgs(types.LoreRevisionTreeLoadArgs{
+		Store:      types.LoreStore{HandleId: storeHandleId},
+		Repository: partition,
+	})
+	defer cleanupLoad()
+
+	var treeHandleId uint64
+	result, err = RevisionTreeLoad(&globals, &loadArgs, &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, _ uint64) {
+			if event.Tag == types.LoreEventTag_REVISION_TREE_LOADED {
+				if d, ok := event.GetData().(*types.LoreRevisionTreeLoadedEventDataFFI); ok {
+					treeHandleId = d.HandleId
+				}
+			}
+		},
+		UserContext: 0,
+	})
+	if err != nil || result != 0 {
+		t.Fatalf("LoreRevisionTreeLoad: err=%v result=%d", err, result)
+	}
+	if treeHandleId == 0 {
+		t.Fatal("REVISION_TREE_LOADED event not received")
+	}
+	tree := types.LoreRevisionTree{HandleId: treeHandleId}
+
+	defer func() {
+		closeArgs, cleanupClose := types.NewLoreRevisionTreeCloseArgs(types.LoreRevisionTreeCloseArgs{
+			Handle: tree,
+		})
+		defer cleanupClose()
+		if _, err := RevisionTreeClose(&globals, &closeArgs, &types.LoreEventCallbackConfig{
+			Callback:    func(event *types.LoreEventFFI, _ uint64) {},
+			UserContext: 0,
+		}); err != nil {
+			t.Errorf("LoreRevisionTreeClose: %v", err)
+		}
+	}()
+
+	// One value of every kind the union can hold. Address is the widest member
+	// at 48 bytes, so it is the one that pins down the union's size.
+	stringValue := "a string value -öäÄÅ𒂔"
+	numericValue := uint64(1 << 40)
+	booleanValue := true
+	binaryValue := types.LoreBinary{0x00, 0xff, 0x10, 0x00, 0x7f}
+	var hashValue types.LoreHash
+	var contextValue types.LoreContext
+	copy(hashValue.Data[:], "0123456789abcdef0123456789abcdef")
+	copy(contextValue.Data[:], "fedcba9876543210")
+	addressValue := types.LoreAddress{Hash: hashValue, Context: contextValue}
+
+	// entry_id is echoed back on METADATA_SET_COMPLETE, and the same ids are
+	// reused for the get so a value can be matched to the key that produced it.
+	keys := map[uint64]string{
+		1: "meta-string",
+		2: "meta-numeric",
+		3: "meta-boolean",
+		4: "meta-binary",
+		5: "meta-hash",
+		6: "meta-context",
+		7: "meta-address",
+	}
+
+	setEntries := []types.LoreRevisionTreeMetadataSetEntry{
+		{EntryId: 1, Key: keys[1], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_STRING, String: &stringValue}},
+		{EntryId: 2, Key: keys[2], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_NUMERIC, Numeric: &numericValue}},
+		{EntryId: 3, Key: keys[3], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_BOOLEAN, Boolean: &booleanValue}},
+		{EntryId: 4, Key: keys[4], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_BINARY, Binary: &binaryValue}},
+		{EntryId: 5, Key: keys[5], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_HASH, Hash: &hashValue}},
+		{EntryId: 6, Key: keys[6], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_CONTEXT, Context: &contextValue}},
+		{EntryId: 7, Key: keys[7], Value: types.LoreMetadata{
+			Tag: types.LoreMetadataType_ADDRESS, Address: &addressValue}},
+	}
+
+	setArgs, cleanupSet := types.NewLoreRevisionTreeMetadataSetArgs(types.LoreRevisionTreeMetadataSetArgs{
+		BatchId: 100,
+		Handle:  tree,
+		Entries: setEntries,
+	})
+	defer cleanupSet()
+
+	setComplete := make(map[uint64]bool)
+	var setBatchSeen bool
+	result, err = RevisionTreeMetadataSet(&globals, &setArgs, &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, _ uint64) {
+			switch event.Tag {
+			case types.LoreEventTag_REVISION_TREE_METADATA_SET_COMPLETE:
+				if d, ok := event.GetData().(*types.LoreRevisionTreeMetadataSetCompleteEventDataFFI); ok {
+					if d.ErrorCode != 0 {
+						t.Errorf("METADATA_SET_COMPLETE entry_id=%d ErrorCode=%d", d.EntryId, d.ErrorCode)
+						return
+					}
+					setComplete[d.EntryId] = true
+				}
+			case types.LoreEventTag_REVISION_TREE_BATCH_COMPLETE:
+				if d, ok := event.GetData().(*types.LoreRevisionTreeBatchCompleteEventDataFFI); ok {
+					if d.BatchId != 100 {
+						t.Errorf("BATCH_COMPLETE: want batch_id 100, got %d", d.BatchId)
+					}
+					if d.ErrorCode != 0 {
+						t.Errorf("BATCH_COMPLETE ErrorCode=%d", d.ErrorCode)
+					}
+					setBatchSeen = true
+				}
+			}
+		},
+		UserContext: 0,
+	})
+	if err != nil || result != 0 {
+		t.Fatalf("LoreRevisionTreeMetadataSet: err=%v result=%d", err, result)
+	}
+	if !setBatchSeen {
+		t.Error("REVISION_TREE_BATCH_COMPLETE event not received for the set")
+	}
+	if len(setComplete) != len(setEntries) {
+		t.Fatalf("expected %d METADATA_SET_COMPLETE events, got %d", len(setEntries), len(setComplete))
+	}
+
+	getEntries := make([]types.LoreRevisionTreeMetadataGetEntry, 0, len(setEntries))
+	for _, e := range setEntries {
+		getEntries = append(getEntries, types.LoreRevisionTreeMetadataGetEntry{
+			EntryId: e.EntryId,
+			Key:     e.Key,
+		})
+	}
+
+	// IncludeRevision stays false: these pairs are pending on the handle and
+	// were never committed, so this reads back exactly what was set above.
+	getArgs, cleanupGet := types.NewLoreRevisionTreeMetadataGetArgs(types.LoreRevisionTreeMetadataGetArgs{
+		BatchId: 200,
+		Handle:  tree,
+		Entries: getEntries,
+	})
+	defer cleanupGet()
+
+	// Clone() copies the value out of C-owned memory so it stays valid after
+	// the callback returns.
+	got := make(map[uint64]types.LoreMetadata)
+	gotKeys := make(map[uint64]string)
+	result, err = RevisionTreeMetadataGet(&globals, &getArgs, &types.LoreEventCallbackConfig{
+		Callback: func(event *types.LoreEventFFI, _ uint64) {
+			if event.Tag != types.LoreEventTag_REVISION_TREE_METADATA_GET_COMPLETE {
+				return
+			}
+			d, ok := event.GetData().(*types.LoreRevisionTreeMetadataGetCompleteEventDataFFI)
+			if !ok {
+				return
+			}
+			if d.ErrorCode != 0 {
+				t.Errorf("METADATA_GET_COMPLETE entry_id=%d ErrorCode=%d", d.EntryId, d.ErrorCode)
+				return
+			}
+			gotKeys[d.EntryId] = d.Key.Clone()
+			got[d.EntryId] = d.Value.Clone()
+		},
+		UserContext: 0,
+	})
+	if err != nil || result != 0 {
+		t.Fatalf("LoreRevisionTreeMetadataGet: err=%v result=%d", err, result)
+	}
+	if len(got) != len(getEntries) {
+		t.Fatalf("expected %d METADATA_GET_COMPLETE events, got %d", len(getEntries), len(got))
+	}
+	for id, want := range keys {
+		if gotKeys[id] != want {
+			t.Errorf("entry_id=%d: want key %q, got %q", id, want, gotKeys[id])
+		}
+	}
+
+	if v := got[1]; v.Tag != types.LoreMetadataType_STRING {
+		t.Errorf("string: want tag %d, got %d", types.LoreMetadataType_STRING, v.Tag)
+	} else if v.String == nil || *v.String != stringValue {
+		t.Errorf("string: want %q, got %v", stringValue, v.String)
+	}
+
+	if v := got[2]; v.Tag != types.LoreMetadataType_NUMERIC {
+		t.Errorf("numeric: want tag %d, got %d", types.LoreMetadataType_NUMERIC, v.Tag)
+	} else if v.Numeric == nil || *v.Numeric != numericValue {
+		t.Errorf("numeric: want %d, got %v", numericValue, v.Numeric)
+	}
+
+	if v := got[3]; v.Tag != types.LoreMetadataType_BOOLEAN {
+		t.Errorf("boolean: want tag %d, got %d", types.LoreMetadataType_BOOLEAN, v.Tag)
+	} else if v.Boolean == nil || *v.Boolean != booleanValue {
+		t.Errorf("boolean: want %v, got %v", booleanValue, v.Boolean)
+	}
+
+	if v := got[4]; v.Tag != types.LoreMetadataType_BINARY {
+		t.Errorf("binary: want tag %d, got %d", types.LoreMetadataType_BINARY, v.Tag)
+	} else if v.Binary == nil || !bytes.Equal(*v.Binary, binaryValue) {
+		t.Errorf("binary: want %v, got %v", binaryValue, v.Binary)
+	}
+
+	if v := got[5]; v.Tag != types.LoreMetadataType_HASH {
+		t.Errorf("hash: want tag %d, got %d", types.LoreMetadataType_HASH, v.Tag)
+	} else if v.Hash == nil || v.Hash.Data != hashValue.Data {
+		t.Errorf("hash: want %v, got %v", hashValue.Data, v.Hash)
+	}
+
+	if v := got[6]; v.Tag != types.LoreMetadataType_CONTEXT {
+		t.Errorf("context: want tag %d, got %d", types.LoreMetadataType_CONTEXT, v.Tag)
+	} else if v.Context == nil || v.Context.Data != contextValue.Data {
+		t.Errorf("context: want %v, got %v", contextValue.Data, v.Context)
+	}
+
+	if v := got[7]; v.Tag != types.LoreMetadataType_ADDRESS {
+		t.Errorf("address: want tag %d, got %d", types.LoreMetadataType_ADDRESS, v.Tag)
+	} else if v.Address == nil || v.Address.Hash.Data != addressValue.Hash.Data ||
+		v.Address.Context.Data != addressValue.Context.Data {
+		t.Errorf("address: want %v, got %v", addressValue, v.Address)
 	}
 }
 

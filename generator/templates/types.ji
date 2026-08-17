@@ -471,14 +471,18 @@ func NewLoreBytes(data LoreBinary) (LoreBinaryFFI, func()) {
 
 // LoreMetadataFFI is a C-compatible representation of lore_metadata_t
 type LoreMetadataFFI struct {
-	Tag     LoreMetadataTag
+	Tag     LoreMetadataType
 	padding [4]byte // Ensure union starts at 8-byte boundary
-	// Union data follows (we access it via unsafe pointer arithmetic)
+	// Union storage, sized and aligned for the largest member: LoreAddress,
+	// a 32-byte hash followed by a 16-byte context. Read through the As*()
+	// accessors and written by NewLoreMetadata, both via unsafe pointer
+	// arithmetic.
+	union [6]uint64
 }
 
 // LoreMetadata is a Go-compatible representation of lore_metadata_t
 type LoreMetadata struct {
-	Tag     LoreMetadataTag
+	Tag     LoreMetadataType
 	Address *LoreAddress
 	Boolean *bool
 	Binary  *LoreBinary
@@ -489,72 +493,124 @@ type LoreMetadata struct {
 }
 
 // Precomputed offset to the union data in LoreMetadata
-const loreMetadataUnionOffset = unsafe.Sizeof(LoreMetadataTag(0)) + unsafe.Sizeof([4]byte{})
+const loreMetadataUnionOffset = unsafe.Sizeof(LoreMetadataType(0)) + unsafe.Sizeof([4]byte{})
 
 // AsAddress returns the metadata value as LoreAddress
-// Only valid if Tag == LoreMetadataTag_ADDRESS
+// Only valid if Tag == LoreMetadataType_ADDRESS
 func (m *LoreMetadataFFI) AsLoreAddress() *LoreAddress {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreAddress)(unionPtr)
 }
 
 // AsBoolean returns the metadata value as bool
-// Only valid if Tag == LoreMetadataTag_BOOLEAN
+// Only valid if Tag == LoreMetadataType_BOOLEAN
 func (m *LoreMetadataFFI) AsBoolean() bool {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return *(*uint8)(unionPtr) != 0
 }
 
 // AsBinary returns the metadata value as LoreBinaryFFI
-// Only valid if Tag == LoreMetadataTag_BINARY
+// Only valid if Tag == LoreMetadataType_BINARY
 func (m *LoreMetadataFFI) AsLoreBinary() *LoreBinaryFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreBinaryFFI)(unionPtr)
 }
 
 // AsContext returns the metadata value as LoreContext
-// Only valid if Tag == LoreMetadataTag_CONTEXT
+// Only valid if Tag == LoreMetadataType_CONTEXT
 func (m *LoreMetadataFFI) AsLoreContext() *LoreContext {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreContext)(unionPtr)
 }
 
 // AsHash returns the metadata value as LoreHash
-// Only valid if Tag == LoreMetadataTag_HASH
+// Only valid if Tag == LoreMetadataType_HASH
 func (m *LoreMetadataFFI) AsLoreHash() *LoreHash {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreHash)(unionPtr)
 }
 
 // AsNumeric returns the metadata value as uint64
-// Only valid if Tag == LoreMetadataTag_NUMERIC
+// Only valid if Tag == LoreMetadataType_NUMERIC
 func (m *LoreMetadataFFI) AsNumeric() uint64 {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return *(*uint64)(unionPtr)
 }
 
 // AsString returns the metadata value as LoreString
-// Only valid if Tag == LoreMetadataTag_STRING
+// Only valid if Tag == LoreMetadataType_STRING
 func (m *LoreMetadataFFI) AsLoreString() *LoreString {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreString)(unionPtr)
 }
 
+// NewLoreMetadata converts a LoreMetadata to LoreMetadataFFI, writing the
+// payload into the union storage under the kind named by Tag. A nil payload
+// pointer is written as that kind's zero value. Panics on a Tag that names no
+// kind, including the zero value, which the C API does not accept.
+func NewLoreMetadata(m LoreMetadata) (LoreMetadataFFI, func()) {
+	ffi := LoreMetadataFFI{Tag: m.Tag}
+	unionPtr := unsafe.Pointer(&ffi.union)
+
+	switch m.Tag {
+	case LoreMetadataType_ADDRESS:
+		if m.Address != nil {
+			*(*LoreAddress)(unionPtr) = *m.Address
+		}
+	case LoreMetadataType_BOOLEAN:
+		if m.Boolean != nil && *m.Boolean {
+			*(*uint8)(unionPtr) = 1
+		}
+	case LoreMetadataType_BINARY:
+		var binary LoreBinary
+		if m.Binary != nil {
+			binary = *m.Binary
+		}
+		val, cleanup := NewLoreBinary(binary)
+		*(*LoreBinaryFFI)(unionPtr) = val
+		return ffi, cleanup
+	case LoreMetadataType_CONTEXT:
+		if m.Context != nil {
+			*(*LoreContext)(unionPtr) = *m.Context
+		}
+	case LoreMetadataType_HASH:
+		if m.Hash != nil {
+			*(*LoreHash)(unionPtr) = *m.Hash
+		}
+	case LoreMetadataType_NUMERIC:
+		if m.Numeric != nil {
+			*(*uint64)(unionPtr) = *m.Numeric
+		}
+	case LoreMetadataType_STRING:
+		var str string
+		if m.String != nil {
+			str = *m.String
+		}
+		val, cleanup := NewLoreString(str)
+		*(*LoreString)(unionPtr) = val
+		return ffi, cleanup
+	default:
+		panic(fmt.Sprintf("invalid metadata type: %d", m.Tag))
+	}
+
+	return ffi, func() {}
+}
+
 func (m *LoreMetadataFFI) Clone() LoreMetadata {
 	switch m.Tag {
-	case LoreMetadataTag_ADDRESS:
+	case LoreMetadataType_ADDRESS:
 		addr := m.AsLoreAddress().Clone()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Address: &addr,
 		}
-	case LoreMetadataTag_BOOLEAN:
+	case LoreMetadataType_BOOLEAN:
 		boolVal := m.AsBoolean()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Boolean: &boolVal,
 		}
-	case LoreMetadataTag_BINARY:
+	case LoreMetadataType_BINARY:
 		binary := m.AsLoreBinary()
 		// Copy binary data to Go-owned memory
 		binaryCopy := binary.Clone()
@@ -562,25 +618,25 @@ func (m *LoreMetadataFFI) Clone() LoreMetadata {
 			Tag:    m.Tag,
 			Binary: &binaryCopy,
 		}
-	case LoreMetadataTag_CONTEXT:
+	case LoreMetadataType_CONTEXT:
 		ctx := m.AsLoreContext().Clone()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Context: &ctx,
 		}
-	case LoreMetadataTag_HASH:
+	case LoreMetadataType_HASH:
 		hash := m.AsLoreHash().Clone()
 		return LoreMetadata{
 			Tag:  m.Tag,
 			Hash: &hash,
 		}
-	case LoreMetadataTag_NUMERIC:
+	case LoreMetadataType_NUMERIC:
 		num := m.AsNumeric()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Numeric: &num,
 		}
-	case LoreMetadataTag_STRING:
+	case LoreMetadataType_STRING:
 		str := m.AsLoreString().String()
 		return LoreMetadata{
 			Tag:    m.Tag,

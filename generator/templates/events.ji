@@ -120,7 +120,7 @@ func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
 
 {% for enum_name, enum_values in symbols.enums.items() %}
   {% if enum_name == 'lore_event_tag_t' %}
-    {% for value in enum_values %}
+    {% for value, number in enum_values %}
         func (e *LoreEventFFI) as{{pascal_case(value.lower())}}EventDataFFI() *Lore{{pascal_case(value.lower())}}EventDataFFI {
             unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
             return (*Lore{{pascal_case(value.lower())}}EventDataFFI)(unionPtr)
@@ -133,7 +133,7 @@ func (e *LoreEventFFI) GetData() any {
     switch e.Tag {
 {% for enum_name, enum_values in symbols.enums.items() %}
   {% if enum_name == 'lore_event_tag_t' %}
-    {% for value in enum_values %}
+    {% for value, number in enum_values %}
         case LoreEventTag_{{value}}:
             return e.as{{pascal_case(value.lower())}}EventDataFFI()
     {% endfor %}
@@ -176,7 +176,7 @@ func (e *LoreEventFFI) Clone() LoreEvent {
     switch e.Tag {
 {% for enum_name, enum_values in symbols.enums.items() %}
   {% if enum_name == 'lore_event_tag_t' %}
-    {% for value in enum_values %}
+    {% for value, number in enum_values %}
         case LoreEventTag_{{value}}:
             return LoreEvent{
                 Tag: e.Tag,
