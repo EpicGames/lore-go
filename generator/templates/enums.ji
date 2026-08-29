@@ -2,8 +2,11 @@
 
 package types
 
+{# The underlying type is the signed `int32` rather than `uint32` so that
+   negative enumerators (such as `LORE_ERROR_CODE_INTERNAL = -1`) both compile
+   as constants and read back off an FFI struct field as written. #}
 {% for enum_name, enum_values in symbols.enums.items() %}
-    type {{pascal_case(enum_name.removesuffix("_t"))}} uint32
+    type {{pascal_case(enum_name.removesuffix("_t"))}} int32
     const (
         {% for value, number in enum_values %}
             {{pascal_case(enum_name.removesuffix("_t"))}}_{{value}} {{pascal_case(enum_name.removesuffix("_t"))}} = {{number}}
