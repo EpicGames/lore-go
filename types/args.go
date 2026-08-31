@@ -56,6 +56,18 @@ type LoreGlobalArgs struct {
 	this only state fragments and fragments flagged for local cache priority
 	are retained */
 	Cache bool
+	/* Authentication token to use instead of the one held in the secure token
+	store. Authorization tokens are exchanged from it as they are needed.
+
+	Supplying either token puts the call in external-credential mode: `identity`
+	must be left empty, since it is read from the token. */
+	IdentityToken string
+	/* Authorization token to use instead of exchanging one with the auth
+	service. If given, will not perform token exchanges.
+
+	Supplying either token puts the call in external-credential mode: `identity`
+	must be left empty, since it is read from the token. */
+	AccessToken string
 }
 
 type LoreGlobalArgsFFI struct {
@@ -112,6 +124,18 @@ type LoreGlobalArgsFFI struct {
 	this only state fragments and fragments flagged for local cache priority
 	are retained */
 	Cache uint8
+	/* Authentication token to use instead of the one held in the secure token
+	store. Authorization tokens are exchanged from it as they are needed.
+
+	Supplying either token puts the call in external-credential mode: `identity`
+	must be left empty, since it is read from the token. */
+	IdentityToken LoreString
+	/* Authorization token to use instead of exchanging one with the auth
+	service. If given, will not perform token exchanges.
+
+	Supplying either token puts the call in external-credential mode: `identity`
+	must be left empty, since it is read from the token. */
+	AccessToken LoreString
 }
 
 func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
@@ -131,6 +155,8 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valStoreKeepAlive, cleanupStoreKeepAlive := Newuint8(opts.StoreKeepAlive)
 	valSyncData, cleanupSyncData := Newuint8(opts.SyncData)
 	valCache, cleanupCache := Newuint8(opts.Cache)
+	valIdentityToken, cleanupIdentityToken := NewLoreString(opts.IdentityToken)
+	valAccessToken, cleanupAccessToken := NewLoreString(opts.AccessToken)
 
 	cleanup := func() {
 		cleanupRepositoryPath()
@@ -149,6 +175,8 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		cleanupStoreKeepAlive()
 		cleanupSyncData()
 		cleanupCache()
+		cleanupIdentityToken()
+		cleanupAccessToken()
 	}
 
 	return LoreGlobalArgsFFI{
@@ -174,6 +202,8 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		StoreKeepAliveSeconds: opts.StoreKeepAliveSeconds,
 		SyncData:              valSyncData,
 		Cache:                 valCache,
+		IdentityToken:         valIdentityToken,
+		AccessToken:           valAccessToken,
 	}, cleanup
 }
 
@@ -426,22 +456,29 @@ func NewLoreBranchCreateArgs(opts LoreBranchCreateArgs) (LoreBranchCreateArgsFFI
 type LoreBranchInfoArgs struct {
 	/* Name of the branch */
 	Branch string
+	/* Optional path of a link whose repository the branch belongs to */
+	Link string
 }
 
 type LoreBranchInfoArgsFFI struct {
 	/* Name of the branch */
 	Branch LoreString
+	/* Optional path of a link whose repository the branch belongs to */
+	Link LoreString
 }
 
 func NewLoreBranchInfoArgs(opts LoreBranchInfoArgs) (LoreBranchInfoArgsFFI, func()) {
 	valBranch, cleanupBranch := NewLoreString(opts.Branch)
+	valLink, cleanupLink := NewLoreString(opts.Link)
 
 	cleanup := func() {
 		cleanupBranch()
+		cleanupLink()
 	}
 
 	return LoreBranchInfoArgsFFI{
 		Branch: valBranch,
+		Link:   valLink,
 	}, cleanup
 }
 
@@ -535,22 +572,50 @@ func NewLoreBranchUnprotectArgs(opts LoreBranchUnprotectArgs) (LoreBranchUnprote
 type LoreBranchArchiveArgs struct {
 	/* Name of the branch */
 	Branch string
+	/* If set, archive only in this layer (mount path relative to repo root) */
+	Layer string
+	/* Also archive the branch in every configured layer */
+	IncludeLayers bool
+	/* If set, archive only in this link (mount path relative to repo root) */
+	Link string
+	/* Also archive the branch in every configured link */
+	IncludeLinks bool
 }
 
 type LoreBranchArchiveArgsFFI struct {
 	/* Name of the branch */
 	Branch LoreString
+	/* If set, archive only in this layer (mount path relative to repo root) */
+	Layer LoreString
+	/* Also archive the branch in every configured layer */
+	IncludeLayers uint8
+	/* If set, archive only in this link (mount path relative to repo root) */
+	Link LoreString
+	/* Also archive the branch in every configured link */
+	IncludeLinks uint8
 }
 
 func NewLoreBranchArchiveArgs(opts LoreBranchArchiveArgs) (LoreBranchArchiveArgsFFI, func()) {
 	valBranch, cleanupBranch := NewLoreString(opts.Branch)
+	valLayer, cleanupLayer := NewLoreString(opts.Layer)
+	valIncludeLayers, cleanupIncludeLayers := Newuint8(opts.IncludeLayers)
+	valLink, cleanupLink := NewLoreString(opts.Link)
+	valIncludeLinks, cleanupIncludeLinks := Newuint8(opts.IncludeLinks)
 
 	cleanup := func() {
 		cleanupBranch()
+		cleanupLayer()
+		cleanupIncludeLayers()
+		cleanupLink()
+		cleanupIncludeLinks()
 	}
 
 	return LoreBranchArchiveArgsFFI{
-		Branch: valBranch,
+		Branch:        valBranch,
+		Layer:         valLayer,
+		IncludeLayers: valIncludeLayers,
+		Link:          valLink,
+		IncludeLinks:  valIncludeLinks,
 	}, cleanup
 }
 
@@ -2056,6 +2121,28 @@ func NewLoreLinkRemoveArgs(opts LoreLinkRemoveArgs) (LoreLinkRemoveArgsFFI, func
 	}, cleanup
 }
 
+type LoreLinkInfoArgs struct {
+	/* Path within this repository of the link to describe */
+	LinkPath string
+}
+
+type LoreLinkInfoArgsFFI struct {
+	/* Path within this repository of the link to describe */
+	LinkPath LoreString
+}
+
+func NewLoreLinkInfoArgs(opts LoreLinkInfoArgs) (LoreLinkInfoArgsFFI, func()) {
+	valLinkPath, cleanupLinkPath := NewLoreString(opts.LinkPath)
+
+	cleanup := func() {
+		cleanupLinkPath()
+	}
+
+	return LoreLinkInfoArgsFFI{
+		LinkPath: valLinkPath,
+	}, cleanup
+}
+
 type LoreLinkListArgs struct {
 	Unused int
 }
@@ -2116,16 +2203,15 @@ type LoreRepositoryCloneArgs struct {
 	Virtually bool
 	/* Use direct file write */
 	DirectFileWrite bool
-	/* Use direct file I/O instead of memory mapping files */
-	DirectFileIo bool
 	/* (Optional) Layer module */
 	Layer string
 	/* (Optional) Layer metadata key to link revisions with */
 	LayerMetadata string
 	/* (Optional) File containing list of files to prefetch */
 	Prefetch string
-	/* Use the shared store instead of a local immutable store */
-	UseSharedStore bool
+	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath string
 	/* Clone without local repository tracking (memory-only stores) */
@@ -2153,16 +2239,15 @@ type LoreRepositoryCloneArgsFFI struct {
 	Virtually uint8
 	/* Use direct file write */
 	DirectFileWrite uint8
-	/* Use direct file I/O instead of memory mapping files */
-	DirectFileIo uint8
 	/* (Optional) Layer module */
 	Layer LoreString
 	/* (Optional) Layer metadata key to link revisions with */
 	LayerMetadata LoreString
 	/* (Optional) File containing list of files to prefetch */
 	Prefetch LoreString
-	/* Use the shared store instead of a local immutable store */
-	UseSharedStore uint8
+	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath LoreString
 	/* Clone without local repository tracking (memory-only stores) */
@@ -2184,11 +2269,9 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 	valBare, cleanupBare := Newuint8(opts.Bare)
 	valVirtually, cleanupVirtually := Newuint8(opts.Virtually)
 	valDirectFileWrite, cleanupDirectFileWrite := Newuint8(opts.DirectFileWrite)
-	valDirectFileIo, cleanupDirectFileIo := Newuint8(opts.DirectFileIo)
 	valLayer, cleanupLayer := NewLoreString(opts.Layer)
 	valLayerMetadata, cleanupLayerMetadata := NewLoreString(opts.LayerMetadata)
 	valPrefetch, cleanupPrefetch := NewLoreString(opts.Prefetch)
-	valUseSharedStore, cleanupUseSharedStore := Newuint8(opts.UseSharedStore)
 	valSharedStorePath, cleanupSharedStorePath := NewLoreString(opts.SharedStorePath)
 	valNoTracking, cleanupNoTracking := Newuint8(opts.NoTracking)
 	valRootFiles, cleanupRootFiles := NewLoreStringArray(opts.RootFiles)
@@ -2202,11 +2285,9 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 		cleanupBare()
 		cleanupVirtually()
 		cleanupDirectFileWrite()
-		cleanupDirectFileIo()
 		cleanupLayer()
 		cleanupLayerMetadata()
 		cleanupPrefetch()
-		cleanupUseSharedStore()
 		cleanupSharedStorePath()
 		cleanupNoTracking()
 		cleanupRootFiles()
@@ -2221,11 +2302,10 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 		Bare:                 valBare,
 		Virtually:            valVirtually,
 		DirectFileWrite:      valDirectFileWrite,
-		DirectFileIo:         valDirectFileIo,
 		Layer:                valLayer,
 		LayerMetadata:        valLayerMetadata,
 		Prefetch:             valPrefetch,
-		UseSharedStore:       valUseSharedStore,
+		UseSharedStore:       opts.UseSharedStore,
 		SharedStorePath:      valSharedStorePath,
 		NoTracking:           valNoTracking,
 		RootFiles:            valRootFiles,
@@ -2298,8 +2378,9 @@ type LoreRepositoryCreateArgs struct {
 	Description string
 	/* Optional repository ID, set to empty string to generate a new ID */
 	Id string
-	/* Use the shared store instead of a local immutable store */
-	UseSharedStore bool
+	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath string
 }
@@ -2311,8 +2392,9 @@ type LoreRepositoryCreateArgsFFI struct {
 	Description LoreString
 	/* Optional repository ID, set to empty string to generate a new ID */
 	Id LoreString
-	/* Use the shared store instead of a local immutable store */
-	UseSharedStore uint8
+	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath LoreString
 }
@@ -2321,14 +2403,12 @@ func NewLoreRepositoryCreateArgs(opts LoreRepositoryCreateArgs) (LoreRepositoryC
 	valRepositoryUrl, cleanupRepositoryUrl := NewLoreString(opts.RepositoryUrl)
 	valDescription, cleanupDescription := NewLoreString(opts.Description)
 	valId, cleanupId := NewLoreString(opts.Id)
-	valUseSharedStore, cleanupUseSharedStore := Newuint8(opts.UseSharedStore)
 	valSharedStorePath, cleanupSharedStorePath := NewLoreString(opts.SharedStorePath)
 
 	cleanup := func() {
 		cleanupRepositoryUrl()
 		cleanupDescription()
 		cleanupId()
-		cleanupUseSharedStore()
 		cleanupSharedStorePath()
 	}
 
@@ -2336,7 +2416,7 @@ func NewLoreRepositoryCreateArgs(opts LoreRepositoryCreateArgs) (LoreRepositoryC
 		RepositoryUrl:   valRepositoryUrl,
 		Description:     valDescription,
 		Id:              valId,
-		UseSharedStore:  valUseSharedStore,
+		UseSharedStore:  opts.UseSharedStore,
 		SharedStorePath: valSharedStorePath,
 	}, cleanup
 }
@@ -3468,6 +3548,62 @@ func NewLoreStorageGetArgs(opts LoreStorageGetArgs) (LoreStorageGetArgsFFI, func
 	}, cleanup
 }
 
+type LoreStorageGetResolvedArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to resolve and read; each runs independently and emits its own event sequence */
+	Items LoreStorageGetResolvedItemArray
+}
+
+type LoreStorageGetResolvedArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to resolve and read; each runs independently and emits its own event sequence */
+	Items LoreStorageGetResolvedItemArrayFFI
+}
+
+func NewLoreStorageGetResolvedArgs(opts LoreStorageGetResolvedArgs) (LoreStorageGetResolvedArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageGetResolvedItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageGetResolvedArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStoragePutResolvedArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Buffers to store and publish; each runs independently and emits its own
+	`PUT_ITEM_COMPLETE` */
+	Items LoreStoragePutResolvedItemArray
+}
+
+type LoreStoragePutResolvedArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Buffers to store and publish; each runs independently and emits its own
+	`PUT_ITEM_COMPLETE` */
+	Items LoreStoragePutResolvedItemArrayFFI
+}
+
+func NewLoreStoragePutResolvedArgs(opts LoreStoragePutResolvedArgs) (LoreStoragePutResolvedArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStoragePutResolvedItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStoragePutResolvedArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
 type LoreStorageCloseArgs struct {
 	/* Handle to release; from `LORE_EVENT_STORAGE_OPENED` */
 	Handle LoreStore
@@ -4213,8 +4349,8 @@ func NewLoreRevisionTreeNodePathArgs(opts LoreRevisionTreeNodePathArgs) (LoreRev
 }
 
 type LoreRevisionTreeAddArgs struct {
-	/* Per-call correlation id echoed back in `BATCH_COMPLETE` */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
 	/* Nodes to add; each emits its own `ADD_COMPLETE` */
@@ -4222,8 +4358,8 @@ type LoreRevisionTreeAddArgs struct {
 }
 
 type LoreRevisionTreeAddArgsFFI struct {
-	/* Per-call correlation id echoed back in `BATCH_COMPLETE` */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
 	/* Nodes to add; each emits its own `ADD_COMPLETE` */
@@ -4238,202 +4374,210 @@ func NewLoreRevisionTreeAddArgs(opts LoreRevisionTreeAddArgs) (LoreRevisionTreeA
 	}
 
 	return LoreRevisionTreeAddArgsFFI{
-		Id:      opts.Id,
+		BatchId: opts.BatchId,
 		Handle:  opts.Handle,
 		Entries: valEntries,
 	}, cleanup
 }
 
 type LoreRevisionTreeDeleteArgs struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Subtree root to mark deleted, including its transitive children */
-	NodeId uint32
+	/* Subtrees to remove; each emits its own `DELETE_COMPLETE` */
+	Entries LoreRevisionTreeDeleteEntryArray
 }
 
 type LoreRevisionTreeDeleteArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Subtree root to mark deleted, including its transitive children */
-	NodeId uint32
+	/* Subtrees to remove; each emits its own `DELETE_COMPLETE` */
+	Entries LoreRevisionTreeDeleteEntryArrayFFI
 }
 
 func NewLoreRevisionTreeDeleteArgs(opts LoreRevisionTreeDeleteArgs) (LoreRevisionTreeDeleteArgsFFI, func()) {
+	valEntries, cleanupEntries := NewLoreRevisionTreeDeleteEntryArray(opts.Entries)
 
 	cleanup := func() {
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeDeleteArgsFFI{
-		Id:     opts.Id,
-		Handle: opts.Handle,
-		NodeId: opts.NodeId,
+		BatchId: opts.BatchId,
+		Handle:  opts.Handle,
+		Entries: valEntries,
 	}, cleanup
 }
 
 type LoreRevisionTreeModifyArgs struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Leaf node to update; non-leaf targets are rejected */
-	NodeId uint32
-	/* New POSIX permission bits */
-	Mode uint16
-	/* New content size in bytes */
-	Size uint64
-	/* New content address; the existing `file_id` context is preserved */
-	Address LoreAddress
+	/* Nodes to rewrite; each emits its own `MODIFY_COMPLETE` */
+	Entries LoreRevisionTreeModifyEntryArray
 }
 
 type LoreRevisionTreeModifyArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Leaf node to update; non-leaf targets are rejected */
-	NodeId uint32
-	/* New POSIX permission bits */
-	Mode uint16
-	/* New content size in bytes */
-	Size uint64
-	/* New content address; the existing `file_id` context is preserved */
-	Address LoreAddress
+	/* Nodes to rewrite; each emits its own `MODIFY_COMPLETE` */
+	Entries LoreRevisionTreeModifyEntryArrayFFI
 }
 
 func NewLoreRevisionTreeModifyArgs(opts LoreRevisionTreeModifyArgs) (LoreRevisionTreeModifyArgsFFI, func()) {
+	valEntries, cleanupEntries := NewLoreRevisionTreeModifyEntryArray(opts.Entries)
 
 	cleanup := func() {
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeModifyArgsFFI{
-		Id:      opts.Id,
+		BatchId: opts.BatchId,
 		Handle:  opts.Handle,
-		NodeId:  opts.NodeId,
-		Mode:    opts.Mode,
-		Size:    opts.Size,
-		Address: opts.Address,
+		Entries: valEntries,
 	}, cleanup
 }
 
 type LoreRevisionTreeMoveArgs struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Node to move; its `file_id` is preserved across the move */
-	NodeId uint32
-	/* Parent node the moved node is reparented under */
-	DestinationParentId uint32
-	/* UTF-8 name the moved node takes at the destination */
-	DstName string
+	/* Nodes to move; each emits its own `MOVE_COMPLETE` */
+	Entries LoreRevisionTreeMoveEntryArray
 }
 
 type LoreRevisionTreeMoveArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Node to move; its `file_id` is preserved across the move */
-	NodeId uint32
-	/* Parent node the moved node is reparented under */
-	DestinationParentId uint32
-	/* UTF-8 name the moved node takes at the destination */
-	DstName LoreString
+	/* Nodes to move; each emits its own `MOVE_COMPLETE` */
+	Entries LoreRevisionTreeMoveEntryArrayFFI
 }
 
 func NewLoreRevisionTreeMoveArgs(opts LoreRevisionTreeMoveArgs) (LoreRevisionTreeMoveArgsFFI, func()) {
-	valDstName, cleanupDstName := NewLoreString(opts.DstName)
+	valEntries, cleanupEntries := NewLoreRevisionTreeMoveEntryArray(opts.Entries)
 
 	cleanup := func() {
-		cleanupDstName()
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeMoveArgsFFI{
-		Id:                  opts.Id,
-		Handle:              opts.Handle,
-		NodeId:              opts.NodeId,
-		DestinationParentId: opts.DestinationParentId,
-		DstName:             valDstName,
+		BatchId: opts.BatchId,
+		Handle:  opts.Handle,
+		Entries: valEntries,
 	}, cleanup
 }
 
 type LoreRevisionTreeMetadataSetArgs struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Metadata key; re-setting it overwrites the pending value */
-	Key string
-	/* Value stored under the key */
-	Value string
-	/* Value encoding, matching `LoreRevisionMetadataSetArgs::formats` */
-	Format uint32
+	/* Pairs to record; each emits its own `METADATA_SET_COMPLETE` */
+	Entries LoreRevisionTreeMetadataSetEntryArray
 }
 
 type LoreRevisionTreeMetadataSetArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to mutate */
 	Handle LoreRevisionTree
-	/* Metadata key; re-setting it overwrites the pending value */
-	Key LoreString
-	/* Value stored under the key */
-	Value LoreString
-	/* Value encoding, matching `LoreRevisionMetadataSetArgs::formats` */
-	Format uint32
+	/* Pairs to record; each emits its own `METADATA_SET_COMPLETE` */
+	Entries LoreRevisionTreeMetadataSetEntryArrayFFI
 }
 
 func NewLoreRevisionTreeMetadataSetArgs(opts LoreRevisionTreeMetadataSetArgs) (LoreRevisionTreeMetadataSetArgsFFI, func()) {
-	valKey, cleanupKey := NewLoreString(opts.Key)
-	valValue, cleanupValue := NewLoreString(opts.Value)
+	valEntries, cleanupEntries := NewLoreRevisionTreeMetadataSetEntryArray(opts.Entries)
 
 	cleanup := func() {
-		cleanupKey()
-		cleanupValue()
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeMetadataSetArgsFFI{
-		Id:     opts.Id,
-		Handle: opts.Handle,
-		Key:    valKey,
-		Value:  valValue,
-		Format: opts.Format,
+		BatchId: opts.BatchId,
+		Handle:  opts.Handle,
+		Entries: valEntries,
 	}, cleanup
 }
 
 type LoreRevisionTreeMetadataGetArgs struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to read from */
 	Handle LoreRevisionTree
-	/* Metadata key to read; pending edits take precedence over the revision */
-	Key string
+	/* `0` reads only the revision being built; `1` also falls back to the
+	loaded revision for a key the handle has no entry for */
+	IncludeRevision bool
+	/* Keys to read; a key that resolves emits its own `METADATA_GET_COMPLETE` */
+	Entries LoreRevisionTreeMetadataGetEntryArray
 }
 
 type LoreRevisionTreeMetadataGetArgsFFI struct {
-	/* Per-call correlation id echoed back in events */
-	Id uint64
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
 	/* Loaded revision-tree handle to read from */
 	Handle LoreRevisionTree
-	/* Metadata key to read; pending edits take precedence over the revision */
-	Key LoreString
+	/* `0` reads only the revision being built; `1` also falls back to the
+	loaded revision for a key the handle has no entry for */
+	IncludeRevision uint8
+	/* Keys to read; a key that resolves emits its own `METADATA_GET_COMPLETE` */
+	Entries LoreRevisionTreeMetadataGetEntryArrayFFI
 }
 
 func NewLoreRevisionTreeMetadataGetArgs(opts LoreRevisionTreeMetadataGetArgs) (LoreRevisionTreeMetadataGetArgsFFI, func()) {
-	valKey, cleanupKey := NewLoreString(opts.Key)
+	valIncludeRevision, cleanupIncludeRevision := Newuint8(opts.IncludeRevision)
+	valEntries, cleanupEntries := NewLoreRevisionTreeMetadataGetEntryArray(opts.Entries)
 
 	cleanup := func() {
-		cleanupKey()
+		cleanupIncludeRevision()
+		cleanupEntries()
 	}
 
 	return LoreRevisionTreeMetadataGetArgsFFI{
-		Id:     opts.Id,
-		Handle: opts.Handle,
-		Key:    valKey,
+		BatchId:         opts.BatchId,
+		Handle:          opts.Handle,
+		IncludeRevision: valIncludeRevision,
+		Entries:         valEntries,
+	}, cleanup
+}
+
+type LoreRevisionTreeMetadataClearArgs struct {
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
+	/* Loaded revision-tree handle to mutate */
+	Handle LoreRevisionTree
+	/* Keys to remove; each emits its own `METADATA_CLEAR_COMPLETE` */
+	Entries LoreRevisionTreeMetadataClearEntryArray
+}
+
+type LoreRevisionTreeMetadataClearArgsFFI struct {
+	/* Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE` */
+	BatchId uint64
+	/* Loaded revision-tree handle to mutate */
+	Handle LoreRevisionTree
+	/* Keys to remove; each emits its own `METADATA_CLEAR_COMPLETE` */
+	Entries LoreRevisionTreeMetadataClearEntryArrayFFI
+}
+
+func NewLoreRevisionTreeMetadataClearArgs(opts LoreRevisionTreeMetadataClearArgs) (LoreRevisionTreeMetadataClearArgsFFI, func()) {
+	valEntries, cleanupEntries := NewLoreRevisionTreeMetadataClearEntryArray(opts.Entries)
+
+	cleanup := func() {
+		cleanupEntries()
+	}
+
+	return LoreRevisionTreeMetadataClearArgsFFI{
+		BatchId: opts.BatchId,
+		Handle:  opts.Handle,
+		Entries: valEntries,
 	}, cleanup
 }
 
@@ -4442,8 +4586,6 @@ type LoreRevisionTreeCommitArgs struct {
 	Id uint64
 	/* Loaded revision-tree handle to freeze and commit */
 	Handle LoreRevisionTree
-	/* Branch whose tip is atomically advanced to the new revision */
-	Branch LoreBranchId
 	/* Commit tuneables (local-only vs remote-uploading) */
 	Options LoreRevisionTreeCommitOptions
 }
@@ -4453,8 +4595,6 @@ type LoreRevisionTreeCommitArgsFFI struct {
 	Id uint64
 	/* Loaded revision-tree handle to freeze and commit */
 	Handle LoreRevisionTree
-	/* Branch whose tip is atomically advanced to the new revision */
-	Branch LoreBranchId
 	/* Commit tuneables (local-only vs remote-uploading) */
 	Options LoreRevisionTreeCommitOptions
 }
@@ -4467,7 +4607,6 @@ func NewLoreRevisionTreeCommitArgs(opts LoreRevisionTreeCommitArgs) (LoreRevisio
 	return LoreRevisionTreeCommitArgsFFI{
 		Id:      opts.Id,
 		Handle:  opts.Handle,
-		Branch:  opts.Branch,
 		Options: opts.Options,
 	}, cleanup
 }

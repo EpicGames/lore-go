@@ -450,6 +450,138 @@ func NewLoreStorageGetItemArray(arr []LoreStorageGetItem) (LoreStorageGetItemArr
 	}, cleanup
 }
 
+type LoreStorageGetResolvedItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageGetResolvedItemArray = []LoreStorageGetResolvedItem
+
+func (arr LoreStorageGetResolvedItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageGetResolvedItemArrayFFI) Get(index int) LoreStorageGetResolvedItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStorageGetResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageGetResolvedItemArrayFFI) Clone() []LoreStorageGetResolvedItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageGetResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageGetResolvedItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageGetResolvedItemArray(arr []LoreStorageGetResolvedItem) (LoreStorageGetResolvedItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageGetResolvedItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageGetResolvedItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageGetResolvedItem(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreStorageGetResolvedItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreStoragePutResolvedItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStoragePutResolvedItemArray = []LoreStoragePutResolvedItem
+
+func (arr LoreStoragePutResolvedItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStoragePutResolvedItemArrayFFI) Get(index int) LoreStoragePutResolvedItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreStoragePutResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStoragePutResolvedItemArrayFFI) Clone() []LoreStoragePutResolvedItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreStoragePutResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStoragePutResolvedItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStoragePutResolvedItemArray(arr []LoreStoragePutResolvedItem) (LoreStoragePutResolvedItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStoragePutResolvedItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStoragePutResolvedItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStoragePutResolvedItem(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreStoragePutResolvedItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreStorageGetMetadataItemArrayFFI struct {
 	Ptr   uintptr
 	Count uint64
@@ -1176,6 +1308,402 @@ func NewLoreRevisionTreeAddEntryArray(arr []LoreRevisionTreeAddEntry) (LoreRevis
 	}, cleanup
 }
 
+type LoreRevisionTreeDeleteEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeDeleteEntryArray = []LoreRevisionTreeDeleteEntry
+
+func (arr LoreRevisionTreeDeleteEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeDeleteEntryArrayFFI) Get(index int) LoreRevisionTreeDeleteEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeDeleteEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeDeleteEntryArrayFFI) Clone() []LoreRevisionTreeDeleteEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeDeleteEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeDeleteEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeDeleteEntryArray(arr []LoreRevisionTreeDeleteEntry) (LoreRevisionTreeDeleteEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeDeleteEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeDeleteEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeDeleteEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeDeleteEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeModifyEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeModifyEntryArray = []LoreRevisionTreeModifyEntry
+
+func (arr LoreRevisionTreeModifyEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeModifyEntryArrayFFI) Get(index int) LoreRevisionTreeModifyEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeModifyEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeModifyEntryArrayFFI) Clone() []LoreRevisionTreeModifyEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeModifyEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeModifyEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeModifyEntryArray(arr []LoreRevisionTreeModifyEntry) (LoreRevisionTreeModifyEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeModifyEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeModifyEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeModifyEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeModifyEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeMoveEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeMoveEntryArray = []LoreRevisionTreeMoveEntry
+
+func (arr LoreRevisionTreeMoveEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeMoveEntryArrayFFI) Get(index int) LoreRevisionTreeMoveEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeMoveEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeMoveEntryArrayFFI) Clone() []LoreRevisionTreeMoveEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeMoveEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeMoveEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeMoveEntryArray(arr []LoreRevisionTreeMoveEntry) (LoreRevisionTreeMoveEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeMoveEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeMoveEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeMoveEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeMoveEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeMetadataSetEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeMetadataSetEntryArray = []LoreRevisionTreeMetadataSetEntry
+
+func (arr LoreRevisionTreeMetadataSetEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeMetadataSetEntryArrayFFI) Get(index int) LoreRevisionTreeMetadataSetEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeMetadataSetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeMetadataSetEntryArrayFFI) Clone() []LoreRevisionTreeMetadataSetEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataSetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeMetadataSetEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeMetadataSetEntryArray(arr []LoreRevisionTreeMetadataSetEntry) (LoreRevisionTreeMetadataSetEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeMetadataSetEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeMetadataSetEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeMetadataSetEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeMetadataSetEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeMetadataGetEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeMetadataGetEntryArray = []LoreRevisionTreeMetadataGetEntry
+
+func (arr LoreRevisionTreeMetadataGetEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeMetadataGetEntryArrayFFI) Get(index int) LoreRevisionTreeMetadataGetEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeMetadataGetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeMetadataGetEntryArrayFFI) Clone() []LoreRevisionTreeMetadataGetEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataGetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeMetadataGetEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeMetadataGetEntryArray(arr []LoreRevisionTreeMetadataGetEntry) (LoreRevisionTreeMetadataGetEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeMetadataGetEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeMetadataGetEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeMetadataGetEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeMetadataGetEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreRevisionTreeMetadataClearEntryArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreRevisionTreeMetadataClearEntryArray = []LoreRevisionTreeMetadataClearEntry
+
+func (arr LoreRevisionTreeMetadataClearEntryArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreRevisionTreeMetadataClearEntryArrayFFI) Get(index int) LoreRevisionTreeMetadataClearEntry {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	slice := unsafe.Slice((*LoreRevisionTreeMetadataClearEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreRevisionTreeMetadataClearEntryArrayFFI) Clone() []LoreRevisionTreeMetadataClearEntry {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("cannot access FFI data outside the callback function")
+	}
+	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataClearEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreRevisionTreeMetadataClearEntry, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreRevisionTreeMetadataClearEntryArray(arr []LoreRevisionTreeMetadataClearEntry) (LoreRevisionTreeMetadataClearEntryArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreRevisionTreeMetadataClearEntryArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreRevisionTreeMetadataClearEntryFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreRevisionTreeMetadataClearEntry(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreRevisionTreeMetadataClearEntryArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreTraceLocationFFI struct {
 	/* The source file path. */
 	File LoreString
@@ -1311,6 +1839,8 @@ type LoreBranchDiffNodeDataFFI struct {
 	Path LoreString
 	/* Set when the change was merged automatically. */
 	Automerged uint8
+	/* Previous path of the node when it was moved or copied. Empty otherwise. */
+	FromPath LoreString
 }
 
 type LoreBranchDiffNodeData struct {
@@ -1320,21 +1850,26 @@ type LoreBranchDiffNodeData struct {
 	Path string
 	/* Set when the change was merged automatically. */
 	Automerged bool
+	/* Previous path of the node when it was moved or copied. Empty otherwise. */
+	FromPath string
 }
 
 func NewLoreBranchDiffNodeData(opts LoreBranchDiffNodeData) (LoreBranchDiffNodeDataFFI, func()) {
 	valPath, cleanupPath := NewLoreString(opts.Path)
 	valAutomerged, cleanupAutomerged := Newuint8(opts.Automerged)
+	valFromPath, cleanupFromPath := NewLoreString(opts.FromPath)
 
 	cleanup := func() {
 		cleanupPath()
 		cleanupAutomerged()
+		cleanupFromPath()
 	}
 
 	return LoreBranchDiffNodeDataFFI{
 		Action:     opts.Action,
 		Path:       valPath,
 		Automerged: valAutomerged,
+		FromPath:   valFromPath,
 	}, cleanup
 }
 
@@ -1343,6 +1878,7 @@ func (e *LoreBranchDiffNodeDataFFI) Clone() LoreBranchDiffNodeData {
 		Action:     e.Action,
 		Path:       e.Path.Clone(),
 		Automerged: e.Automerged != 0,
+		FromPath:   e.FromPath.Clone(),
 	}
 }
 
@@ -1899,7 +2435,15 @@ type LoreStorageGetItemFFI struct {
 	Partition LorePartition
 	/* Content address to read; `hash == Hash::default()` short-circuits to an empty buffer */
 	Address LoreAddress
-	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer */
+	/* First content byte to read, counted from the start of the decompressed content.
+	Past the end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to read from `offset`; `0` reads to the end. A range reaching past the
+	end is clamped to it, so `GET_DATA` may carry fewer bytes than asked for */
+	Length uint64
+	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer. A read
+	that fails partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short
+	with a success code */
 	Streaming uint8
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
@@ -1913,7 +2457,15 @@ type LoreStorageGetItem struct {
 	Partition LorePartition
 	/* Content address to read; `hash == Hash::default()` short-circuits to an empty buffer */
 	Address LoreAddress
-	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer */
+	/* First content byte to read, counted from the start of the decompressed content.
+	Past the end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to read from `offset`; `0` reads to the end. A range reaching past the
+	end is clamped to it, so `GET_DATA` may carry fewer bytes than asked for */
+	Length uint64
+	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer. A read
+	that fails partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short
+	with a success code */
 	Streaming bool
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
@@ -1933,6 +2485,8 @@ func NewLoreStorageGetItem(opts LoreStorageGetItem) (LoreStorageGetItemFFI, func
 		Id:         opts.Id,
 		Partition:  opts.Partition,
 		Address:    opts.Address,
+		Offset:     opts.Offset,
+		Length:     opts.Length,
 		Streaming:  valStreaming,
 		LocalCache: valLocalCache,
 	}, cleanup
@@ -1943,8 +2497,168 @@ func (e *LoreStorageGetItemFFI) Clone() LoreStorageGetItem {
 		Id:         e.Id,
 		Partition:  e.Partition,
 		Address:    e.Address,
+		Offset:     e.Offset,
+		Length:     e.Length,
 		Streaming:  e.Streaming != 0,
 		LocalCache: e.LocalCache != 0,
+	}
+}
+
+type LoreStorageGetResolvedItemFFI struct {
+	/* Caller-chosen id echoed back in every event for this item */
+	Id uint64
+	/* Partition to resolve and read within; the zero/default partition rejects with
+	`INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to resolve, always read as `KeyType::Resolve` */
+	Key LoreHash
+	/* Paired with the resolved hash to address the immutable read; the mutable store yields
+	only a hash. */
+	Context LoreContext
+	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer, as
+	`lore_storage_get` does. Peak memory then follows the fragment size rather than the
+	content size, which is what makes a key naming something large usable. A read that fails
+	partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short with a
+	success code */
+	Streaming uint8
+	/* Cache fetched bytes back to the local store even without the producer's
+	`PayloadLocalCachePriority` hint */
+	LocalCache uint8
+}
+
+type LoreStorageGetResolvedItem struct {
+	/* Caller-chosen id echoed back in every event for this item */
+	Id uint64
+	/* Partition to resolve and read within; the zero/default partition rejects with
+	`INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to resolve, always read as `KeyType::Resolve` */
+	Key LoreHash
+	/* Paired with the resolved hash to address the immutable read; the mutable store yields
+	only a hash. */
+	Context LoreContext
+	/* Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer, as
+	`lore_storage_get` does. Peak memory then follows the fragment size rather than the
+	content size, which is what makes a key naming something large usable. A read that fails
+	partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short with a
+	success code */
+	Streaming bool
+	/* Cache fetched bytes back to the local store even without the producer's
+	`PayloadLocalCachePriority` hint */
+	LocalCache bool
+}
+
+func NewLoreStorageGetResolvedItem(opts LoreStorageGetResolvedItem) (LoreStorageGetResolvedItemFFI, func()) {
+	valStreaming, cleanupStreaming := Newuint8(opts.Streaming)
+	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+
+	cleanup := func() {
+		cleanupStreaming()
+		cleanupLocalCache()
+	}
+
+	return LoreStorageGetResolvedItemFFI{
+		Id:         opts.Id,
+		Partition:  opts.Partition,
+		Key:        opts.Key,
+		Context:    opts.Context,
+		Streaming:  valStreaming,
+		LocalCache: valLocalCache,
+	}, cleanup
+}
+
+func (e *LoreStorageGetResolvedItemFFI) Clone() LoreStorageGetResolvedItem {
+	return LoreStorageGetResolvedItem{
+		Id:         e.Id,
+		Partition:  e.Partition,
+		Key:        e.Key,
+		Context:    e.Context,
+		Streaming:  e.Streaming != 0,
+		LocalCache: e.LocalCache != 0,
+	}
+}
+
+type LoreStoragePutResolvedItemFFI struct {
+	/* Caller-chosen id echoed back in `PUT_ITEM_COMPLETE` */
+	Id uint64
+	/* Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Dedup tag stored alongside the content hash in the resulting address, and the context a
+	later `get_resolved` must read the key at */
+	Context LoreContext
+	/* Borrowed view into caller memory; bytes must live until `Complete` fires. A zero-length
+	buffer removes the key's mapping instead of publishing one */
+	Data LoreBytesFFI
+	/* Also publish the content and the mapping to the remote; ignored when the handle has no
+	remote or the call is offline/local */
+	RemoteWrite uint8
+	/* Tag the fragment with `PayloadLocalCachePriority` so future remote reads always cache it
+	locally */
+	LocalCache uint8
+	/* Leaf fragment size cap for large buffers; `0` lets the writer choose. Ignored for buffers
+	under `FRAGMENT_SIZE_THRESHOLD` */
+	FixedSizeChunk uint64
+}
+
+type LoreStoragePutResolvedItem struct {
+	/* Caller-chosen id echoed back in `PUT_ITEM_COMPLETE` */
+	Id uint64
+	/* Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Dedup tag stored alongside the content hash in the resulting address, and the context a
+	later `get_resolved` must read the key at */
+	Context LoreContext
+	/* Borrowed view into caller memory; bytes must live until `Complete` fires. A zero-length
+	buffer removes the key's mapping instead of publishing one */
+	Data LoreBytes
+	/* Also publish the content and the mapping to the remote; ignored when the handle has no
+	remote or the call is offline/local */
+	RemoteWrite bool
+	/* Tag the fragment with `PayloadLocalCachePriority` so future remote reads always cache it
+	locally */
+	LocalCache bool
+	/* Leaf fragment size cap for large buffers; `0` lets the writer choose. Ignored for buffers
+	under `FRAGMENT_SIZE_THRESHOLD` */
+	FixedSizeChunk uint64
+}
+
+func NewLoreStoragePutResolvedItem(opts LoreStoragePutResolvedItem) (LoreStoragePutResolvedItemFFI, func()) {
+	valData, cleanupData := NewLoreBytes(opts.Data)
+	valRemoteWrite, cleanupRemoteWrite := Newuint8(opts.RemoteWrite)
+	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+
+	cleanup := func() {
+		cleanupData()
+		cleanupRemoteWrite()
+		cleanupLocalCache()
+	}
+
+	return LoreStoragePutResolvedItemFFI{
+		Id:             opts.Id,
+		Partition:      opts.Partition,
+		Key:            opts.Key,
+		Context:        opts.Context,
+		Data:           valData,
+		RemoteWrite:    valRemoteWrite,
+		LocalCache:     valLocalCache,
+		FixedSizeChunk: opts.FixedSizeChunk,
+	}, cleanup
+}
+
+func (e *LoreStoragePutResolvedItemFFI) Clone() LoreStoragePutResolvedItem {
+	return LoreStoragePutResolvedItem{
+		Id:             e.Id,
+		Partition:      e.Partition,
+		Key:            e.Key,
+		Context:        e.Context,
+		Data:           e.Data.Clone(),
+		RemoteWrite:    e.RemoteWrite != 0,
+		LocalCache:     e.LocalCache != 0,
+		FixedSizeChunk: e.FixedSizeChunk,
 	}
 }
 
@@ -2346,6 +3060,12 @@ type LoreStorageGetFileItemFFI struct {
 	/* Destination path; empty rejects with `INVALID_ARGUMENTS`. Multi-fragment writes
 	stage via `<path>.loretmp` then atomically rename */
 	Path LoreString
+	/* First content byte to write, counted from the start of the decompressed content.
+	Past the end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+	requested range starting at its own first byte, and is sized to it */
+	Length uint64
 	/* Cache fetched fragments back to the local store, not just write them to `path` */
 	LocalCache uint8
 }
@@ -2360,6 +3080,12 @@ type LoreStorageGetFileItem struct {
 	/* Destination path; empty rejects with `INVALID_ARGUMENTS`. Multi-fragment writes
 	stage via `<path>.loretmp` then atomically rename */
 	Path string
+	/* First content byte to write, counted from the start of the decompressed content.
+	Past the end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+	requested range starting at its own first byte, and is sized to it */
+	Length uint64
 	/* Cache fetched fragments back to the local store, not just write them to `path` */
 	LocalCache bool
 }
@@ -2378,6 +3104,8 @@ func NewLoreStorageGetFileItem(opts LoreStorageGetFileItem) (LoreStorageGetFileI
 		Partition:  opts.Partition,
 		Address:    opts.Address,
 		Path:       valPath,
+		Offset:     opts.Offset,
+		Length:     opts.Length,
 		LocalCache: valLocalCache,
 	}, cleanup
 }
@@ -2388,6 +3116,8 @@ func (e *LoreStorageGetFileItemFFI) Clone() LoreStorageGetFileItem {
 		Partition:  e.Partition,
 		Address:    e.Address,
 		Path:       e.Path.Clone(),
+		Offset:     e.Offset,
+		Length:     e.Length,
 		LocalCache: e.LocalCache != 0,
 	}
 }
@@ -2533,13 +3263,13 @@ func (e *LoreRevisionTreeFFI) Clone() LoreRevisionTree {
 }
 
 type LoreRevisionTreeAddEntryFFI struct {
-	/* Caller-chosen id echoed back in this entry's `ADD_COMPLETE` */
-	Id uint64
-	/* Parent for the new node; the invalid-node sentinel selects `parent_entry` */
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `ADD_COMPLETE` */
+	EntryId uint64
+	/* Parent for the new node; the invalid-node sentinel selects `parent_entry_index` */
 	ParentNodeId uint32
 	/* Index of an earlier entry in this batch whose new node is the parent;
 	read only when `parent_node_id` is the invalid-node sentinel */
-	ParentEntry uint32
+	ParentEntryIndex uint32
 	/* UTF-8 name of the new child within its parent */
 	Name LoreString
 	/* `LoreNodeType` encoding: `DIRECTORY = 0`, `FILE = 1`, `LINK = 2` */
@@ -2553,13 +3283,13 @@ type LoreRevisionTreeAddEntryFFI struct {
 }
 
 type LoreRevisionTreeAddEntry struct {
-	/* Caller-chosen id echoed back in this entry's `ADD_COMPLETE` */
-	Id uint64
-	/* Parent for the new node; the invalid-node sentinel selects `parent_entry` */
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `ADD_COMPLETE` */
+	EntryId uint64
+	/* Parent for the new node; the invalid-node sentinel selects `parent_entry_index` */
 	ParentNodeId uint32
 	/* Index of an earlier entry in this batch whose new node is the parent;
 	read only when `parent_node_id` is the invalid-node sentinel */
-	ParentEntry uint32
+	ParentEntryIndex uint32
 	/* UTF-8 name of the new child within its parent */
 	Name string
 	/* `LoreNodeType` encoding: `DIRECTORY = 0`, `FILE = 1`, `LINK = 2` */
@@ -2580,27 +3310,265 @@ func NewLoreRevisionTreeAddEntry(opts LoreRevisionTreeAddEntry) (LoreRevisionTre
 	}
 
 	return LoreRevisionTreeAddEntryFFI{
-		Id:           opts.Id,
-		ParentNodeId: opts.ParentNodeId,
-		ParentEntry:  opts.ParentEntry,
-		Name:         valName,
-		Kind:         opts.Kind,
-		Mode:         opts.Mode,
-		Size:         opts.Size,
-		Address:      opts.Address,
+		EntryId:          opts.EntryId,
+		ParentNodeId:     opts.ParentNodeId,
+		ParentEntryIndex: opts.ParentEntryIndex,
+		Name:             valName,
+		Kind:             opts.Kind,
+		Mode:             opts.Mode,
+		Size:             opts.Size,
+		Address:          opts.Address,
 	}, cleanup
 }
 
 func (e *LoreRevisionTreeAddEntryFFI) Clone() LoreRevisionTreeAddEntry {
 	return LoreRevisionTreeAddEntry{
-		Id:           e.Id,
-		ParentNodeId: e.ParentNodeId,
-		ParentEntry:  e.ParentEntry,
-		Name:         e.Name.Clone(),
-		Kind:         e.Kind,
-		Mode:         e.Mode,
-		Size:         e.Size,
-		Address:      e.Address,
+		EntryId:          e.EntryId,
+		ParentNodeId:     e.ParentNodeId,
+		ParentEntryIndex: e.ParentEntryIndex,
+		Name:             e.Name.Clone(),
+		Kind:             e.Kind,
+		Mode:             e.Mode,
+		Size:             e.Size,
+		Address:          e.Address,
+	}
+}
+
+type LoreRevisionTreeDeleteEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `DELETE_COMPLETE` */
+	EntryId uint64
+	/* Root of the subtree to remove, including its transitive children */
+	NodeId uint32
+}
+
+type LoreRevisionTreeDeleteEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `DELETE_COMPLETE` */
+	EntryId uint64
+	/* Root of the subtree to remove, including its transitive children */
+	NodeId uint32
+}
+
+func NewLoreRevisionTreeDeleteEntry(opts LoreRevisionTreeDeleteEntry) (LoreRevisionTreeDeleteEntryFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreRevisionTreeDeleteEntryFFI{
+		EntryId: opts.EntryId,
+		NodeId:  opts.NodeId,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeDeleteEntryFFI) Clone() LoreRevisionTreeDeleteEntry {
+	return LoreRevisionTreeDeleteEntry{
+		EntryId: e.EntryId,
+		NodeId:  e.NodeId,
+	}
+}
+
+type LoreRevisionTreeModifyEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `MODIFY_COMPLETE` */
+	EntryId uint64
+	/* Leaf node to rewrite; non-leaf targets are rejected */
+	NodeId uint32
+	/* New POSIX permission bits */
+	Mode uint16
+	/* New content size in bytes */
+	Size uint64
+	/* New content address; a zero `context` preserves the node's file id */
+	Address LoreAddress
+}
+
+type LoreRevisionTreeModifyEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `MODIFY_COMPLETE` */
+	EntryId uint64
+	/* Leaf node to rewrite; non-leaf targets are rejected */
+	NodeId uint32
+	/* New POSIX permission bits */
+	Mode uint16
+	/* New content size in bytes */
+	Size uint64
+	/* New content address; a zero `context` preserves the node's file id */
+	Address LoreAddress
+}
+
+func NewLoreRevisionTreeModifyEntry(opts LoreRevisionTreeModifyEntry) (LoreRevisionTreeModifyEntryFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreRevisionTreeModifyEntryFFI{
+		EntryId: opts.EntryId,
+		NodeId:  opts.NodeId,
+		Mode:    opts.Mode,
+		Size:    opts.Size,
+		Address: opts.Address,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeModifyEntryFFI) Clone() LoreRevisionTreeModifyEntry {
+	return LoreRevisionTreeModifyEntry{
+		EntryId: e.EntryId,
+		NodeId:  e.NodeId,
+		Mode:    e.Mode,
+		Size:    e.Size,
+		Address: e.Address,
+	}
+}
+
+type LoreRevisionTreeMoveEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `MOVE_COMPLETE` */
+	EntryId uint64
+	/* Node to move; its `file_id` is preserved across the move */
+	NodeId uint32
+	/* Parent node the moved node is reparented under; its current parent renames it */
+	DestinationParentId uint32
+	/* UTF-8 name the moved node takes at the destination */
+	DstName LoreString
+}
+
+type LoreRevisionTreeMoveEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `MOVE_COMPLETE` */
+	EntryId uint64
+	/* Node to move; its `file_id` is preserved across the move */
+	NodeId uint32
+	/* Parent node the moved node is reparented under; its current parent renames it */
+	DestinationParentId uint32
+	/* UTF-8 name the moved node takes at the destination */
+	DstName string
+}
+
+func NewLoreRevisionTreeMoveEntry(opts LoreRevisionTreeMoveEntry) (LoreRevisionTreeMoveEntryFFI, func()) {
+	valDstName, cleanupDstName := NewLoreString(opts.DstName)
+
+	cleanup := func() {
+		cleanupDstName()
+	}
+
+	return LoreRevisionTreeMoveEntryFFI{
+		EntryId:             opts.EntryId,
+		NodeId:              opts.NodeId,
+		DestinationParentId: opts.DestinationParentId,
+		DstName:             valDstName,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeMoveEntryFFI) Clone() LoreRevisionTreeMoveEntry {
+	return LoreRevisionTreeMoveEntry{
+		EntryId:             e.EntryId,
+		NodeId:              e.NodeId,
+		DestinationParentId: e.DestinationParentId,
+		DstName:             e.DstName.Clone(),
+	}
+}
+
+type LoreRevisionTreeMetadataSetEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_SET_COMPLETE` */
+	EntryId uint64
+	/* Metadata key; a later entry naming it overwrites this one */
+	Key LoreString
+	/* Value to store, stored under the kind it carries */
+	Value LoreMetadataFFI
+}
+
+type LoreRevisionTreeMetadataSetEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_SET_COMPLETE` */
+	EntryId uint64
+	/* Metadata key; a later entry naming it overwrites this one */
+	Key string
+	/* Value to store, stored under the kind it carries */
+	Value LoreMetadata
+}
+
+func NewLoreRevisionTreeMetadataSetEntry(opts LoreRevisionTreeMetadataSetEntry) (LoreRevisionTreeMetadataSetEntryFFI, func()) {
+	valKey, cleanupKey := NewLoreString(opts.Key)
+	valValue, cleanupValue := NewLoreMetadata(opts.Value)
+
+	cleanup := func() {
+		cleanupKey()
+		cleanupValue()
+	}
+
+	return LoreRevisionTreeMetadataSetEntryFFI{
+		EntryId: opts.EntryId,
+		Key:     valKey,
+		Value:   valValue,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeMetadataSetEntryFFI) Clone() LoreRevisionTreeMetadataSetEntry {
+	return LoreRevisionTreeMetadataSetEntry{
+		EntryId: e.EntryId,
+		Key:     e.Key.Clone(),
+		Value:   e.Value.Clone(),
+	}
+}
+
+type LoreRevisionTreeMetadataGetEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_GET_COMPLETE` */
+	EntryId uint64
+	/* Metadata key to read */
+	Key LoreString
+}
+
+type LoreRevisionTreeMetadataGetEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_GET_COMPLETE` */
+	EntryId uint64
+	/* Metadata key to read */
+	Key string
+}
+
+func NewLoreRevisionTreeMetadataGetEntry(opts LoreRevisionTreeMetadataGetEntry) (LoreRevisionTreeMetadataGetEntryFFI, func()) {
+	valKey, cleanupKey := NewLoreString(opts.Key)
+
+	cleanup := func() {
+		cleanupKey()
+	}
+
+	return LoreRevisionTreeMetadataGetEntryFFI{
+		EntryId: opts.EntryId,
+		Key:     valKey,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeMetadataGetEntryFFI) Clone() LoreRevisionTreeMetadataGetEntry {
+	return LoreRevisionTreeMetadataGetEntry{
+		EntryId: e.EntryId,
+		Key:     e.Key.Clone(),
+	}
+}
+
+type LoreRevisionTreeMetadataClearEntryFFI struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_CLEAR_COMPLETE` */
+	EntryId uint64
+	/* Metadata key to remove; a key that is not set is a no-op */
+	Key LoreString
+}
+
+type LoreRevisionTreeMetadataClearEntry struct {
+	/* Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_CLEAR_COMPLETE` */
+	EntryId uint64
+	/* Metadata key to remove; a key that is not set is a no-op */
+	Key string
+}
+
+func NewLoreRevisionTreeMetadataClearEntry(opts LoreRevisionTreeMetadataClearEntry) (LoreRevisionTreeMetadataClearEntryFFI, func()) {
+	valKey, cleanupKey := NewLoreString(opts.Key)
+
+	cleanup := func() {
+		cleanupKey()
+	}
+
+	return LoreRevisionTreeMetadataClearEntryFFI{
+		EntryId: opts.EntryId,
+		Key:     valKey,
+	}, cleanup
+}
+
+func (e *LoreRevisionTreeMetadataClearEntryFFI) Clone() LoreRevisionTreeMetadataClearEntry {
+	return LoreRevisionTreeMetadataClearEntry{
+		EntryId: e.EntryId,
+		Key:     e.Key.Clone(),
 	}
 }
 
@@ -2907,14 +3875,18 @@ func NewLoreBytes(data LoreBinary) (LoreBinaryFFI, func()) {
 
 // LoreMetadataFFI is a C-compatible representation of lore_metadata_t
 type LoreMetadataFFI struct {
-	Tag     LoreMetadataTag
+	Tag     LoreMetadataType
 	padding [4]byte // Ensure union starts at 8-byte boundary
-	// Union data follows (we access it via unsafe pointer arithmetic)
+	// Union storage, sized and aligned for the largest member: LoreAddress,
+	// a 32-byte hash followed by a 16-byte context. Read through the As*()
+	// accessors and written by NewLoreMetadata, both via unsafe pointer
+	// arithmetic.
+	union [6]uint64
 }
 
 // LoreMetadata is a Go-compatible representation of lore_metadata_t
 type LoreMetadata struct {
-	Tag     LoreMetadataTag
+	Tag     LoreMetadataType
 	Address *LoreAddress
 	Boolean *bool
 	Binary  *LoreBinary
@@ -2925,72 +3897,124 @@ type LoreMetadata struct {
 }
 
 // Precomputed offset to the union data in LoreMetadata
-const loreMetadataUnionOffset = unsafe.Sizeof(LoreMetadataTag(0)) + unsafe.Sizeof([4]byte{})
+const loreMetadataUnionOffset = unsafe.Sizeof(LoreMetadataType(0)) + unsafe.Sizeof([4]byte{})
 
 // AsAddress returns the metadata value as LoreAddress
-// Only valid if Tag == LoreMetadataTag_ADDRESS
+// Only valid if Tag == LoreMetadataType_ADDRESS
 func (m *LoreMetadataFFI) AsLoreAddress() *LoreAddress {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreAddress)(unionPtr)
 }
 
 // AsBoolean returns the metadata value as bool
-// Only valid if Tag == LoreMetadataTag_BOOLEAN
+// Only valid if Tag == LoreMetadataType_BOOLEAN
 func (m *LoreMetadataFFI) AsBoolean() bool {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return *(*uint8)(unionPtr) != 0
 }
 
 // AsBinary returns the metadata value as LoreBinaryFFI
-// Only valid if Tag == LoreMetadataTag_BINARY
+// Only valid if Tag == LoreMetadataType_BINARY
 func (m *LoreMetadataFFI) AsLoreBinary() *LoreBinaryFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreBinaryFFI)(unionPtr)
 }
 
 // AsContext returns the metadata value as LoreContext
-// Only valid if Tag == LoreMetadataTag_CONTEXT
+// Only valid if Tag == LoreMetadataType_CONTEXT
 func (m *LoreMetadataFFI) AsLoreContext() *LoreContext {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreContext)(unionPtr)
 }
 
 // AsHash returns the metadata value as LoreHash
-// Only valid if Tag == LoreMetadataTag_HASH
+// Only valid if Tag == LoreMetadataType_HASH
 func (m *LoreMetadataFFI) AsLoreHash() *LoreHash {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreHash)(unionPtr)
 }
 
 // AsNumeric returns the metadata value as uint64
-// Only valid if Tag == LoreMetadataTag_NUMERIC
+// Only valid if Tag == LoreMetadataType_NUMERIC
 func (m *LoreMetadataFFI) AsNumeric() uint64 {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return *(*uint64)(unionPtr)
 }
 
 // AsString returns the metadata value as LoreString
-// Only valid if Tag == LoreMetadataTag_STRING
+// Only valid if Tag == LoreMetadataType_STRING
 func (m *LoreMetadataFFI) AsLoreString() *LoreString {
 	unionPtr := unsafe.Add(unsafe.Pointer(m), loreMetadataUnionOffset)
 	return (*LoreString)(unionPtr)
 }
 
+// NewLoreMetadata converts a LoreMetadata to LoreMetadataFFI, writing the
+// payload into the union storage under the kind named by Tag. A nil payload
+// pointer is written as that kind's zero value. Panics on a Tag that names no
+// kind, including the zero value, which the C API does not accept.
+func NewLoreMetadata(m LoreMetadata) (LoreMetadataFFI, func()) {
+	ffi := LoreMetadataFFI{Tag: m.Tag}
+	unionPtr := unsafe.Pointer(&ffi.union)
+
+	switch m.Tag {
+	case LoreMetadataType_ADDRESS:
+		if m.Address != nil {
+			*(*LoreAddress)(unionPtr) = *m.Address
+		}
+	case LoreMetadataType_BOOLEAN:
+		if m.Boolean != nil && *m.Boolean {
+			*(*uint8)(unionPtr) = 1
+		}
+	case LoreMetadataType_BINARY:
+		var binary LoreBinary
+		if m.Binary != nil {
+			binary = *m.Binary
+		}
+		val, cleanup := NewLoreBinary(binary)
+		*(*LoreBinaryFFI)(unionPtr) = val
+		return ffi, cleanup
+	case LoreMetadataType_CONTEXT:
+		if m.Context != nil {
+			*(*LoreContext)(unionPtr) = *m.Context
+		}
+	case LoreMetadataType_HASH:
+		if m.Hash != nil {
+			*(*LoreHash)(unionPtr) = *m.Hash
+		}
+	case LoreMetadataType_NUMERIC:
+		if m.Numeric != nil {
+			*(*uint64)(unionPtr) = *m.Numeric
+		}
+	case LoreMetadataType_STRING:
+		var str string
+		if m.String != nil {
+			str = *m.String
+		}
+		val, cleanup := NewLoreString(str)
+		*(*LoreString)(unionPtr) = val
+		return ffi, cleanup
+	default:
+		panic(fmt.Sprintf("invalid metadata type: %d", m.Tag))
+	}
+
+	return ffi, func() {}
+}
+
 func (m *LoreMetadataFFI) Clone() LoreMetadata {
 	switch m.Tag {
-	case LoreMetadataTag_ADDRESS:
+	case LoreMetadataType_ADDRESS:
 		addr := m.AsLoreAddress().Clone()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Address: &addr,
 		}
-	case LoreMetadataTag_BOOLEAN:
+	case LoreMetadataType_BOOLEAN:
 		boolVal := m.AsBoolean()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Boolean: &boolVal,
 		}
-	case LoreMetadataTag_BINARY:
+	case LoreMetadataType_BINARY:
 		binary := m.AsLoreBinary()
 		// Copy binary data to Go-owned memory
 		binaryCopy := binary.Clone()
@@ -2998,25 +4022,25 @@ func (m *LoreMetadataFFI) Clone() LoreMetadata {
 			Tag:    m.Tag,
 			Binary: &binaryCopy,
 		}
-	case LoreMetadataTag_CONTEXT:
+	case LoreMetadataType_CONTEXT:
 		ctx := m.AsLoreContext().Clone()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Context: &ctx,
 		}
-	case LoreMetadataTag_HASH:
+	case LoreMetadataType_HASH:
 		hash := m.AsLoreHash().Clone()
 		return LoreMetadata{
 			Tag:  m.Tag,
 			Hash: &hash,
 		}
-	case LoreMetadataTag_NUMERIC:
+	case LoreMetadataType_NUMERIC:
 		num := m.AsNumeric()
 		return LoreMetadata{
 			Tag:     m.Tag,
 			Numeric: &num,
 		}
-	case LoreMetadataTag_STRING:
+	case LoreMetadataType_STRING:
 		str := m.AsLoreString().String()
 		return LoreMetadata{
 			Tag:    m.Tag,

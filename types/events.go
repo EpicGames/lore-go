@@ -1114,11 +1114,19 @@ type LoreBranchPushFragmentEndEventData struct {
 	BytesTransferred uint64
 }
 type LoreBranchPushBranchCreateBeginEventDataFFI struct {
+	/* The repository the branch is created in. */
+	Repository LoreRepositoryId
+	/* The branch being created. */
+	Branch LoreBranchId
 	/* The local revision the branch starts from. */
 	LocalRevision LoreHash
 }
 
 type LoreBranchPushBranchCreateBeginEventData struct {
+	/* The repository the branch is created in. */
+	Repository LoreRepositoryId
+	/* The branch being created. */
+	Branch LoreBranchId
 	/* The local revision the branch starts from. */
 	LocalRevision LoreHash
 }
@@ -1132,6 +1140,10 @@ type LoreBranchPushBranchCreateEndEventData struct {
 	RemoteRevision LoreHash
 }
 type LoreBranchPushRevisionPushBeginEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed to. */
+	Branch LoreBranchId
 	/* The latest revision of the branch on the remote. */
 	RemoteRevision LoreHash
 	/* The local revision being pushed. */
@@ -1139,6 +1151,10 @@ type LoreBranchPushRevisionPushBeginEventDataFFI struct {
 }
 
 type LoreBranchPushRevisionPushBeginEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed to. */
+	Branch LoreBranchId
 	/* The latest revision of the branch on the remote. */
 	RemoteRevision LoreHash
 	/* The local revision being pushed. */
@@ -1162,6 +1178,10 @@ type LoreBranchPushRevisionPushUpdateEventData struct {
 	NewRevisionNumber uint64
 }
 type LoreBranchPushRevisionPushEndEventDataFFI struct {
+	/* The repository that was pushed. */
+	Repository LoreRepositoryId
+	/* The branch that was pushed to. */
+	Branch LoreBranchId
 	/* The branch revision on the remote before the push. */
 	OldRemoteRevision LoreHash
 	/* The branch revision on the remote after the push. */
@@ -1175,6 +1195,10 @@ type LoreBranchPushRevisionPushEndEventDataFFI struct {
 }
 
 type LoreBranchPushRevisionPushEndEventData struct {
+	/* The repository that was pushed. */
+	Repository LoreRepositoryId
+	/* The branch that was pushed to. */
+	Branch LoreBranchId
 	/* The branch revision on the remote before the push. */
 	OldRemoteRevision LoreHash
 	/* The branch revision on the remote after the push. */
@@ -1836,6 +1860,33 @@ type LoreLayerStagedEntryEventData struct {
 	/* Number of staged files in the layer. */
 	StagedFileCount uint64
 }
+type LoreLinkBranchCreateEventDataFFI struct {
+	/* Path of the link within the parent repository. */
+	LinkPath LoreString
+	/* Identifier of the repository the link points to. */
+	LinkRepository LoreRepositoryId
+	/* Identifier of the branch in the linked repository. */
+	Branch LoreBranchId
+	/* Hash of the latest revision on that branch. */
+	Revision LoreHash
+	/* Set when a branch with this identifier was already present and was
+	reused rather than created. */
+	Reused uint8
+}
+
+type LoreLinkBranchCreateEventData struct {
+	/* Path of the link within the parent repository. */
+	LinkPath string
+	/* Identifier of the repository the link points to. */
+	LinkRepository LoreRepositoryId
+	/* Identifier of the branch in the linked repository. */
+	Branch LoreBranchId
+	/* Hash of the latest revision on that branch. */
+	Revision LoreHash
+	/* Set when a branch with this identifier was already present and was
+	reused rather than created. */
+	Reused bool
+}
 type LoreLinkChangeEventDataFFI struct {
 	/* Path of the link within the parent repository. */
 	LinkPath LoreString
@@ -1874,8 +1925,9 @@ type LoreLinkEntryEventDataFFI struct {
 	SourcePath LoreString
 	/* Identifier of the branch the link is pinned to. */
 	Branch LoreBranchId
-	/* Name of the branch the link is pinned to. */
-	BranchName LoreString
+	/* Set when the link follows its parent's branch instead of being pinned to
+	an explicit one, in which case `branch` is the branch it resolved to. */
+	Tracking uint8
 	/* Hash of the revision the link is pinned to. */
 	Revision LoreHash
 	/* Link flags. */
@@ -1895,12 +1947,36 @@ type LoreLinkEntryEventData struct {
 	SourcePath string
 	/* Identifier of the branch the link is pinned to. */
 	Branch LoreBranchId
-	/* Name of the branch the link is pinned to. */
-	BranchName string
+	/* Set when the link follows its parent's branch instead of being pinned to
+	an explicit one, in which case `branch` is the branch it resolved to. */
+	Tracking bool
 	/* Hash of the revision the link is pinned to. */
 	Revision LoreHash
 	/* Link flags. */
 	Flags uint32
+}
+type LoreLinkInfoEventDataFFI struct {
+	/* The link as `LinkEntry` reports it. */
+	Entry LoreLinkEntryEventDataFFI
+	/* Hash of the remote latest revision of the pinned branch, zero when the
+	remote was not consulted. */
+	RemoteRevision LoreHash
+	/* Staged change to the link itself. */
+	StagedState LoreLinkStagedState
+	/* Number of staged files inside the linked repository. */
+	StagedFileCount uint64
+}
+
+type LoreLinkInfoEventData struct {
+	/* The link as `LinkEntry` reports it. */
+	Entry LoreLinkEntryEventData
+	/* Hash of the remote latest revision of the pinned branch, zero when the
+	remote was not consulted. */
+	RemoteRevision LoreHash
+	/* Staged change to the link itself. */
+	StagedState LoreLinkStagedState
+	/* Number of staged files inside the linked repository. */
+	StagedFileCount uint64
 }
 type LoreLockFileAcquireBeginEventDataFFI struct {
 	/* Number of acquire entries that follow. */
@@ -2591,6 +2667,10 @@ type LoreRepositoryStatusSummaryEventDataFFI struct {
 	Moves uint64
 	/* Number of files copied. */
 	Copies uint64
+	/* Number of files the answer required reading, including any that could not be read. */
+	HashChecks uint64
+	/* Number of files a recorded modified time answered for, sparing them a hash check. */
+	MtimeMatches uint64
 }
 
 type LoreRepositoryStatusSummaryEventData struct {
@@ -2604,6 +2684,10 @@ type LoreRepositoryStatusSummaryEventData struct {
 	Moves uint64
 	/* Number of files copied. */
 	Copies uint64
+	/* Number of files the answer required reading, including any that could not be read. */
+	HashChecks uint64
+	/* Number of files a recorded modified time answered for, sparing them a hash check. */
+	MtimeMatches uint64
 }
 type LoreRepositoryStoreImmutableQueryEventDataFFI struct {
 	/* Address of fragment */
@@ -2771,6 +2855,8 @@ type LoreRevisionDiffFileEventDataFFI struct {
 	OldAddress LoreAddress
 	/* Address of the file content on the target side. */
 	NewAddress LoreAddress
+	/* Previous path of the file when it was moved or copied. Empty otherwise. */
+	FromPath LoreString
 }
 
 type LoreRevisionDiffFileEventData struct {
@@ -2786,6 +2872,8 @@ type LoreRevisionDiffFileEventData struct {
 	OldAddress LoreAddress
 	/* Address of the file content on the target side. */
 	NewAddress LoreAddress
+	/* Previous path of the file when it was moved or copied. Empty otherwise. */
+	FromPath string
 }
 type LoreRevisionFindEventDataFFI struct {
 	/* Signature of the revision that was found. */
@@ -3232,6 +3320,15 @@ type LoreStoragePutItemCompleteEventDataFFI struct {
 	Address LoreAddress
 	/* The outcome for the item. */
 	ErrorCode LoreErrorCode
+	/* Non-zero when the local store holds the content. Appended after the original three
+	fields, so a consumer reading only those is unaffected — `serde(default)` lets an older
+	payload that lacks the field deserialize, as events cross the IPC boundary. */
+	StoredLocal uint8
+	/* Non-zero when the content reached the remote, or was already durable there. A remote
+	write that fails still reports `error_code = NONE` if the local write succeeded — this is
+	how a caller tells the two apart. For fragmented content it is the intersection across
+	every fragment, so it is set only when the whole tree is remote. */
+	StoredRemote uint8
 }
 
 type LoreStoragePutItemCompleteEventData struct {
@@ -3241,6 +3338,15 @@ type LoreStoragePutItemCompleteEventData struct {
 	Address LoreAddress
 	/* The outcome for the item. */
 	ErrorCode LoreErrorCode
+	/* Non-zero when the local store holds the content. Appended after the original three
+	fields, so a consumer reading only those is unaffected — `serde(default)` lets an older
+	payload that lacks the field deserialize, as events cross the IPC boundary. */
+	StoredLocal bool
+	/* Non-zero when the content reached the remote, or was already durable there. A remote
+	write that fails still reports `error_code = NONE` if the local write succeeded — this is
+	how a caller tells the two apart. For fragmented content it is the intersection across
+	every fragment, so it is set only when the whole tree is remote. */
+	StoredRemote bool
 }
 type LoreStorageGetHeaderEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3446,6 +3552,9 @@ type LoreRevisionTreeChildEventDataFFI struct {
 	ParentId uint32
 	/* The kind of node. */
 	Kind uint32
+	/* The change staged on the node, as a `LoreNodeStagedAction`. A child
+	staged for deletion is still listed, carrying the deletion here. */
+	StagedAction uint32
 	/* The file mode bits. */
 	Mode uint16
 	/* The size of the node's content in bytes. */
@@ -3467,6 +3576,9 @@ type LoreRevisionTreeChildEventData struct {
 	ParentId uint32
 	/* The kind of node. */
 	Kind uint32
+	/* The change staged on the node, as a `LoreNodeStagedAction`. A child
+	staged for deletion is still listed, carrying the deletion here. */
+	StagedAction uint32
 	/* The file mode bits. */
 	Mode uint16
 	/* The size of the node's content in bytes. */
@@ -3491,6 +3603,9 @@ type LoreRevisionTreeNodeInfoEventDataFFI struct {
 	ParentId uint32
 	/* The kind of node. */
 	Kind uint32
+	/* The change staged on the node, as a `LoreNodeStagedAction`. A node
+	staged for deletion still reports, carrying the deletion here. */
+	StagedAction uint32
 	/* The file mode bits. */
 	Mode uint16
 	/* The size of the node's content in bytes. */
@@ -3518,6 +3633,9 @@ type LoreRevisionTreeNodeInfoEventData struct {
 	ParentId uint32
 	/* The kind of node. */
 	Kind uint32
+	/* The change staged on the node, as a `LoreNodeStagedAction`. A node
+	staged for deletion still reports, carrying the deletion here. */
+	StagedAction uint32
 	/* The file mode bits. */
 	Mode uint16
 	/* The size of the node's content in bytes. */
@@ -3555,8 +3673,8 @@ type LoreRevisionTreeNodePathEventData struct {
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeAddCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The newly-added node. */
 	NodeId uint32
 	/* The outcome of the call. */
@@ -3564,29 +3682,35 @@ type LoreRevisionTreeAddCompleteEventDataFFI struct {
 }
 
 type LoreRevisionTreeAddCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The newly-added node. */
 	NodeId uint32
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeDeleteCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
+	/* How many nodes the entry's subtree removed, staged and discarded
+	together. Zero on failure, since nothing was removed. */
+	NodeCount uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 
 type LoreRevisionTreeDeleteCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
+	/* How many nodes the entry's subtree removed, staged and discarded
+	together. Zero on failure, since nothing was removed. */
+	NodeCount uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeModifyCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The modified node. */
 	NodeId uint32
 	/* The outcome of the call. */
@@ -3594,16 +3718,16 @@ type LoreRevisionTreeModifyCompleteEventDataFFI struct {
 }
 
 type LoreRevisionTreeModifyCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The modified node. */
 	NodeId uint32
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeMoveCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The moved node. */
 	NodeId uint32
 	/* The outcome of the call. */
@@ -3611,29 +3735,29 @@ type LoreRevisionTreeMoveCompleteEventDataFFI struct {
 }
 
 type LoreRevisionTreeMoveCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The moved node. */
 	NodeId uint32
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeMetadataSetCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 
 type LoreRevisionTreeMetadataSetCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 type LoreRevisionTreeMetadataGetCompleteEventDataFFI struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The metadata key. */
 	Key LoreString
 	/* The metadata value. */
@@ -3643,8 +3767,8 @@ type LoreRevisionTreeMetadataGetCompleteEventDataFFI struct {
 }
 
 type LoreRevisionTreeMetadataGetCompleteEventData struct {
-	/* Correlation id of the originating call. */
-	Id uint64
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
 	/* The metadata key. */
 	Key string
 	/* The metadata value. */
@@ -3876,16 +4000,35 @@ type LoreCompactionEndEventData struct {
 	TotalCompactedBytes uint64
 }
 type LoreRevisionTreeBatchCompleteEventDataFFI struct {
-	/* Correlation id of the originating call */
-	Id uint64
+	/* Correlation id the call was submitted under */
+	BatchId uint64
 	/* The outcome of the call as a whole */
 	ErrorCode LoreErrorCode
 }
 
 type LoreRevisionTreeBatchCompleteEventData struct {
-	/* Correlation id of the originating call */
-	Id uint64
+	/* Correlation id the call was submitted under */
+	BatchId uint64
 	/* The outcome of the call as a whole */
+	ErrorCode LoreErrorCode
+}
+type LoreRevisionTreeMetadataClearCompleteEventDataFFI struct {
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
+	/* `1` when the key was present and has been removed, `0` when it was absent
+	and the entry was a no-op. */
+	Removed uint8
+	/* The outcome of the call. */
+	ErrorCode LoreErrorCode
+}
+
+type LoreRevisionTreeMetadataClearCompleteEventData struct {
+	/* Correlation id of the entry this reports, not of the call. */
+	EntryId uint64
+	/* `1` when the key was present and has been removed, `0` when it was absent
+	and the entry was a no-op. */
+	Removed bool
+	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
 }
 
@@ -4361,6 +4504,10 @@ func (e *LoreEventFFI) asLayerStagedEntryEventDataFFI() *LoreLayerStagedEntryEve
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLayerStagedEntryEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asLinkBranchCreateEventDataFFI() *LoreLinkBranchCreateEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreLinkBranchCreateEventDataFFI)(unionPtr)
+}
 func (e *LoreEventFFI) asLinkChangeEventDataFFI() *LoreLinkChangeEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLinkChangeEventDataFFI)(unionPtr)
@@ -4368,6 +4515,10 @@ func (e *LoreEventFFI) asLinkChangeEventDataFFI() *LoreLinkChangeEventDataFFI {
 func (e *LoreEventFFI) asLinkEntryEventDataFFI() *LoreLinkEntryEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLinkEntryEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asLinkInfoEventDataFFI() *LoreLinkInfoEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreLinkInfoEventDataFFI)(unionPtr)
 }
 func (e *LoreEventFFI) asLockFileAcquireBeginEventDataFFI() *LoreLockFileAcquireBeginEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -4797,6 +4948,10 @@ func (e *LoreEventFFI) asRevisionTreeBatchCompleteEventDataFFI() *LoreRevisionTr
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreRevisionTreeBatchCompleteEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asRevisionTreeMetadataClearCompleteEventDataFFI() *LoreRevisionTreeMetadataClearCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRevisionTreeMetadataClearCompleteEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -5036,10 +5191,14 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asLayerRemoveEventDataFFI()
 	case LoreEventTag_LAYER_STAGED_ENTRY:
 		return e.asLayerStagedEntryEventDataFFI()
+	case LoreEventTag_LINK_BRANCH_CREATE:
+		return e.asLinkBranchCreateEventDataFFI()
 	case LoreEventTag_LINK_CHANGE:
 		return e.asLinkChangeEventDataFFI()
 	case LoreEventTag_LINK_ENTRY:
 		return e.asLinkEntryEventDataFFI()
+	case LoreEventTag_LINK_INFO:
+		return e.asLinkInfoEventDataFFI()
 	case LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN:
 		return e.asLockFileAcquireBeginEventDataFFI()
 	case LoreEventTag_LOCK_FILE_ACQUIRE:
@@ -5254,6 +5413,8 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asCompactionEndEventDataFFI()
 	case LoreEventTag_REVISION_TREE_BATCH_COMPLETE:
 		return e.asRevisionTreeBatchCompleteEventDataFFI()
+	case LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE:
+		return e.asRevisionTreeMetadataClearCompleteEventDataFFI()
 	default:
 		return nil
 	}
@@ -5721,6 +5882,8 @@ func (e *LoreBranchPushFragmentEndEventDataFFI) Clone() LoreBranchPushFragmentEn
 }
 func (e *LoreBranchPushBranchCreateBeginEventDataFFI) Clone() LoreBranchPushBranchCreateBeginEventData {
 	return LoreBranchPushBranchCreateBeginEventData{
+		Repository:    e.Repository,
+		Branch:        e.Branch,
 		LocalRevision: e.LocalRevision,
 	}
 }
@@ -5731,6 +5894,8 @@ func (e *LoreBranchPushBranchCreateEndEventDataFFI) Clone() LoreBranchPushBranch
 }
 func (e *LoreBranchPushRevisionPushBeginEventDataFFI) Clone() LoreBranchPushRevisionPushBeginEventData {
 	return LoreBranchPushRevisionPushBeginEventData{
+		Repository:     e.Repository,
+		Branch:         e.Branch,
 		RemoteRevision: e.RemoteRevision,
 		LocalRevision:  e.LocalRevision,
 	}
@@ -5744,6 +5909,8 @@ func (e *LoreBranchPushRevisionPushUpdateEventDataFFI) Clone() LoreBranchPushRev
 }
 func (e *LoreBranchPushRevisionPushEndEventDataFFI) Clone() LoreBranchPushRevisionPushEndEventData {
 	return LoreBranchPushRevisionPushEndEventData{
+		Repository:              e.Repository,
+		Branch:                  e.Branch,
 		OldRemoteRevision:       e.OldRemoteRevision,
 		NewRemoteRevision:       e.NewRemoteRevision,
 		NewRemoteRevisionNumber: e.NewRemoteRevisionNumber,
@@ -6032,6 +6199,15 @@ func (e *LoreLayerStagedEntryEventDataFFI) Clone() LoreLayerStagedEntryEventData
 		StagedFileCount:  e.StagedFileCount,
 	}
 }
+func (e *LoreLinkBranchCreateEventDataFFI) Clone() LoreLinkBranchCreateEventData {
+	return LoreLinkBranchCreateEventData{
+		LinkPath:       e.LinkPath.Clone(),
+		LinkRepository: e.LinkRepository,
+		Branch:         e.Branch,
+		Revision:       e.Revision,
+		Reused:         e.Reused != 0,
+	}
+}
 func (e *LoreLinkChangeEventDataFFI) Clone() LoreLinkChangeEventData {
 	return LoreLinkChangeEventData{
 		LinkPath:       e.LinkPath.Clone(),
@@ -6049,9 +6225,17 @@ func (e *LoreLinkEntryEventDataFFI) Clone() LoreLinkEntryEventData {
 		SourceNode: e.SourceNode,
 		SourcePath: e.SourcePath.Clone(),
 		Branch:     e.Branch,
-		BranchName: e.BranchName.Clone(),
+		Tracking:   e.Tracking != 0,
 		Revision:   e.Revision,
 		Flags:      e.Flags,
+	}
+}
+func (e *LoreLinkInfoEventDataFFI) Clone() LoreLinkInfoEventData {
+	return LoreLinkInfoEventData{
+		Entry:           e.Entry.Clone(),
+		RemoteRevision:  e.RemoteRevision,
+		StagedState:     e.StagedState,
+		StagedFileCount: e.StagedFileCount,
 	}
 }
 func (e *LoreLockFileAcquireBeginEventDataFFI) Clone() LoreLockFileAcquireBeginEventData {
@@ -6318,11 +6502,13 @@ func (e *LoreRepositoryStatusCountEventDataFFI) Clone() LoreRepositoryStatusCoun
 }
 func (e *LoreRepositoryStatusSummaryEventDataFFI) Clone() LoreRepositoryStatusSummaryEventData {
 	return LoreRepositoryStatusSummaryEventData{
-		Adds:     e.Adds,
-		Deletes:  e.Deletes,
-		Modifies: e.Modifies,
-		Moves:    e.Moves,
-		Copies:   e.Copies,
+		Adds:         e.Adds,
+		Deletes:      e.Deletes,
+		Modifies:     e.Modifies,
+		Moves:        e.Moves,
+		Copies:       e.Copies,
+		HashChecks:   e.HashChecks,
+		MtimeMatches: e.MtimeMatches,
 	}
 }
 func (e *LoreRepositoryStoreImmutableQueryEventDataFFI) Clone() LoreRepositoryStoreImmutableQueryEventData {
@@ -6391,6 +6577,7 @@ func (e *LoreRevisionDiffFileEventDataFFI) Clone() LoreRevisionDiffFileEventData
 		NewIsFile:  e.NewIsFile != 0,
 		OldAddress: e.OldAddress,
 		NewAddress: e.NewAddress,
+		FromPath:   e.FromPath.Clone(),
 	}
 }
 func (e *LoreRevisionFindEventDataFFI) Clone() LoreRevisionFindEventData {
@@ -6584,9 +6771,11 @@ func (e *LoreStorageOpenedEventDataFFI) Clone() LoreStorageOpenedEventData {
 }
 func (e *LoreStoragePutItemCompleteEventDataFFI) Clone() LoreStoragePutItemCompleteEventData {
 	return LoreStoragePutItemCompleteEventData{
-		Id:        e.Id,
-		Address:   e.Address,
-		ErrorCode: e.ErrorCode,
+		Id:           e.Id,
+		Address:      e.Address,
+		ErrorCode:    e.ErrorCode,
+		StoredLocal:  e.StoredLocal != 0,
+		StoredRemote: e.StoredRemote != 0,
 	}
 }
 func (e *LoreStorageGetHeaderEventDataFFI) Clone() LoreStorageGetHeaderEventData {
@@ -6664,31 +6853,33 @@ func (e *LoreRevisionTreeResolvePathCompleteEventDataFFI) Clone() LoreRevisionTr
 }
 func (e *LoreRevisionTreeChildEventDataFFI) Clone() LoreRevisionTreeChildEventData {
 	return LoreRevisionTreeChildEventData{
-		Id:        e.Id,
-		NodeId:    e.NodeId,
-		Name:      e.Name.Clone(),
-		ParentId:  e.ParentId,
-		Kind:      e.Kind,
-		Mode:      e.Mode,
-		Size:      e.Size,
-		Address:   e.Address,
-		ErrorCode: e.ErrorCode,
+		Id:           e.Id,
+		NodeId:       e.NodeId,
+		Name:         e.Name.Clone(),
+		ParentId:     e.ParentId,
+		Kind:         e.Kind,
+		StagedAction: e.StagedAction,
+		Mode:         e.Mode,
+		Size:         e.Size,
+		Address:      e.Address,
+		ErrorCode:    e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeNodeInfoEventDataFFI) Clone() LoreRevisionTreeNodeInfoEventData {
 	return LoreRevisionTreeNodeInfoEventData{
-		Id:         e.Id,
-		NodeId:     e.NodeId,
-		Repository: e.Repository,
-		Revision:   e.Revision,
-		Name:       e.Name.Clone(),
-		ParentId:   e.ParentId,
-		Kind:       e.Kind,
-		Mode:       e.Mode,
-		Size:       e.Size,
-		Address:    e.Address,
-		FileId:     e.FileId,
-		ErrorCode:  e.ErrorCode,
+		Id:           e.Id,
+		NodeId:       e.NodeId,
+		Repository:   e.Repository,
+		Revision:     e.Revision,
+		Name:         e.Name.Clone(),
+		ParentId:     e.ParentId,
+		Kind:         e.Kind,
+		StagedAction: e.StagedAction,
+		Mode:         e.Mode,
+		Size:         e.Size,
+		Address:      e.Address,
+		FileId:       e.FileId,
+		ErrorCode:    e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeNodePathEventDataFFI) Clone() LoreRevisionTreeNodePathEventData {
@@ -6702,40 +6893,41 @@ func (e *LoreRevisionTreeNodePathEventDataFFI) Clone() LoreRevisionTreeNodePathE
 }
 func (e *LoreRevisionTreeAddCompleteEventDataFFI) Clone() LoreRevisionTreeAddCompleteEventData {
 	return LoreRevisionTreeAddCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
 		NodeId:    e.NodeId,
 		ErrorCode: e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeDeleteCompleteEventDataFFI) Clone() LoreRevisionTreeDeleteCompleteEventData {
 	return LoreRevisionTreeDeleteCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
+		NodeCount: e.NodeCount,
 		ErrorCode: e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeModifyCompleteEventDataFFI) Clone() LoreRevisionTreeModifyCompleteEventData {
 	return LoreRevisionTreeModifyCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
 		NodeId:    e.NodeId,
 		ErrorCode: e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeMoveCompleteEventDataFFI) Clone() LoreRevisionTreeMoveCompleteEventData {
 	return LoreRevisionTreeMoveCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
 		NodeId:    e.NodeId,
 		ErrorCode: e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeMetadataSetCompleteEventDataFFI) Clone() LoreRevisionTreeMetadataSetCompleteEventData {
 	return LoreRevisionTreeMetadataSetCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
 		ErrorCode: e.ErrorCode,
 	}
 }
 func (e *LoreRevisionTreeMetadataGetCompleteEventDataFFI) Clone() LoreRevisionTreeMetadataGetCompleteEventData {
 	return LoreRevisionTreeMetadataGetCompleteEventData{
-		Id:        e.Id,
+		EntryId:   e.EntryId,
 		Key:       e.Key.Clone(),
 		Value:     e.Value.Clone(),
 		ErrorCode: e.ErrorCode,
@@ -6843,7 +7035,14 @@ func (e *LoreCompactionEndEventDataFFI) Clone() LoreCompactionEndEventData {
 }
 func (e *LoreRevisionTreeBatchCompleteEventDataFFI) Clone() LoreRevisionTreeBatchCompleteEventData {
 	return LoreRevisionTreeBatchCompleteEventData{
-		Id:        e.Id,
+		BatchId:   e.BatchId,
+		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreRevisionTreeMetadataClearCompleteEventDataFFI) Clone() LoreRevisionTreeMetadataClearCompleteEventData {
+	return LoreRevisionTreeMetadataClearCompleteEventData{
+		EntryId:   e.EntryId,
+		Removed:   e.Removed != 0,
 		ErrorCode: e.ErrorCode,
 	}
 }
@@ -7442,6 +7641,11 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 			Tag:  e.Tag,
 			Data: e.asLayerStagedEntryEventDataFFI().Clone(),
 		}
+	case LoreEventTag_LINK_BRANCH_CREATE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asLinkBranchCreateEventDataFFI().Clone(),
+		}
 	case LoreEventTag_LINK_CHANGE:
 		return LoreEvent{
 			Tag:  e.Tag,
@@ -7451,6 +7655,11 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asLinkEntryEventDataFFI().Clone(),
+		}
+	case LoreEventTag_LINK_INFO:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asLinkInfoEventDataFFI().Clone(),
 		}
 	case LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN:
 		return LoreEvent{
@@ -7986,6 +8195,11 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asRevisionTreeBatchCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRevisionTreeMetadataClearCompleteEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{

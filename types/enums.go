@@ -2,7 +2,19 @@
 
 package types
 
-type LoreLogLevel uint32
+type LoreMetadataType int32
+
+const (
+	LoreMetadataType_ADDRESS LoreMetadataType = 1
+	LoreMetadataType_BOOLEAN LoreMetadataType = 2
+	LoreMetadataType_CONTEXT LoreMetadataType = 3
+	LoreMetadataType_HASH    LoreMetadataType = 4
+	LoreMetadataType_NUMERIC LoreMetadataType = 5
+	LoreMetadataType_STRING  LoreMetadataType = 6
+	LoreMetadataType_BINARY  LoreMetadataType = 255
+)
+
+type LoreLogLevel int32
 
 const (
 	LoreLogLevel_NONE  LoreLogLevel = 0
@@ -13,14 +25,14 @@ const (
 	LoreLogLevel_ERROR LoreLogLevel = 5
 )
 
-type LoreBranchLocation uint32
+type LoreBranchLocation int32
 
 const (
 	LoreBranchLocation_LOCAL  LoreBranchLocation = 0
 	LoreBranchLocation_REMOTE LoreBranchLocation = 1
 )
 
-type LoreFileAction uint32
+type LoreFileAction int32
 
 const (
 	LoreFileAction_KEEP   LoreFileAction = 0
@@ -30,7 +42,16 @@ const (
 	LoreFileAction_COPY   LoreFileAction = 4
 )
 
-type LoreNodeType uint32
+type LoreLinkStagedState int32
+
+const (
+	LoreLinkStagedState_NONE     LoreLinkStagedState = 0
+	LoreLinkStagedState_ADDED    LoreLinkStagedState = 1
+	LoreLinkStagedState_REMOVED  LoreLinkStagedState = 2
+	LoreLinkStagedState_MODIFIED LoreLinkStagedState = 3
+)
+
+type LoreNodeType int32
 
 const (
 	LoreNodeType_DIRECTORY LoreNodeType = 0
@@ -38,7 +59,7 @@ const (
 	LoreNodeType_LINK      LoreNodeType = 2
 )
 
-type LoreErrorCode uint32
+type LoreErrorCode int32
 
 const (
 	LoreErrorCode_NONE              LoreErrorCode = 0
@@ -48,15 +69,15 @@ const (
 	LoreErrorCode_SLOW_DOWN         LoreErrorCode = 4
 )
 
-type LoreMetadataType uint32
+type LoreSharedStoreMode int32
 
 const (
-	LoreMetadataType_BINARY  LoreMetadataType = 0
-	LoreMetadataType_NUMERIC LoreMetadataType = 1
-	LoreMetadataType_STRING  LoreMetadataType = 2
+	LoreSharedStoreMode_INHERIT  LoreSharedStoreMode = 0
+	LoreSharedStoreMode_ENABLED  LoreSharedStoreMode = 1
+	LoreSharedStoreMode_DISABLED LoreSharedStoreMode = 2
 )
 
-type LoreKeyType uint32
+type LoreKeyType int32
 
 const (
 	LoreKeyType_UNTYPED               LoreKeyType = 0
@@ -66,21 +87,21 @@ const (
 	LoreKeyType_REPOSITORY_METADATA   LoreKeyType = 4
 	LoreKeyType_REPOSITORY_ID         LoreKeyType = 5
 	LoreKeyType_INSTANCE              LoreKeyType = 6
+	LoreKeyType_RESOLVE               LoreKeyType = 7
 )
 
-type LoreMetadataTag uint32
+type LoreNodeStagedAction int32
 
 const (
-	LoreMetadataTag_ADDRESS LoreMetadataTag = 0
-	LoreMetadataTag_BOOLEAN LoreMetadataTag = 1
-	LoreMetadataTag_BINARY  LoreMetadataTag = 2
-	LoreMetadataTag_CONTEXT LoreMetadataTag = 3
-	LoreMetadataTag_HASH    LoreMetadataTag = 4
-	LoreMetadataTag_NUMERIC LoreMetadataTag = 5
-	LoreMetadataTag_STRING  LoreMetadataTag = 6
+	LoreNodeStagedAction_NONE   LoreNodeStagedAction = 0
+	LoreNodeStagedAction_ADD    LoreNodeStagedAction = 1
+	LoreNodeStagedAction_MODIFY LoreNodeStagedAction = 2
+	LoreNodeStagedAction_DELETE LoreNodeStagedAction = 3
+	LoreNodeStagedAction_MOVE   LoreNodeStagedAction = 4
+	LoreNodeStagedAction_COPY   LoreNodeStagedAction = 5
 )
 
-type LoreEventTag uint32
+type LoreEventTag int32
 
 const (
 	LoreEventTag_PROGRESS                                       LoreEventTag = 0
@@ -201,113 +222,116 @@ const (
 	LoreEventTag_LAYER_ENTRY                                    LoreEventTag = 115
 	LoreEventTag_LAYER_REMOVE                                   LoreEventTag = 116
 	LoreEventTag_LAYER_STAGED_ENTRY                             LoreEventTag = 117
-	LoreEventTag_LINK_CHANGE                                    LoreEventTag = 118
-	LoreEventTag_LINK_ENTRY                                     LoreEventTag = 119
-	LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN                        LoreEventTag = 120
-	LoreEventTag_LOCK_FILE_ACQUIRE                              LoreEventTag = 121
-	LoreEventTag_LOCK_FILE_STATUS_BEGIN                         LoreEventTag = 122
-	LoreEventTag_LOCK_FILE_STATUS                               LoreEventTag = 123
-	LoreEventTag_LOCK_FILE_QUERY_BEGIN                          LoreEventTag = 124
-	LoreEventTag_LOCK_FILE_QUERY                                LoreEventTag = 125
-	LoreEventTag_LOCK_FILE_RELEASE_BEGIN                        LoreEventTag = 126
-	LoreEventTag_LOCK_FILE_RELEASE                              LoreEventTag = 127
-	LoreEventTag_METADATA_CLEAR_FILE                            LoreEventTag = 128
-	LoreEventTag_METADATA_CLEAR_REVISION                        LoreEventTag = 129
-	LoreEventTag_PATH_IGNORE                                    LoreEventTag = 130
-	LoreEventTag_REPOSITORY_CREATE                              LoreEventTag = 131
-	LoreEventTag_REPOSITORY_CLONE_BEGIN                         LoreEventTag = 132
-	LoreEventTag_REPOSITORY_CLONE_PROGRESS                      LoreEventTag = 133
-	LoreEventTag_REPOSITORY_CLONE_END                           LoreEventTag = 134
-	LoreEventTag_DEPENDENCY_RESOLVE_BEGIN                       LoreEventTag = 135
-	LoreEventTag_DEPENDENCY_RESOLVE_ITEM                        LoreEventTag = 136
-	LoreEventTag_DEPENDENCY_RESOLVE_END                         LoreEventTag = 137
-	LoreEventTag_REPOSITORY_DATA                                LoreEventTag = 138
-	LoreEventTag_REPOSITORY_CONFIG_GET                          LoreEventTag = 139
-	LoreEventTag_REPOSITORY_DUMP_BEGIN                          LoreEventTag = 140
-	LoreEventTag_REPOSITORY_DUMP_END                            LoreEventTag = 141
-	LoreEventTag_REPOSITORY_LIST_ENTRY                          LoreEventTag = 142
-	LoreEventTag_REPOSITORY_INSTANCE                            LoreEventTag = 143
-	LoreEventTag_REPOSITORY_VERIFY_STATE_BEGIN                  LoreEventTag = 144
-	LoreEventTag_REPOSITORY_VERIFY_STATE_END                    LoreEventTag = 145
-	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT                     LoreEventTag = 146
-	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT_MATCH               LoreEventTag = 147
-	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT_REMOTE              LoreEventTag = 148
-	LoreEventTag_REPOSITORY_STATE_DUMP                          LoreEventTag = 149
-	LoreEventTag_REPOSITORY_STATE_DUMP_NODE                     LoreEventTag = 150
-	LoreEventTag_REPOSITORY_STATUS_REVISION                     LoreEventTag = 151
-	LoreEventTag_REPOSITORY_STATUS_FILE                         LoreEventTag = 152
-	LoreEventTag_REPOSITORY_STATUS_COUNT                        LoreEventTag = 153
-	LoreEventTag_REPOSITORY_STATUS_SUMMARY                      LoreEventTag = 154
-	LoreEventTag_REPOSITORY_STORE_IMMUTABLE_QUERY               LoreEventTag = 155
-	LoreEventTag_REVISION_COMMIT_BEGIN                          LoreEventTag = 156
-	LoreEventTag_REVISION_COMMIT_PROGRESS                       LoreEventTag = 157
-	LoreEventTag_REVISION_COMMIT_END                            LoreEventTag = 158
-	LoreEventTag_REVISION_COMMIT_REVISION                       LoreEventTag = 159
-	LoreEventTag_REVISION_INFO                                  LoreEventTag = 160
-	LoreEventTag_REVISION_INFO_DELTA                            LoreEventTag = 161
-	LoreEventTag_REVISION_DIFF_FILE                             LoreEventTag = 162
-	LoreEventTag_REVISION_FIND                                  LoreEventTag = 163
-	LoreEventTag_REVISION_HISTORY                               LoreEventTag = 164
-	LoreEventTag_REVISION_HISTORY_ENTRY                         LoreEventTag = 165
-	LoreEventTag_REVISION_RESTORE_FILE_BEGIN                    LoreEventTag = 166
-	LoreEventTag_REVISION_RESTORE_FILE                          LoreEventTag = 167
-	LoreEventTag_REVISION_RESTORE_FILE_END                      LoreEventTag = 168
-	LoreEventTag_REVISION_RESTORE_FRAGMENT_BEGIN                LoreEventTag = 169
-	LoreEventTag_REVISION_RESTORE_FRAGMENT_PROGRESS             LoreEventTag = 170
-	LoreEventTag_REVISION_RESTORE_FRAGMENT_END                  LoreEventTag = 171
-	LoreEventTag_REVISION_RESTORE_REVISION                      LoreEventTag = 172
-	LoreEventTag_REVISION_RESTORE_SYNC_BEGIN                    LoreEventTag = 173
-	LoreEventTag_REVISION_RESTORE_SYNC_END                      LoreEventTag = 174
-	LoreEventTag_REVISION_RESOLVE                               LoreEventTag = 175
-	LoreEventTag_REVISION_SYNC_TARGET                           LoreEventTag = 176
-	LoreEventTag_REVISION_SYNC_FILE                             LoreEventTag = 177
-	LoreEventTag_REVISION_SYNC_PROGRESS                         LoreEventTag = 178
-	LoreEventTag_REVISION_SYNC_REVISION                         LoreEventTag = 179
-	LoreEventTag_REVISION_BISECT                                LoreEventTag = 180
-	LoreEventTag_NOTIFICATION_BRANCH_CREATED                    LoreEventTag = 181
-	LoreEventTag_NOTIFICATION_BRANCH_DELETED                    LoreEventTag = 182
-	LoreEventTag_NOTIFICATION_BRANCH_PUSHED                     LoreEventTag = 183
-	LoreEventTag_NOTIFICATION_RESOURCE_LOCKED                   LoreEventTag = 184
-	LoreEventTag_NOTIFICATION_RESOURCE_UNLOCKED                 LoreEventTag = 185
-	LoreEventTag_NOTIFICATION_SUBSCRIBED                        LoreEventTag = 186
-	LoreEventTag_NOTIFICATION_UNSUBSCRIBED                      LoreEventTag = 187
-	LoreEventTag_SHARED_STORE_CREATE                            LoreEventTag = 188
-	LoreEventTag_SHARED_STORE_INFO                              LoreEventTag = 189
-	LoreEventTag_LINK_STAGED_ENTRY                              LoreEventTag = 190
-	LoreEventTag_STORAGE_OPENED                                 LoreEventTag = 191
-	LoreEventTag_STORAGE_PUT_ITEM_COMPLETE                      LoreEventTag = 192
-	LoreEventTag_STORAGE_GET_HEADER                             LoreEventTag = 193
-	LoreEventTag_STORAGE_GET_DATA                               LoreEventTag = 194
-	LoreEventTag_STORAGE_GET_ITEM_COMPLETE                      LoreEventTag = 195
-	LoreEventTag_STORAGE_GET_METADATA_ITEM_COMPLETE             LoreEventTag = 196
-	LoreEventTag_STORAGE_COPY_ITEM_COMPLETE                     LoreEventTag = 197
-	LoreEventTag_STORAGE_OBLITERATE_ITEM_COMPLETE               LoreEventTag = 198
-	LoreEventTag_STORAGE_UPLOAD_ITEM_COMPLETE                   LoreEventTag = 199
-	LoreEventTag_REVISION_TREE_LOADED                           LoreEventTag = 200
-	LoreEventTag_REVISION_TREE_RESOLVE_PATH_COMPLETE            LoreEventTag = 201
-	LoreEventTag_REVISION_TREE_CHILD                            LoreEventTag = 202
-	LoreEventTag_REVISION_TREE_NODE_INFO                        LoreEventTag = 203
-	LoreEventTag_REVISION_TREE_NODE_PATH                        LoreEventTag = 204
-	LoreEventTag_REVISION_TREE_ADD_COMPLETE                     LoreEventTag = 205
-	LoreEventTag_REVISION_TREE_DELETE_COMPLETE                  LoreEventTag = 206
-	LoreEventTag_REVISION_TREE_MODIFY_COMPLETE                  LoreEventTag = 207
-	LoreEventTag_REVISION_TREE_MOVE_COMPLETE                    LoreEventTag = 208
-	LoreEventTag_REVISION_TREE_METADATA_SET_COMPLETE            LoreEventTag = 209
-	LoreEventTag_REVISION_TREE_METADATA_GET_COMPLETE            LoreEventTag = 210
-	LoreEventTag_REVISION_TREE_COMMIT_COMPLETE                  LoreEventTag = 211
-	LoreEventTag_REVISION_TREE_CLOSE_COMPLETE                   LoreEventTag = 212
-	LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN              LoreEventTag = 213
-	LoreEventTag_REVISION_TREE_INFO                             LoreEventTag = 214
-	LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE             LoreEventTag = 215
-	LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE            LoreEventTag = 216
-	LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE LoreEventTag = 217
-	LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY                     LoreEventTag = 218
-	LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE             LoreEventTag = 219
-	LoreEventTag_EVICTION_BEGIN                                 LoreEventTag = 220
-	LoreEventTag_EVICTION_PROGRESS                              LoreEventTag = 221
-	LoreEventTag_EVICTION_END                                   LoreEventTag = 222
-	LoreEventTag_COMPACTION_BEGIN                               LoreEventTag = 223
-	LoreEventTag_COMPACTION_PROGRESS                            LoreEventTag = 224
-	LoreEventTag_COMPACTION_END                                 LoreEventTag = 225
-	LoreEventTag_REVISION_TREE_BATCH_COMPLETE                   LoreEventTag = 226
+	LoreEventTag_LINK_BRANCH_CREATE                             LoreEventTag = 118
+	LoreEventTag_LINK_CHANGE                                    LoreEventTag = 119
+	LoreEventTag_LINK_ENTRY                                     LoreEventTag = 120
+	LoreEventTag_LINK_INFO                                      LoreEventTag = 121
+	LoreEventTag_LOCK_FILE_ACQUIRE_BEGIN                        LoreEventTag = 122
+	LoreEventTag_LOCK_FILE_ACQUIRE                              LoreEventTag = 123
+	LoreEventTag_LOCK_FILE_STATUS_BEGIN                         LoreEventTag = 124
+	LoreEventTag_LOCK_FILE_STATUS                               LoreEventTag = 125
+	LoreEventTag_LOCK_FILE_QUERY_BEGIN                          LoreEventTag = 126
+	LoreEventTag_LOCK_FILE_QUERY                                LoreEventTag = 127
+	LoreEventTag_LOCK_FILE_RELEASE_BEGIN                        LoreEventTag = 128
+	LoreEventTag_LOCK_FILE_RELEASE                              LoreEventTag = 129
+	LoreEventTag_METADATA_CLEAR_FILE                            LoreEventTag = 130
+	LoreEventTag_METADATA_CLEAR_REVISION                        LoreEventTag = 131
+	LoreEventTag_PATH_IGNORE                                    LoreEventTag = 132
+	LoreEventTag_REPOSITORY_CREATE                              LoreEventTag = 133
+	LoreEventTag_REPOSITORY_CLONE_BEGIN                         LoreEventTag = 134
+	LoreEventTag_REPOSITORY_CLONE_PROGRESS                      LoreEventTag = 135
+	LoreEventTag_REPOSITORY_CLONE_END                           LoreEventTag = 136
+	LoreEventTag_DEPENDENCY_RESOLVE_BEGIN                       LoreEventTag = 137
+	LoreEventTag_DEPENDENCY_RESOLVE_ITEM                        LoreEventTag = 138
+	LoreEventTag_DEPENDENCY_RESOLVE_END                         LoreEventTag = 139
+	LoreEventTag_REPOSITORY_DATA                                LoreEventTag = 140
+	LoreEventTag_REPOSITORY_CONFIG_GET                          LoreEventTag = 141
+	LoreEventTag_REPOSITORY_DUMP_BEGIN                          LoreEventTag = 142
+	LoreEventTag_REPOSITORY_DUMP_END                            LoreEventTag = 143
+	LoreEventTag_REPOSITORY_LIST_ENTRY                          LoreEventTag = 144
+	LoreEventTag_REPOSITORY_INSTANCE                            LoreEventTag = 145
+	LoreEventTag_REPOSITORY_VERIFY_STATE_BEGIN                  LoreEventTag = 146
+	LoreEventTag_REPOSITORY_VERIFY_STATE_END                    LoreEventTag = 147
+	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT                     LoreEventTag = 148
+	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT_MATCH               LoreEventTag = 149
+	LoreEventTag_REPOSITORY_VERIFY_FRAGMENT_REMOTE              LoreEventTag = 150
+	LoreEventTag_REPOSITORY_STATE_DUMP                          LoreEventTag = 151
+	LoreEventTag_REPOSITORY_STATE_DUMP_NODE                     LoreEventTag = 152
+	LoreEventTag_REPOSITORY_STATUS_REVISION                     LoreEventTag = 153
+	LoreEventTag_REPOSITORY_STATUS_FILE                         LoreEventTag = 154
+	LoreEventTag_REPOSITORY_STATUS_COUNT                        LoreEventTag = 155
+	LoreEventTag_REPOSITORY_STATUS_SUMMARY                      LoreEventTag = 156
+	LoreEventTag_REPOSITORY_STORE_IMMUTABLE_QUERY               LoreEventTag = 157
+	LoreEventTag_REVISION_COMMIT_BEGIN                          LoreEventTag = 158
+	LoreEventTag_REVISION_COMMIT_PROGRESS                       LoreEventTag = 159
+	LoreEventTag_REVISION_COMMIT_END                            LoreEventTag = 160
+	LoreEventTag_REVISION_COMMIT_REVISION                       LoreEventTag = 161
+	LoreEventTag_REVISION_INFO                                  LoreEventTag = 162
+	LoreEventTag_REVISION_INFO_DELTA                            LoreEventTag = 163
+	LoreEventTag_REVISION_DIFF_FILE                             LoreEventTag = 164
+	LoreEventTag_REVISION_FIND                                  LoreEventTag = 165
+	LoreEventTag_REVISION_HISTORY                               LoreEventTag = 166
+	LoreEventTag_REVISION_HISTORY_ENTRY                         LoreEventTag = 167
+	LoreEventTag_REVISION_RESTORE_FILE_BEGIN                    LoreEventTag = 168
+	LoreEventTag_REVISION_RESTORE_FILE                          LoreEventTag = 169
+	LoreEventTag_REVISION_RESTORE_FILE_END                      LoreEventTag = 170
+	LoreEventTag_REVISION_RESTORE_FRAGMENT_BEGIN                LoreEventTag = 171
+	LoreEventTag_REVISION_RESTORE_FRAGMENT_PROGRESS             LoreEventTag = 172
+	LoreEventTag_REVISION_RESTORE_FRAGMENT_END                  LoreEventTag = 173
+	LoreEventTag_REVISION_RESTORE_REVISION                      LoreEventTag = 174
+	LoreEventTag_REVISION_RESTORE_SYNC_BEGIN                    LoreEventTag = 175
+	LoreEventTag_REVISION_RESTORE_SYNC_END                      LoreEventTag = 176
+	LoreEventTag_REVISION_RESOLVE                               LoreEventTag = 177
+	LoreEventTag_REVISION_SYNC_TARGET                           LoreEventTag = 178
+	LoreEventTag_REVISION_SYNC_FILE                             LoreEventTag = 179
+	LoreEventTag_REVISION_SYNC_PROGRESS                         LoreEventTag = 180
+	LoreEventTag_REVISION_SYNC_REVISION                         LoreEventTag = 181
+	LoreEventTag_REVISION_BISECT                                LoreEventTag = 182
+	LoreEventTag_NOTIFICATION_BRANCH_CREATED                    LoreEventTag = 183
+	LoreEventTag_NOTIFICATION_BRANCH_DELETED                    LoreEventTag = 184
+	LoreEventTag_NOTIFICATION_BRANCH_PUSHED                     LoreEventTag = 185
+	LoreEventTag_NOTIFICATION_RESOURCE_LOCKED                   LoreEventTag = 186
+	LoreEventTag_NOTIFICATION_RESOURCE_UNLOCKED                 LoreEventTag = 187
+	LoreEventTag_NOTIFICATION_SUBSCRIBED                        LoreEventTag = 188
+	LoreEventTag_NOTIFICATION_UNSUBSCRIBED                      LoreEventTag = 189
+	LoreEventTag_SHARED_STORE_CREATE                            LoreEventTag = 190
+	LoreEventTag_SHARED_STORE_INFO                              LoreEventTag = 191
+	LoreEventTag_LINK_STAGED_ENTRY                              LoreEventTag = 192
+	LoreEventTag_STORAGE_OPENED                                 LoreEventTag = 193
+	LoreEventTag_STORAGE_PUT_ITEM_COMPLETE                      LoreEventTag = 194
+	LoreEventTag_STORAGE_GET_HEADER                             LoreEventTag = 195
+	LoreEventTag_STORAGE_GET_DATA                               LoreEventTag = 196
+	LoreEventTag_STORAGE_GET_ITEM_COMPLETE                      LoreEventTag = 197
+	LoreEventTag_STORAGE_GET_METADATA_ITEM_COMPLETE             LoreEventTag = 198
+	LoreEventTag_STORAGE_COPY_ITEM_COMPLETE                     LoreEventTag = 199
+	LoreEventTag_STORAGE_OBLITERATE_ITEM_COMPLETE               LoreEventTag = 200
+	LoreEventTag_STORAGE_UPLOAD_ITEM_COMPLETE                   LoreEventTag = 201
+	LoreEventTag_REVISION_TREE_LOADED                           LoreEventTag = 202
+	LoreEventTag_REVISION_TREE_RESOLVE_PATH_COMPLETE            LoreEventTag = 203
+	LoreEventTag_REVISION_TREE_CHILD                            LoreEventTag = 204
+	LoreEventTag_REVISION_TREE_NODE_INFO                        LoreEventTag = 205
+	LoreEventTag_REVISION_TREE_NODE_PATH                        LoreEventTag = 206
+	LoreEventTag_REVISION_TREE_ADD_COMPLETE                     LoreEventTag = 207
+	LoreEventTag_REVISION_TREE_DELETE_COMPLETE                  LoreEventTag = 208
+	LoreEventTag_REVISION_TREE_MODIFY_COMPLETE                  LoreEventTag = 209
+	LoreEventTag_REVISION_TREE_MOVE_COMPLETE                    LoreEventTag = 210
+	LoreEventTag_REVISION_TREE_METADATA_SET_COMPLETE            LoreEventTag = 211
+	LoreEventTag_REVISION_TREE_METADATA_GET_COMPLETE            LoreEventTag = 212
+	LoreEventTag_REVISION_TREE_COMMIT_COMPLETE                  LoreEventTag = 213
+	LoreEventTag_REVISION_TREE_CLOSE_COMPLETE                   LoreEventTag = 214
+	LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN              LoreEventTag = 215
+	LoreEventTag_REVISION_TREE_INFO                             LoreEventTag = 216
+	LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE             LoreEventTag = 217
+	LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE            LoreEventTag = 218
+	LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE LoreEventTag = 219
+	LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY                     LoreEventTag = 220
+	LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE             LoreEventTag = 221
+	LoreEventTag_EVICTION_BEGIN                                 LoreEventTag = 222
+	LoreEventTag_EVICTION_PROGRESS                              LoreEventTag = 223
+	LoreEventTag_EVICTION_END                                   LoreEventTag = 224
+	LoreEventTag_COMPACTION_BEGIN                               LoreEventTag = 225
+	LoreEventTag_COMPACTION_PROGRESS                            LoreEventTag = 226
+	LoreEventTag_COMPACTION_END                                 LoreEventTag = 227
+	LoreEventTag_REVISION_TREE_BATCH_COMPLETE                   LoreEventTag = 228
+	LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE          LoreEventTag = 229
 )
