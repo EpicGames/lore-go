@@ -28,7 +28,7 @@ func (arr {{ arr.ffi_class }}) Get(index int) {{ arr.element_field_type }} {
     panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
   }
   if arr.{{ arr.ptr_field_pascal }} == 0 {
-    panic("cannot access FFI data outside the callback function")
+    panic("nil FFI array data pointer despite non-zero count")
   }
   slice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
   return slice[index]
@@ -39,7 +39,7 @@ func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
     return nil
   }
   if arr.{{ arr.ptr_field_pascal }} == 0 {
-    panic("cannot access FFI data outside the callback function")
+    panic("nil FFI array data pointer despite non-zero count")
   }
   cDataSlice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
   result := make([]{{ arr.element_field_type }}, arr.Count)
@@ -354,7 +354,7 @@ func (arr LoreStringArrayFFI) Get(index int) string {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index].String()
@@ -363,11 +363,11 @@ func (arr LoreStringArrayFFI) Get(index int) string {
 // Clone converts LoreStringArrayFFI from FFI memory to Go []string
 // This creates a copy of the data that remains valid after the callback returns
 func (arr LoreStringArrayFFI) Clone() []string {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cStrings := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]string, arr.Count)
@@ -397,7 +397,7 @@ func (arr LoreUint8ArrayFFI) Get(index int) bool {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*uint8)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index] != 0
@@ -406,11 +406,11 @@ func (arr LoreUint8ArrayFFI) Get(index int) bool {
 // Clone converts LoreUint8ArrayFFI from FFI memory to Go []bool
 // This creates a copy of the data that remains valid after the callback returns
 func (arr LoreUint8ArrayFFI) Clone() []bool {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cUint8s := unsafe.Slice((*bool)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]bool, arr.Count)
@@ -451,11 +451,11 @@ func NewLoreBinary(data LoreBinary) (LoreBinaryFFI, func()) {
 }
 
 func (data *LoreBinaryFFI) Clone() LoreBinary {
-  if data.Payload == 0 {
-    panic("cannot access FFI data outside the callback function")
-  }
   if data.Length == 0 {
     return nil
+  }
+  if data.Payload == 0 {
+    panic("nil FFI binary data pointer despite non-zero length")
   }
   cDataSlice := unsafe.Slice((*byte)(unsafe.Pointer(data.Payload)), data.Length)
   result := make([]byte, data.Length)

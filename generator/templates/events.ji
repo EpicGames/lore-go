@@ -9,8 +9,14 @@ import (
 
 {% import "utils.ji" as utils %}
 
-// LoreEventFFI is a C-compatible representation of lore_event_t
-// Only valid during the callback
+// LoreEventFFI is a C-compatible representation of lore_event_t.
+//
+// The event — and everything reached through it (GetData results, LoreString
+// values, array views) — is backed by native memory that is only valid for the
+// duration of the event callback invocation. Reading it after the callback
+// returns is a silent use-after-free: no runtime check can catch it, because
+// the FFI values are raw views and copies of raw pointers. Call Clone() inside
+// the callback to get a Go-owned LoreEvent that stays valid afterwards.
 type LoreEventFFI struct {
 	Tag     LoreEventTag
 	padding [4]byte // Ensure union starts at 8-byte boundary
@@ -44,18 +50,18 @@ func (arr {{ arr.ffi_class }}) Get(index int) {{ arr.element_field_type }} {
     panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
   }
   if arr.{{ arr.ptr_field_pascal }} == 0 {
-    panic("cannot access FFI data outside the callback function")
+    panic("nil FFI array data pointer despite non-zero count")
   }
   slice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
   return slice[index]
 }
 
 func (arr {{ arr.ffi_class }}) Clone() []{{ arr.element_field_type }} {
-  if arr.{{ arr.ptr_field_pascal }} == 0 {
-    panic("cannot access FFI data outside the callback function")
-  }
   if arr.Count == 0 {
     return nil
+  }
+  if arr.{{ arr.ptr_field_pascal }} == 0 {
+    panic("nil FFI array data pointer despite non-zero count")
   }
   cDataSlice := unsafe.Slice((*{{ arr.element_field_type }})(unsafe.Pointer(arr.{{ arr.ptr_field_pascal }})), arr.Count)
   result := make([]{{ arr.element_field_type }}, arr.Count)

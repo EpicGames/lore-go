@@ -101,6 +101,12 @@ func init() {
 // Multiple callbacks can be registered for the same event type.
 // Returns a cleanup function that unregisters the callback when called.
 //
+// The *types.LoreEventFFI passed to the callback — and everything reached
+// through it — is backed by native memory that is only valid for the duration
+// of the callback invocation. Reading it after the callback returns is a
+// silent use-after-free. Call Clone() inside the callback to get a Go-owned
+// copy that stays valid afterwards.
+//
 // Example usage:
 //
 //	cleanup := lore.GlobalCallback(types.LoreEventTag_LOG, func(event *types.LoreEventFFI, userContext uint64) {
@@ -196,6 +202,14 @@ type LoreCall[TArgs any] struct {
 
 // Callback sets the event handler for this operation.
 // Returns the same handle for method chaining.
+//
+// The *types.LoreEventFFI passed to the callback — and everything reached
+// through it (GetData results, LoreString values, array views) — is backed by
+// native memory that is only valid for the duration of the callback
+// invocation. Reading it after the callback returns is a silent use-after-free.
+// Call Clone() inside the callback on the event (or on the specific data) to
+// get a Go-owned copy that stays valid afterwards. Collect and AsyncIter do
+// this cloning automatically.
 func (c *LoreCall[TArgs]) Callback(fn types.LoreEventCallback) *LoreCall[TArgs] {
 	c.callback = fn
 	return c

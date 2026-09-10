@@ -1098,3 +1098,30 @@ func TestLoreBranchList_Collect_CompleteAndEndEvents(t *testing.T) {
 		t.Error("Wait(): expected END event")
 	}
 }
+
+func TestEmptyArrayFFICloneReturnsNil(t *testing.T) {
+	eventsArr := types.LoreRepositoryVerifyFragmentMatchEventDataArrayFFI{Ptr: 0, Count: 0}
+	if got := eventsArr.Clone(); got != nil {
+		t.Errorf("expected nil clone for empty event data array, got %v", got)
+	}
+
+	typesArr := types.LoreTraceLocationArrayFFI{Ptr: 0, Count: 0}
+	if got := typesArr.Clone(); got != nil {
+		t.Errorf("expected nil clone for empty array, got %v", got)
+	}
+
+	stringArr := types.LoreStringArrayFFI{Ptr: 0, Count: 0}
+	if got := stringArr.Clone(); got != nil {
+		t.Errorf("expected nil clone for empty string array, got %v", got)
+	}
+
+	boolArr := types.LoreUint8ArrayFFI{Ptr: 0, Count: 0}
+	if got := boolArr.Clone(); got != nil {
+		t.Errorf("expected nil clone for empty bool array, got %v", got)
+	}
+
+	binary := types.LoreBinaryFFI{Payload: 0, Length: 0}
+	if got := binary.Clone(); got != nil {
+		t.Errorf("expected nil clone for empty binary, got %v", got)
+	}
+}
