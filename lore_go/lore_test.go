@@ -220,7 +220,7 @@ func TestLoreBranchInfo_NonZeroReturnCode_ReturnsLoreError(t *testing.T) {
 		if loreErr.ReturnCode != returnCode {
 			t.Errorf("LoreError.ReturnCode %d does not match return code %d", loreErr.ReturnCode, returnCode)
 		}
-		t.Logf("LoreError: code=%d, messages=%v", loreErr.ReturnCode, loreErr.Messages)
+		t.Logf("LoreError: code=%d, detail=%+v", loreErr.ReturnCode, loreErr.ErrorDetail)
 	}
 }
 
@@ -298,23 +298,32 @@ func TestLoreCall_MethodChaining(t *testing.T) {
 	}
 }
 
-func TestLoreError_Error_WithMessages(t *testing.T) {
+func TestLoreError_Error_WithDetail(t *testing.T) {
 	err := &LoreError{
 		ReturnCode: 42,
-		Messages:   []string{"error 1", "error 2"},
+		ErrorDetail: &types.LoreErrorDetail{
+			ErrorCode: 42,
+			Message:   "something failed",
+			TraceLocations: types.LoreTraceLocationArray{
+				{File: "src/repo.rs", Line: 12, Column: 4, Context: "open"},
+				{File: "src/main.rs", Line: 3, Column: 1},
+			},
+		},
 	}
 
 	errorString := err.Error()
 
-	if errorString != "Lore operation failed with code 42: error 1; error 2" {
+	expected := "Lore error 42: something failed" +
+		"\n    at src/repo.rs:12:4 (open)" +
+		"\n    at src/main.rs:3:1"
+	if errorString != expected {
 		t.Errorf("Unexpected error string: %s", errorString)
 	}
 }
 
-func TestLoreError_Error_WithoutMessages(t *testing.T) {
+func TestLoreError_Error_WithoutDetail(t *testing.T) {
 	err := &LoreError{
 		ReturnCode: 42,
-		Messages:   nil,
 	}
 
 	errorString := err.Error()
