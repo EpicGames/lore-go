@@ -460,6 +460,22 @@ func SetThreadLimit(count uintptr) (int32, error) {
 	return native.SetThreadLimit(count)
 }
 
+// SetCompressionMode selects how payloads are compressed before they are
+// stored. Applies to payloads written after the call. Returns 0 if the mode
+// was applied, or 3 (LORE_ERROR_CODE_INVALID_ARGUMENTS) if the value is not a
+// valid mode (LoreCompressionMode_OODLE is rejected as deprecated).
+func SetCompressionMode(mode types.LoreCompressionMode) (int32, error) {
+	return native.SetCompressionMode(uint32(mode))
+}
+
+// SetCompressionLevel selects the level payloads are compressed at: a zstd
+// level 1 through 22, or -1 for the codec default. Must be called before the
+// first payload is written. Returns 0 if the level was selected, or 1 if a
+// payload had already fixed it — the latter is not treated as an error.
+func SetCompressionLevel(level int32) (int32, error) {
+	return native.SetCompressionLevel(level)
+}
+
 // Version returns the Lore library version string.
 func Version() (string, error) {
 	return native.Version()
