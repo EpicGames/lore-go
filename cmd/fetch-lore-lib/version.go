@@ -4,7 +4,7 @@
 package main
 
 const (
-	loreVersion         = "0.9.0"
+	loreVersion         = "v0.10.0"
 	loreRevision        = ""
 	loreSiblingRevision = ""
 	loreBranch          = ""

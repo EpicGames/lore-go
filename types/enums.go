@@ -59,14 +59,30 @@ const (
 	LoreNodeType_LINK      LoreNodeType = 2
 )
 
+type LoreRevisionResolveTarget int32
+
+const (
+	LoreRevisionResolveTarget_NUMBER    LoreRevisionResolveTarget = 1
+	LoreRevisionResolveTarget_LATEST    LoreRevisionResolveTarget = 2
+	LoreRevisionResolveTarget_SIGNATURE LoreRevisionResolveTarget = 3
+)
+
 type LoreErrorCode int32
 
 const (
 	LoreErrorCode_NONE              LoreErrorCode = 0
-	LoreErrorCode_INVALID_ARGUMENTS LoreErrorCode = 1
-	LoreErrorCode_ADDRESS_NOT_FOUND LoreErrorCode = 2
-	LoreErrorCode_INTERNAL          LoreErrorCode = 3
-	LoreErrorCode_SLOW_DOWN         LoreErrorCode = 4
+	LoreErrorCode_INVALID_ARGUMENTS LoreErrorCode = 3
+	LoreErrorCode_ADDRESS_NOT_FOUND LoreErrorCode = 80
+	LoreErrorCode_INTERNAL          LoreErrorCode = -1
+	LoreErrorCode_SLOW_DOWN         LoreErrorCode = 31
+)
+
+type LoreVfsType int32
+
+const (
+	LoreVfsType_NONE    LoreVfsType = 0
+	LoreVfsType_DEFAULT LoreVfsType = 1
+	LoreVfsType_SWFS    LoreVfsType = 2
 )
 
 type LoreSharedStoreMode int32
@@ -99,6 +115,16 @@ const (
 	LoreNodeStagedAction_DELETE LoreNodeStagedAction = 3
 	LoreNodeStagedAction_MOVE   LoreNodeStagedAction = 4
 	LoreNodeStagedAction_COPY   LoreNodeStagedAction = 5
+)
+
+type LoreCompressionMode int32
+
+const (
+	LoreCompressionMode_NOT_SPECIFIED  LoreCompressionMode = 0
+	LoreCompressionMode_NO_COMPRESSION LoreCompressionMode = 1
+	LoreCompressionMode_LZ4            LoreCompressionMode = 2
+	LoreCompressionMode_OODLE          LoreCompressionMode = 3
+	LoreCompressionMode_ZSTD           LoreCompressionMode = 4
 )
 
 type LoreEventTag int32
@@ -296,42 +322,45 @@ const (
 	LoreEventTag_NOTIFICATION_UNSUBSCRIBED                      LoreEventTag = 189
 	LoreEventTag_SHARED_STORE_CREATE                            LoreEventTag = 190
 	LoreEventTag_SHARED_STORE_INFO                              LoreEventTag = 191
-	LoreEventTag_LINK_STAGED_ENTRY                              LoreEventTag = 192
-	LoreEventTag_STORAGE_OPENED                                 LoreEventTag = 193
-	LoreEventTag_STORAGE_PUT_ITEM_COMPLETE                      LoreEventTag = 194
-	LoreEventTag_STORAGE_GET_HEADER                             LoreEventTag = 195
-	LoreEventTag_STORAGE_GET_DATA                               LoreEventTag = 196
-	LoreEventTag_STORAGE_GET_ITEM_COMPLETE                      LoreEventTag = 197
-	LoreEventTag_STORAGE_GET_METADATA_ITEM_COMPLETE             LoreEventTag = 198
-	LoreEventTag_STORAGE_COPY_ITEM_COMPLETE                     LoreEventTag = 199
-	LoreEventTag_STORAGE_OBLITERATE_ITEM_COMPLETE               LoreEventTag = 200
-	LoreEventTag_STORAGE_UPLOAD_ITEM_COMPLETE                   LoreEventTag = 201
-	LoreEventTag_REVISION_TREE_LOADED                           LoreEventTag = 202
-	LoreEventTag_REVISION_TREE_RESOLVE_PATH_COMPLETE            LoreEventTag = 203
-	LoreEventTag_REVISION_TREE_CHILD                            LoreEventTag = 204
-	LoreEventTag_REVISION_TREE_NODE_INFO                        LoreEventTag = 205
-	LoreEventTag_REVISION_TREE_NODE_PATH                        LoreEventTag = 206
-	LoreEventTag_REVISION_TREE_ADD_COMPLETE                     LoreEventTag = 207
-	LoreEventTag_REVISION_TREE_DELETE_COMPLETE                  LoreEventTag = 208
-	LoreEventTag_REVISION_TREE_MODIFY_COMPLETE                  LoreEventTag = 209
-	LoreEventTag_REVISION_TREE_MOVE_COMPLETE                    LoreEventTag = 210
-	LoreEventTag_REVISION_TREE_METADATA_SET_COMPLETE            LoreEventTag = 211
-	LoreEventTag_REVISION_TREE_METADATA_GET_COMPLETE            LoreEventTag = 212
-	LoreEventTag_REVISION_TREE_COMMIT_COMPLETE                  LoreEventTag = 213
-	LoreEventTag_REVISION_TREE_CLOSE_COMPLETE                   LoreEventTag = 214
-	LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN              LoreEventTag = 215
-	LoreEventTag_REVISION_TREE_INFO                             LoreEventTag = 216
-	LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE             LoreEventTag = 217
-	LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE            LoreEventTag = 218
-	LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE LoreEventTag = 219
-	LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY                     LoreEventTag = 220
-	LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE             LoreEventTag = 221
-	LoreEventTag_EVICTION_BEGIN                                 LoreEventTag = 222
-	LoreEventTag_EVICTION_PROGRESS                              LoreEventTag = 223
-	LoreEventTag_EVICTION_END                                   LoreEventTag = 224
-	LoreEventTag_COMPACTION_BEGIN                               LoreEventTag = 225
-	LoreEventTag_COMPACTION_PROGRESS                            LoreEventTag = 226
-	LoreEventTag_COMPACTION_END                                 LoreEventTag = 227
-	LoreEventTag_REVISION_TREE_BATCH_COMPLETE                   LoreEventTag = 228
-	LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE          LoreEventTag = 229
+	LoreEventTag_SHARED_STORE_LIST                              LoreEventTag = 192
+	LoreEventTag_LINK_STAGED_ENTRY                              LoreEventTag = 193
+	LoreEventTag_STORAGE_OPENED                                 LoreEventTag = 194
+	LoreEventTag_STORAGE_PUT_ITEM_COMPLETE                      LoreEventTag = 195
+	LoreEventTag_STORAGE_GET_HEADER                             LoreEventTag = 196
+	LoreEventTag_STORAGE_GET_DATA                               LoreEventTag = 197
+	LoreEventTag_STORAGE_GET_ITEM_COMPLETE                      LoreEventTag = 198
+	LoreEventTag_STORAGE_GET_METADATA_ITEM_COMPLETE             LoreEventTag = 199
+	LoreEventTag_STORAGE_COPY_ITEM_COMPLETE                     LoreEventTag = 200
+	LoreEventTag_STORAGE_OBLITERATE_ITEM_COMPLETE               LoreEventTag = 201
+	LoreEventTag_STORAGE_UPLOAD_ITEM_COMPLETE                   LoreEventTag = 202
+	LoreEventTag_REVISION_TREE_LOADED                           LoreEventTag = 203
+	LoreEventTag_REVISION_TREE_RESOLVE_PATH_COMPLETE            LoreEventTag = 204
+	LoreEventTag_REVISION_TREE_CHILD                            LoreEventTag = 205
+	LoreEventTag_REVISION_TREE_NODE_INFO                        LoreEventTag = 206
+	LoreEventTag_REVISION_TREE_NODE_PATH                        LoreEventTag = 207
+	LoreEventTag_REVISION_TREE_ADD_COMPLETE                     LoreEventTag = 208
+	LoreEventTag_REVISION_TREE_DELETE_COMPLETE                  LoreEventTag = 209
+	LoreEventTag_REVISION_TREE_MODIFY_COMPLETE                  LoreEventTag = 210
+	LoreEventTag_REVISION_TREE_MOVE_COMPLETE                    LoreEventTag = 211
+	LoreEventTag_REVISION_TREE_METADATA_SET_COMPLETE            LoreEventTag = 212
+	LoreEventTag_REVISION_TREE_METADATA_GET_COMPLETE            LoreEventTag = 213
+	LoreEventTag_REVISION_TREE_COMMIT_COMPLETE                  LoreEventTag = 214
+	LoreEventTag_REVISION_TREE_CLOSE_COMPLETE                   LoreEventTag = 215
+	LoreEventTag_REVISION_TREE_LIST_CHILDREN_BEGIN              LoreEventTag = 216
+	LoreEventTag_REVISION_TREE_INFO                             LoreEventTag = 217
+	LoreEventTag_STORAGE_MUTABLE_LOAD_ITEM_COMPLETE             LoreEventTag = 218
+	LoreEventTag_STORAGE_MUTABLE_STORE_ITEM_COMPLETE            LoreEventTag = 219
+	LoreEventTag_STORAGE_MUTABLE_COMPARE_AND_SWAP_ITEM_COMPLETE LoreEventTag = 220
+	LoreEventTag_STORAGE_MUTABLE_LIST_ENTRY                     LoreEventTag = 221
+	LoreEventTag_STORAGE_MUTABLE_LIST_ITEM_COMPLETE             LoreEventTag = 222
+	LoreEventTag_EVICTION_BEGIN                                 LoreEventTag = 223
+	LoreEventTag_EVICTION_PROGRESS                              LoreEventTag = 224
+	LoreEventTag_EVICTION_END                                   LoreEventTag = 225
+	LoreEventTag_COMPACTION_BEGIN                               LoreEventTag = 226
+	LoreEventTag_COMPACTION_PROGRESS                            LoreEventTag = 227
+	LoreEventTag_COMPACTION_END                                 LoreEventTag = 228
+	LoreEventTag_REVISION_TREE_BATCH_COMPLETE                   LoreEventTag = 229
+	LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE          LoreEventTag = 230
+	LoreEventTag_REVISION_COMMIT_STATS                          LoreEventTag = 231
+	LoreEventTag_BRANCH_PUSH_STATS                              LoreEventTag = 232
 )

@@ -7,8 +7,14 @@ import (
 	"unsafe"
 )
 
-// LoreEventFFI is a C-compatible representation of lore_event_t
-// Only valid during the callback
+// LoreEventFFI is a C-compatible representation of lore_event_t.
+//
+// The event — and everything reached through it (GetData results, LoreString
+// values, array views) — is backed by native memory that is only valid for the
+// duration of the event callback invocation. Reading it after the callback
+// returns is a silent use-after-free: no runtime check can catch it, because
+// the FFI values are raw views and copies of raw pointers. Call Clone() inside
+// the callback to get a Go-owned LoreEvent that stays valid afterwards.
 type LoreEventFFI struct {
 	Tag     LoreEventTag
 	padding [4]byte // Ensure union starts at 8-byte boundary
@@ -40,18 +46,18 @@ func (arr LoreRepositoryVerifyFragmentMatchEventDataArrayFFI) Get(index int) Lor
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRepositoryVerifyFragmentMatchEventData)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
 }
 
 func (arr LoreRepositoryVerifyFragmentMatchEventDataArrayFFI) Clone() []LoreRepositoryVerifyFragmentMatchEventData {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRepositoryVerifyFragmentMatchEventData)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRepositoryVerifyFragmentMatchEventData, arr.Count)
@@ -418,13 +424,37 @@ type LoreBranchInfoEventData struct {
 	Archived bool
 }
 type LoreBranchDiffBeginEventDataFFI struct {
-	/* Unused placeholder field. */
-	Unused uint32
+	/* Identifier of the source branch of the diff. */
+	SourceBranch LoreBranchId
+	/* Name of the source branch. */
+	SourceBranchName LoreString
+	/* Revision of the source branch used in the diff. */
+	SourceRevision LoreHash
+	/* Identifier of the target branch of the diff. */
+	TargetBranch LoreBranchId
+	/* Name of the target branch. */
+	TargetBranchName LoreString
+	/* Revision of the target branch used in the diff. */
+	TargetRevision LoreHash
+	/* Base revision the 3-way diff was resolved against. */
+	BaseRevision LoreHash
 }
 
 type LoreBranchDiffBeginEventData struct {
-	/* Unused placeholder field. */
-	Unused uint32
+	/* Identifier of the source branch of the diff. */
+	SourceBranch LoreBranchId
+	/* Name of the source branch. */
+	SourceBranchName string
+	/* Revision of the source branch used in the diff. */
+	SourceRevision LoreHash
+	/* Identifier of the target branch of the diff. */
+	TargetBranch LoreBranchId
+	/* Name of the target branch. */
+	TargetBranchName string
+	/* Revision of the target branch used in the diff. */
+	TargetRevision LoreHash
+	/* Base revision the 3-way diff was resolved against. */
+	BaseRevision LoreHash
 }
 type LoreBranchDiffChangeBeginEventDataFFI struct {
 	/* Number of changes that follow. */
@@ -1279,7 +1309,7 @@ type LoreFileInfoEventDataFFI struct {
 	Size uint64
 	/* Size of the entry on the local filesystem, in bytes. */
 	LocalSize uint64
-	/* Content hash of the entry on the local filesystem. */
+	/* Address the entry's local content hashes to, zero where nothing was compared. */
 	LocalHash LoreHash
 	/* Size of the entry after filters are applied, in bytes. */
 	FilterSize uint64
@@ -1310,7 +1340,7 @@ type LoreFileInfoEventData struct {
 	Size uint64
 	/* Size of the entry on the local filesystem, in bytes. */
 	LocalSize uint64
-	/* Content hash of the entry on the local filesystem. */
+	/* Address the entry's local content hashes to, zero where nothing was compared. */
 	LocalHash LoreHash
 	/* Size of the entry after filters are applied, in bytes. */
 	FilterSize uint64
@@ -1366,6 +1396,8 @@ type LoreFileHistoryEventDataFFI struct {
 	Size uint64
 	/* Action applied to the file at this revision. */
 	Action LoreFileAction
+	/* Path the file was moved from at this revision. Empty otherwise. */
+	FromPath LoreString
 }
 
 type LoreFileHistoryEventData struct {
@@ -1385,6 +1417,8 @@ type LoreFileHistoryEventData struct {
 	Size uint64
 	/* Action applied to the file at this revision. */
 	Action LoreFileAction
+	/* Path the file was moved from at this revision. Empty otherwise. */
+	FromPath string
 }
 type LoreFileWriteEventDataFFI struct {
 	/* Path that was written. */
@@ -1670,18 +1704,18 @@ type LoreFileStageRevisionEventData struct {
 	Revision LoreHash
 }
 type LoreFileStageFileEventDataFFI struct {
-	/* Previous path of the file, when it was moved. */
+	/* Previous path of the file, when it was moved, relative to the root of the working tree. */
 	FromPath LoreString
-	/* Path of the file. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path LoreString
 	/* Action applied to the file. */
 	Action LoreFileAction
 }
 
 type LoreFileStageFileEventData struct {
-	/* Previous path of the file, when it was moved. */
+	/* Previous path of the file, when it was moved, relative to the root of the working tree. */
 	FromPath string
-	/* Path of the file. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path string
 	/* Action applied to the file. */
 	Action LoreFileAction
@@ -1727,14 +1761,14 @@ type LoreFileUnstageRevisionEventData struct {
 	Revision LoreHash
 }
 type LoreFileUnstageFileEventDataFFI struct {
-	/* Path of the file. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path LoreString
 	/* Action applied to the file. */
 	Action LoreFileAction
 }
 
 type LoreFileUnstageFileEventData struct {
-	/* Path of the file. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path string
 	/* Action applied to the file. */
 	Action LoreFileAction
@@ -2209,6 +2243,8 @@ type LoreRepositoryDataEventDataFFI struct {
 	RemoteUrl LoreString
 	/* Repository identifier. */
 	Id LoreRepositoryId
+	/* Instance identifier. */
+	InstanceId LoreInstanceId
 	/* Repository name. */
 	Name LoreString
 	/* Repository description. */
@@ -2219,7 +2255,8 @@ type LoreRepositoryDataEventDataFFI struct {
 	DefaultBranchName LoreString
 	/* Name of the user who created the repository. */
 	Creator LoreString
-	/* Creation time of the repository, in seconds since the Unix epoch. */
+	/* Creation time of the repository, in milliseconds since the Unix
+	epoch. */
 	Created uint64
 }
 
@@ -2228,6 +2265,8 @@ type LoreRepositoryDataEventData struct {
 	RemoteUrl string
 	/* Repository identifier. */
 	Id LoreRepositoryId
+	/* Instance identifier. */
+	InstanceId LoreInstanceId
 	/* Repository name. */
 	Name string
 	/* Repository description. */
@@ -2238,7 +2277,8 @@ type LoreRepositoryDataEventData struct {
 	DefaultBranchName string
 	/* Name of the user who created the repository. */
 	Creator string
-	/* Creation time of the repository, in seconds since the Unix epoch. */
+	/* Creation time of the repository, in milliseconds since the Unix
+	epoch. */
 	Created uint64
 }
 type LoreRepositoryConfigGetEventDataFFI struct {
@@ -2300,7 +2340,11 @@ type LoreRepositoryInstanceEventDataFFI struct {
 	Branch LoreBranchId
 	/* Current revision hash for the instance */
 	Revision LoreHash
-	/* Non-zero if the instance path no longer exists on disk */
+	/* Non-zero if the registration no longer describes a live checkout: 1 when
+	the path no longer exists on disk, 2 when the path holds a repository
+	whose `.lore/instance` names a different instance (superseded by a
+	re-create or re-clone), 3 when the path holds no readable
+	`.lore/instance` at all */
 	Stale uint8
 }
 
@@ -2315,7 +2359,11 @@ type LoreRepositoryInstanceEventData struct {
 	Branch LoreBranchId
 	/* Current revision hash for the instance */
 	Revision LoreHash
-	/* Non-zero if the instance path no longer exists on disk */
+	/* Non-zero if the registration no longer describes a live checkout: 1 when
+	the path no longer exists on disk, 2 when the path holds a repository
+	whose `.lore/instance` names a different instance (superseded by a
+	re-create or re-clone), 3 when the path holds no readable
+	`.lore/instance` at all */
 	Stale bool
 }
 type LoreRepositoryVerifyStateBeginEventDataFFI struct {
@@ -2583,7 +2631,7 @@ type LoreRepositoryStatusRevisionEventData struct {
 	RemoteBranchExist bool
 }
 type LoreRepositoryStatusFileEventDataFFI struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path LoreString
 	/* Size of the file in bytes. */
 	Size uint64
@@ -2612,7 +2660,7 @@ type LoreRepositoryStatusFileEventDataFFI struct {
 }
 
 type LoreRepositoryStatusFileEventData struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path string
 	/* Size of the file in bytes. */
 	Size uint64
@@ -2826,6 +2874,8 @@ type LoreRevisionInfoDeltaEventDataFFI struct {
 	FlagMerged uint8
 	/* Flag indicating the entry is a file rather than a directory. */
 	FlagFile uint8
+	/* Path the file was moved from in this revision. Empty otherwise. */
+	FromPath LoreString
 }
 
 type LoreRevisionInfoDeltaEventData struct {
@@ -2841,9 +2891,11 @@ type LoreRevisionInfoDeltaEventData struct {
 	FlagMerged bool
 	/* Flag indicating the entry is a file rather than a directory. */
 	FlagFile bool
+	/* Path the file was moved from in this revision. Empty otherwise. */
+	FromPath string
 }
 type LoreRevisionDiffFileEventDataFFI struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path LoreString
 	/* Action applied to the file. */
 	Action LoreFileAction
@@ -2855,12 +2907,13 @@ type LoreRevisionDiffFileEventDataFFI struct {
 	OldAddress LoreAddress
 	/* Address of the file content on the target side. */
 	NewAddress LoreAddress
-	/* Previous path of the file when it was moved or copied. Empty otherwise. */
+	/* Previous path of the file when it was moved or copied, relative to the root of the
+	working tree. Empty otherwise. */
 	FromPath LoreString
 }
 
 type LoreRevisionDiffFileEventData struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path string
 	/* Action applied to the file. */
 	Action LoreFileAction
@@ -2872,7 +2925,8 @@ type LoreRevisionDiffFileEventData struct {
 	OldAddress LoreAddress
 	/* Address of the file content on the target side. */
 	NewAddress LoreAddress
-	/* Previous path of the file when it was moved or copied. Empty otherwise. */
+	/* Previous path of the file when it was moved or copied, relative to the root of the
+	working tree. Empty otherwise. */
 	FromPath string
 }
 type LoreRevisionFindEventDataFFI struct {
@@ -3030,10 +3084,12 @@ type LoreRevisionResolveEventDataFFI struct {
 	Repository LoreRepositoryId
 	/* Identifier of the branch on which resolution is being done */
 	Branch LoreBranchId
-	/* If set to non-empty, the partial hash being resolved */
-	Revision LoreString
-	/* If set to non-zero, the revision number being resolved */
+	/* What the specifier names on the branch */
+	Target LoreRevisionResolveTarget
+	/* The revision number being resolved, zero unless `target` is `Number` */
 	RevisionNumber uint64
+	/* The revision being resolved, zero unless `target` is `Signature` */
+	Revision LoreHash
 	/* Resolving using remote data */
 	Remote uint8
 	/* Resolving using local data */
@@ -3045,10 +3101,12 @@ type LoreRevisionResolveEventData struct {
 	Repository LoreRepositoryId
 	/* Identifier of the branch on which resolution is being done */
 	Branch LoreBranchId
-	/* If set to non-empty, the partial hash being resolved */
-	Revision string
-	/* If set to non-zero, the revision number being resolved */
+	/* What the specifier names on the branch */
+	Target LoreRevisionResolveTarget
+	/* The revision number being resolved, zero unless `target` is `Number` */
 	RevisionNumber uint64
+	/* The revision being resolved, zero unless `target` is `Signature` */
+	Revision LoreHash
 	/* Resolving using remote data */
 	Remote bool
 	/* Resolving using local data */
@@ -3075,6 +3133,10 @@ type LoreRevisionSyncTargetEventDataFFI struct {
 	IsLatest uint8
 	/* Flag indicating revision was from local revision history, not remote */
 	Local uint8
+	/* Remote configured for the repository. */
+	RemoteAvailable uint8
+	/* Remote branch query returned an authoritative answer, identity is authorized to access the repository. */
+	RemoteAuthorized uint8
 }
 
 type LoreRevisionSyncTargetEventData struct {
@@ -3098,9 +3160,13 @@ type LoreRevisionSyncTargetEventData struct {
 	IsLatest bool
 	/* Flag indicating revision was from local revision history, not remote */
 	Local bool
+	/* Remote configured for the repository. */
+	RemoteAvailable bool
+	/* Remote branch query returned an authoritative answer, identity is authorized to access the repository. */
+	RemoteAuthorized bool
 }
 type LoreRevisionSyncFileEventDataFFI struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path LoreString
 	/* Size of the file in bytes. */
 	Size uint64
@@ -3111,7 +3177,7 @@ type LoreRevisionSyncFileEventDataFFI struct {
 }
 
 type LoreRevisionSyncFileEventData struct {
-	/* Path of the file relative to the repository root. */
+	/* Path of the file, relative to the root of the working tree. */
 	Path string
 	/* Size of the file in bytes. */
 	Size uint64
@@ -3286,6 +3352,15 @@ type LoreSharedStoreInfoEventData struct {
 	Paths []string
 	/* Per-store flag, nonzero when the store exists on disk. */
 	Exists []bool
+}
+type LoreSharedStoreListEventDataFFI struct {
+	/* All stores from the registry. */
+	Stores LoreSharedStoreListItemArrayFFI
+}
+
+type LoreSharedStoreListEventData struct {
+	/* All stores from the registry. */
+	Stores LoreSharedStoreListItemArray
 }
 type LoreLinkStagedEntryEventDataFFI struct {
 	/* Path of the link within the parent repository. */
@@ -4030,6 +4105,36 @@ type LoreRevisionTreeMetadataClearCompleteEventData struct {
 	Removed bool
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
+}
+type LoreRevisionCommitStatsEventDataFFI struct {
+	/* Files committed, by action. */
+	Files LoreCommitFileStatsDataFFI
+	/* What the commit's fragment writes cost. */
+	Fragments LoreFragmentStatsDataFFI
+}
+
+type LoreRevisionCommitStatsEventData struct {
+	/* Files committed, by action. */
+	Files LoreCommitFileStatsData
+	/* What the commit's fragment writes cost. */
+	Fragments LoreFragmentStatsData
+}
+type LoreBranchPushStatsEventDataFFI struct {
+	/* Fragments the peer already held, so nothing was registered for them. */
+	Deduplicated uint64
+	/* Fragments the peer duplicated an association for, sending no payload. */
+	Copied uint64
+	/* Fragments whose payload was uploaded. */
+	Put uint64
+}
+
+type LoreBranchPushStatsEventData struct {
+	/* Fragments the peer already held, so nothing was registered for them. */
+	Deduplicated uint64
+	/* Fragments the peer duplicated an association for, sending no payload. */
+	Copied uint64
+	/* Fragments whose payload was uploaded. */
+	Put uint64
 }
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
@@ -4800,6 +4905,10 @@ func (e *LoreEventFFI) asSharedStoreInfoEventDataFFI() *LoreSharedStoreInfoEvent
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreSharedStoreInfoEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asSharedStoreListEventDataFFI() *LoreSharedStoreListEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreSharedStoreListEventDataFFI)(unionPtr)
+}
 func (e *LoreEventFFI) asLinkStagedEntryEventDataFFI() *LoreLinkStagedEntryEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreLinkStagedEntryEventDataFFI)(unionPtr)
@@ -4951,6 +5060,14 @@ func (e *LoreEventFFI) asRevisionTreeBatchCompleteEventDataFFI() *LoreRevisionTr
 func (e *LoreEventFFI) asRevisionTreeMetadataClearCompleteEventDataFFI() *LoreRevisionTreeMetadataClearCompleteEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreRevisionTreeMetadataClearCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRevisionCommitStatsEventDataFFI() *LoreRevisionCommitStatsEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRevisionCommitStatsEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asBranchPushStatsEventDataFFI() *LoreBranchPushStatsEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreBranchPushStatsEventDataFFI)(unionPtr)
 }
 
 func (e *LoreEventFFI) GetData() any {
@@ -5339,6 +5456,8 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asSharedStoreCreateEventDataFFI()
 	case LoreEventTag_SHARED_STORE_INFO:
 		return e.asSharedStoreInfoEventDataFFI()
+	case LoreEventTag_SHARED_STORE_LIST:
+		return e.asSharedStoreListEventDataFFI()
 	case LoreEventTag_LINK_STAGED_ENTRY:
 		return e.asLinkStagedEntryEventDataFFI()
 	case LoreEventTag_STORAGE_OPENED:
@@ -5415,6 +5534,10 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asRevisionTreeBatchCompleteEventDataFFI()
 	case LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE:
 		return e.asRevisionTreeMetadataClearCompleteEventDataFFI()
+	case LoreEventTag_REVISION_COMMIT_STATS:
+		return e.asRevisionCommitStatsEventDataFFI()
+	case LoreEventTag_BRANCH_PUSH_STATS:
+		return e.asBranchPushStatsEventDataFFI()
 	default:
 		return nil
 	}
@@ -5565,7 +5688,13 @@ func (e *LoreBranchInfoEventDataFFI) Clone() LoreBranchInfoEventData {
 }
 func (e *LoreBranchDiffBeginEventDataFFI) Clone() LoreBranchDiffBeginEventData {
 	return LoreBranchDiffBeginEventData{
-		Unused: e.Unused,
+		SourceBranch:     e.SourceBranch,
+		SourceBranchName: e.SourceBranchName.Clone(),
+		SourceRevision:   e.SourceRevision,
+		TargetBranch:     e.TargetBranch,
+		TargetBranchName: e.TargetBranchName.Clone(),
+		TargetRevision:   e.TargetRevision,
+		BaseRevision:     e.BaseRevision,
 	}
 }
 func (e *LoreBranchDiffChangeBeginEventDataFFI) Clone() LoreBranchDiffChangeBeginEventData {
@@ -5982,9 +6111,10 @@ func (e *LoreFileHistoryEventDataFFI) Clone() LoreFileHistoryEventData {
 			e.Parent[0].Clone(),
 			e.Parent[1].Clone(),
 		},
-		Address: e.Address,
-		Size:    e.Size,
-		Action:  e.Action,
+		Address:  e.Address,
+		Size:     e.Size,
+		Action:   e.Action,
+		FromPath: e.FromPath.Clone(),
 	}
 }
 func (e *LoreFileWriteEventDataFFI) Clone() LoreFileWriteEventData {
@@ -6348,6 +6478,7 @@ func (e *LoreRepositoryDataEventDataFFI) Clone() LoreRepositoryDataEventData {
 	return LoreRepositoryDataEventData{
 		RemoteUrl:         e.RemoteUrl.Clone(),
 		Id:                e.Id,
+		InstanceId:        e.InstanceId,
 		Name:              e.Name.Clone(),
 		Description:       e.Description.Clone(),
 		DefaultBranch:     e.DefaultBranch,
@@ -6567,6 +6698,7 @@ func (e *LoreRevisionInfoDeltaEventDataFFI) Clone() LoreRevisionInfoDeltaEventDa
 		FlagModify: e.FlagModify != 0,
 		FlagMerged: e.FlagMerged != 0,
 		FlagFile:   e.FlagFile != 0,
+		FromPath:   e.FromPath.Clone(),
 	}
 }
 func (e *LoreRevisionDiffFileEventDataFFI) Clone() LoreRevisionDiffFileEventData {
@@ -6657,8 +6789,9 @@ func (e *LoreRevisionResolveEventDataFFI) Clone() LoreRevisionResolveEventData {
 	return LoreRevisionResolveEventData{
 		Repository:     e.Repository,
 		Branch:         e.Branch,
-		Revision:       e.Revision.Clone(),
+		Target:         e.Target,
 		RevisionNumber: e.RevisionNumber,
+		Revision:       e.Revision,
 		Remote:         e.Remote != 0,
 		Local:          e.Local != 0,
 	}
@@ -6675,6 +6808,8 @@ func (e *LoreRevisionSyncTargetEventDataFFI) Clone() LoreRevisionSyncTargetEvent
 		TargetRevisionNumber: e.TargetRevisionNumber,
 		IsLatest:             e.IsLatest != 0,
 		Local:                e.Local != 0,
+		RemoteAvailable:      e.RemoteAvailable != 0,
+		RemoteAuthorized:     e.RemoteAuthorized != 0,
 	}
 }
 func (e *LoreRevisionSyncFileEventDataFFI) Clone() LoreRevisionSyncFileEventData {
@@ -6755,6 +6890,11 @@ func (e *LoreSharedStoreInfoEventDataFFI) Clone() LoreSharedStoreInfoEventData {
 		RemoteUrls:       e.RemoteUrls.Clone(),
 		Paths:            e.Paths.Clone(),
 		Exists:           e.Exists.Clone(),
+	}
+}
+func (e *LoreSharedStoreListEventDataFFI) Clone() LoreSharedStoreListEventData {
+	return LoreSharedStoreListEventData{
+		Stores: e.Stores.Clone(),
 	}
 }
 func (e *LoreLinkStagedEntryEventDataFFI) Clone() LoreLinkStagedEntryEventData {
@@ -7044,6 +7184,19 @@ func (e *LoreRevisionTreeMetadataClearCompleteEventDataFFI) Clone() LoreRevision
 		EntryId:   e.EntryId,
 		Removed:   e.Removed != 0,
 		ErrorCode: e.ErrorCode,
+	}
+}
+func (e *LoreRevisionCommitStatsEventDataFFI) Clone() LoreRevisionCommitStatsEventData {
+	return LoreRevisionCommitStatsEventData{
+		Files:     e.Files.Clone(),
+		Fragments: e.Fragments.Clone(),
+	}
+}
+func (e *LoreBranchPushStatsEventDataFFI) Clone() LoreBranchPushStatsEventData {
+	return LoreBranchPushStatsEventData{
+		Deduplicated: e.Deduplicated,
+		Copied:       e.Copied,
+		Put:          e.Put,
 	}
 }
 
@@ -8011,6 +8164,11 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 			Tag:  e.Tag,
 			Data: e.asSharedStoreInfoEventDataFFI().Clone(),
 		}
+	case LoreEventTag_SHARED_STORE_LIST:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asSharedStoreListEventDataFFI().Clone(),
+		}
 	case LoreEventTag_LINK_STAGED_ENTRY:
 		return LoreEvent{
 			Tag:  e.Tag,
@@ -8200,6 +8358,16 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asRevisionTreeMetadataClearCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REVISION_COMMIT_STATS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRevisionCommitStatsEventDataFFI().Clone(),
+		}
+	case LoreEventTag_BRANCH_PUSH_STATS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asBranchPushStatsEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{

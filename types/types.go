@@ -25,7 +25,7 @@ func (arr LoreTraceLocationArrayFFI) Get(index int) LoreTraceLocation {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreTraceLocation)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -36,7 +36,7 @@ func (arr LoreTraceLocationArrayFFI) Clone() []LoreTraceLocation {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreTraceLocation)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreTraceLocation, arr.Count)
@@ -91,7 +91,7 @@ func (arr LoreInstanceIdArrayFFI) Get(index int) LoreInstanceId {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreInstanceId)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -102,7 +102,7 @@ func (arr LoreInstanceIdArrayFFI) Clone() []LoreInstanceId {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreInstanceId)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreInstanceId, arr.Count)
@@ -150,7 +150,7 @@ func (arr LoreBranchPointArrayFFI) Get(index int) LoreBranchPoint {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreBranchPoint)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -161,7 +161,7 @@ func (arr LoreBranchPointArrayFFI) Clone() []LoreBranchPoint {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreBranchPoint)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreBranchPoint, arr.Count)
@@ -200,6 +200,72 @@ func NewLoreBranchPointArray(arr []LoreBranchPoint) (LoreBranchPointArrayFFI, fu
 	}, cleanup
 }
 
+type LoreSharedStoreListItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreSharedStoreListItemArray = []LoreSharedStoreListItem
+
+func (arr LoreSharedStoreListItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreSharedStoreListItemArrayFFI) Get(index int) LoreSharedStoreListItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	slice := unsafe.Slice((*LoreSharedStoreListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreSharedStoreListItemArrayFFI) Clone() []LoreSharedStoreListItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	cDataSlice := unsafe.Slice((*LoreSharedStoreListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreSharedStoreListItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreSharedStoreListItemArray(arr []LoreSharedStoreListItem) (LoreSharedStoreListItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreSharedStoreListItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreSharedStoreListItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreSharedStoreListItem(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreSharedStoreListItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreMetadataTypeArrayFFI struct {
 	Ptr   uintptr
 	Count uint64
@@ -216,7 +282,7 @@ func (arr LoreMetadataTypeArrayFFI) Get(index int) LoreMetadataType {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreMetadataType)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -227,7 +293,7 @@ func (arr LoreMetadataTypeArrayFFI) Clone() []LoreMetadataType {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreMetadataType)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreMetadataType, arr.Count)
@@ -275,7 +341,7 @@ func (arr LoreUint32ArrayFFI) Get(index int) uint32 {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*uint32)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -286,7 +352,7 @@ func (arr LoreUint32ArrayFFI) Clone() []uint32 {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*uint32)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]uint32, arr.Count)
@@ -334,7 +400,7 @@ func (arr LoreStoragePutItemArrayFFI) Get(index int) LoreStoragePutItem {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStoragePutItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -345,7 +411,7 @@ func (arr LoreStoragePutItemArrayFFI) Clone() []LoreStoragePutItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStoragePutItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStoragePutItem, arr.Count)
@@ -400,7 +466,7 @@ func (arr LoreStorageGetItemArrayFFI) Get(index int) LoreStorageGetItem {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageGetItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -411,7 +477,7 @@ func (arr LoreStorageGetItemArrayFFI) Clone() []LoreStorageGetItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetItem, arr.Count)
@@ -466,7 +532,7 @@ func (arr LoreStorageGetResolvedItemArrayFFI) Get(index int) LoreStorageGetResol
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageGetResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -477,7 +543,7 @@ func (arr LoreStorageGetResolvedItemArrayFFI) Clone() []LoreStorageGetResolvedIt
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetResolvedItem, arr.Count)
@@ -532,7 +598,7 @@ func (arr LoreStoragePutResolvedItemArrayFFI) Get(index int) LoreStoragePutResol
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStoragePutResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -543,7 +609,7 @@ func (arr LoreStoragePutResolvedItemArrayFFI) Clone() []LoreStoragePutResolvedIt
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStoragePutResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStoragePutResolvedItem, arr.Count)
@@ -598,7 +664,7 @@ func (arr LoreStorageGetMetadataItemArrayFFI) Get(index int) LoreStorageGetMetad
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageGetMetadataItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -609,7 +675,7 @@ func (arr LoreStorageGetMetadataItemArrayFFI) Clone() []LoreStorageGetMetadataIt
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetMetadataItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetMetadataItem, arr.Count)
@@ -664,7 +730,7 @@ func (arr LoreStorageObliterateItemArrayFFI) Get(index int) LoreStorageObliterat
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageObliterateItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -675,7 +741,7 @@ func (arr LoreStorageObliterateItemArrayFFI) Clone() []LoreStorageObliterateItem
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageObliterateItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageObliterateItem, arr.Count)
@@ -730,7 +796,7 @@ func (arr LoreStorageMutableLoadItemArrayFFI) Get(index int) LoreStorageMutableL
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageMutableLoadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -741,7 +807,7 @@ func (arr LoreStorageMutableLoadItemArrayFFI) Clone() []LoreStorageMutableLoadIt
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageMutableLoadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageMutableLoadItem, arr.Count)
@@ -796,7 +862,7 @@ func (arr LoreStorageMutableStoreItemArrayFFI) Get(index int) LoreStorageMutable
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageMutableStoreItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -807,7 +873,7 @@ func (arr LoreStorageMutableStoreItemArrayFFI) Clone() []LoreStorageMutableStore
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageMutableStoreItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageMutableStoreItem, arr.Count)
@@ -862,7 +928,7 @@ func (arr LoreStorageMutableCompareAndSwapItemArrayFFI) Get(index int) LoreStora
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageMutableCompareAndSwapItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -873,7 +939,7 @@ func (arr LoreStorageMutableCompareAndSwapItemArrayFFI) Clone() []LoreStorageMut
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageMutableCompareAndSwapItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageMutableCompareAndSwapItem, arr.Count)
@@ -928,7 +994,7 @@ func (arr LoreStorageMutableListItemArrayFFI) Get(index int) LoreStorageMutableL
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageMutableListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -939,7 +1005,7 @@ func (arr LoreStorageMutableListItemArrayFFI) Clone() []LoreStorageMutableListIt
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageMutableListItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageMutableListItem, arr.Count)
@@ -994,7 +1060,7 @@ func (arr LoreStorageCopyItemArrayFFI) Get(index int) LoreStorageCopyItem {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageCopyItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1005,7 +1071,7 @@ func (arr LoreStorageCopyItemArrayFFI) Clone() []LoreStorageCopyItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageCopyItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageCopyItem, arr.Count)
@@ -1060,7 +1126,7 @@ func (arr LoreStoragePutFileItemArrayFFI) Get(index int) LoreStoragePutFileItem 
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStoragePutFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1071,7 +1137,7 @@ func (arr LoreStoragePutFileItemArrayFFI) Clone() []LoreStoragePutFileItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStoragePutFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStoragePutFileItem, arr.Count)
@@ -1126,7 +1192,7 @@ func (arr LoreStorageGetFileItemArrayFFI) Get(index int) LoreStorageGetFileItem 
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageGetFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1137,7 +1203,7 @@ func (arr LoreStorageGetFileItemArrayFFI) Clone() []LoreStorageGetFileItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageGetFileItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageGetFileItem, arr.Count)
@@ -1176,6 +1242,138 @@ func NewLoreStorageGetFileItemArray(arr []LoreStorageGetFileItem) (LoreStorageGe
 	}, cleanup
 }
 
+type LoreStoragePutFileResolvedItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStoragePutFileResolvedItemArray = []LoreStoragePutFileResolvedItem
+
+func (arr LoreStoragePutFileResolvedItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStoragePutFileResolvedItemArrayFFI) Get(index int) LoreStoragePutFileResolvedItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	slice := unsafe.Slice((*LoreStoragePutFileResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStoragePutFileResolvedItemArrayFFI) Clone() []LoreStoragePutFileResolvedItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	cDataSlice := unsafe.Slice((*LoreStoragePutFileResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStoragePutFileResolvedItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStoragePutFileResolvedItemArray(arr []LoreStoragePutFileResolvedItem) (LoreStoragePutFileResolvedItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStoragePutFileResolvedItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStoragePutFileResolvedItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStoragePutFileResolvedItem(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreStoragePutFileResolvedItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
+type LoreStorageGetFileResolvedItemArrayFFI struct {
+	Ptr   uintptr
+	Count uint64
+}
+
+type LoreStorageGetFileResolvedItemArray = []LoreStorageGetFileResolvedItem
+
+func (arr LoreStorageGetFileResolvedItemArrayFFI) Len() int {
+	return int(arr.Count)
+}
+
+func (arr LoreStorageGetFileResolvedItemArrayFFI) Get(index int) LoreStorageGetFileResolvedItem {
+	if index < 0 || index >= int(arr.Count) {
+		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	slice := unsafe.Slice((*LoreStorageGetFileResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	return slice[index]
+}
+
+func (arr LoreStorageGetFileResolvedItemArrayFFI) Clone() []LoreStorageGetFileResolvedItem {
+	if arr.Count == 0 {
+		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
+	}
+	cDataSlice := unsafe.Slice((*LoreStorageGetFileResolvedItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
+	result := make([]LoreStorageGetFileResolvedItem, arr.Count)
+	copy(result, cDataSlice)
+	return result
+}
+
+func NewLoreStorageGetFileResolvedItemArray(arr []LoreStorageGetFileResolvedItem) (LoreStorageGetFileResolvedItemArrayFFI, func()) {
+	if len(arr) == 0 {
+		return LoreStorageGetFileResolvedItemArrayFFI{Ptr: 0, Count: 0}, func() {}
+	}
+
+	// Element type has separate Go and FFI representations; convert each item
+	// through its NewXxx() builder so the FFI buffer contains FFI-layout structs.
+	ffiArray := make([]LoreStorageGetFileResolvedItemFFI, len(arr))
+	cleanups := make([]func(), len(arr))
+	for i := range arr {
+		ffiArray[i], cleanups[i] = NewLoreStorageGetFileResolvedItem(arr[i])
+	}
+
+	// Pin the buffer so it can be neither moved nor freed while the call is in flight.
+	var pinner runtime.Pinner
+	pinner.Pin(&ffiArray[0])
+	arrayPtr := uintptr(unsafe.Pointer(&ffiArray[0]))
+
+	cleanup := func() {
+		for _, c := range cleanups {
+			c()
+		}
+		pinner.Unpin()
+	}
+
+	return LoreStorageGetFileResolvedItemArrayFFI{
+		Ptr:   arrayPtr,
+		Count: uint64(len(arr)),
+	}, cleanup
+}
+
 type LoreStorageUploadItemArrayFFI struct {
 	Ptr   uintptr
 	Count uint64
@@ -1192,7 +1390,7 @@ func (arr LoreStorageUploadItemArrayFFI) Get(index int) LoreStorageUploadItem {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreStorageUploadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1203,7 +1401,7 @@ func (arr LoreStorageUploadItemArrayFFI) Clone() []LoreStorageUploadItem {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreStorageUploadItem)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreStorageUploadItem, arr.Count)
@@ -1258,7 +1456,7 @@ func (arr LoreRevisionTreeAddEntryArrayFFI) Get(index int) LoreRevisionTreeAddEn
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeAddEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1269,7 +1467,7 @@ func (arr LoreRevisionTreeAddEntryArrayFFI) Clone() []LoreRevisionTreeAddEntry {
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeAddEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeAddEntry, arr.Count)
@@ -1324,7 +1522,7 @@ func (arr LoreRevisionTreeDeleteEntryArrayFFI) Get(index int) LoreRevisionTreeDe
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeDeleteEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1335,7 +1533,7 @@ func (arr LoreRevisionTreeDeleteEntryArrayFFI) Clone() []LoreRevisionTreeDeleteE
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeDeleteEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeDeleteEntry, arr.Count)
@@ -1390,7 +1588,7 @@ func (arr LoreRevisionTreeModifyEntryArrayFFI) Get(index int) LoreRevisionTreeMo
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeModifyEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1401,7 +1599,7 @@ func (arr LoreRevisionTreeModifyEntryArrayFFI) Clone() []LoreRevisionTreeModifyE
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeModifyEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeModifyEntry, arr.Count)
@@ -1456,7 +1654,7 @@ func (arr LoreRevisionTreeMoveEntryArrayFFI) Get(index int) LoreRevisionTreeMove
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeMoveEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1467,7 +1665,7 @@ func (arr LoreRevisionTreeMoveEntryArrayFFI) Clone() []LoreRevisionTreeMoveEntry
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeMoveEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeMoveEntry, arr.Count)
@@ -1522,7 +1720,7 @@ func (arr LoreRevisionTreeMetadataSetEntryArrayFFI) Get(index int) LoreRevisionT
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeMetadataSetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1533,7 +1731,7 @@ func (arr LoreRevisionTreeMetadataSetEntryArrayFFI) Clone() []LoreRevisionTreeMe
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataSetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeMetadataSetEntry, arr.Count)
@@ -1588,7 +1786,7 @@ func (arr LoreRevisionTreeMetadataGetEntryArrayFFI) Get(index int) LoreRevisionT
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeMetadataGetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1599,7 +1797,7 @@ func (arr LoreRevisionTreeMetadataGetEntryArrayFFI) Clone() []LoreRevisionTreeMe
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataGetEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeMetadataGetEntry, arr.Count)
@@ -1654,7 +1852,7 @@ func (arr LoreRevisionTreeMetadataClearEntryArrayFFI) Get(index int) LoreRevisio
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreRevisionTreeMetadataClearEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index]
@@ -1665,7 +1863,7 @@ func (arr LoreRevisionTreeMetadataClearEntryArrayFFI) Clone() []LoreRevisionTree
 		return nil
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cDataSlice := unsafe.Slice((*LoreRevisionTreeMetadataClearEntry)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]LoreRevisionTreeMetadataClearEntry, arr.Count)
@@ -2304,6 +2502,346 @@ func (e *LoreRevisionCommitCountDataFFI) Clone() LoreRevisionCommitCountData {
 	}
 }
 
+type LoreSharedStoreListItemFFI struct {
+	/* Remote URL the shared store is for. */
+	RemoteUrl LoreString
+	/* Path to the shared store on disk. */
+	StorePath LoreString
+	/* Paths to instances using the shared store */
+	InstancePaths LoreStringArrayFFI
+	/* Ids of instances using the shared store */
+	InstanceIds LoreInstanceIdArrayFFI
+}
+
+type LoreSharedStoreListItem struct {
+	/* Remote URL the shared store is for. */
+	RemoteUrl string
+	/* Path to the shared store on disk. */
+	StorePath string
+	/* Paths to instances using the shared store */
+	InstancePaths []string
+	/* Ids of instances using the shared store */
+	InstanceIds LoreInstanceIdArray
+}
+
+func NewLoreSharedStoreListItem(opts LoreSharedStoreListItem) (LoreSharedStoreListItemFFI, func()) {
+	valRemoteUrl, cleanupRemoteUrl := NewLoreString(opts.RemoteUrl)
+	valStorePath, cleanupStorePath := NewLoreString(opts.StorePath)
+	valInstancePaths, cleanupInstancePaths := NewLoreStringArray(opts.InstancePaths)
+	valInstanceIds, cleanupInstanceIds := NewLoreInstanceIdArray(opts.InstanceIds)
+
+	cleanup := func() {
+		cleanupRemoteUrl()
+		cleanupStorePath()
+		cleanupInstancePaths()
+		cleanupInstanceIds()
+	}
+
+	return LoreSharedStoreListItemFFI{
+		RemoteUrl:     valRemoteUrl,
+		StorePath:     valStorePath,
+		InstancePaths: valInstancePaths,
+		InstanceIds:   valInstanceIds,
+	}, cleanup
+}
+
+func (e *LoreSharedStoreListItemFFI) Clone() LoreSharedStoreListItem {
+	return LoreSharedStoreListItem{
+		RemoteUrl:     e.RemoteUrl.Clone(),
+		StorePath:     e.StorePath.Clone(),
+		InstancePaths: e.InstancePaths.Clone(),
+		InstanceIds:   e.InstanceIds.Clone(),
+	}
+}
+
+type LoreCommitFileStatsDataFFI struct {
+	/* Files staged as new additions. */
+	Added uint64
+	/* Files whose content or mode changed. */
+	Modified uint64
+	/* Files staged for deletion. */
+	Deleted uint64
+	/* Files staged as moves. */
+	Moved uint64
+	/* Files staged as copies. */
+	Copied uint64
+	/* Directories staged for deletion. */
+	DirectoriesDeleted uint64
+	/* Files the commit read off disk and fragmented. A different set from
+	`files`: a staged file whose content turns out to match the revision it is
+	committed against is read and committed as nothing, a view-excluded path is
+	committed from its staged node without being read, and an in-memory commit
+	reads none at all. */
+	FilesRead uint64
+	/* Uncompressed content bytes of `files_read`. The same number the progress
+	event reports as `bytesTransferred`. */
+	BytesTransferred uint64
+	/* Files whose content the commit wrote: `added + modified + moved + copied`. */
+	Files uint64
+	/* Uncompressed content size of exactly the `files` above, so the two are a
+	pair. A delete contributes none.
+
+	Distinct from [`FragmentWriteCounts::data_content_bytes`], which counts
+	fragments rather than files and excludes every fragment that needed no
+	payload. */
+	FileBytes uint64
+}
+
+type LoreCommitFileStatsData struct {
+	/* Files staged as new additions. */
+	Added uint64
+	/* Files whose content or mode changed. */
+	Modified uint64
+	/* Files staged for deletion. */
+	Deleted uint64
+	/* Files staged as moves. */
+	Moved uint64
+	/* Files staged as copies. */
+	Copied uint64
+	/* Directories staged for deletion. */
+	DirectoriesDeleted uint64
+	/* Files the commit read off disk and fragmented. A different set from
+	`files`: a staged file whose content turns out to match the revision it is
+	committed against is read and committed as nothing, a view-excluded path is
+	committed from its staged node without being read, and an in-memory commit
+	reads none at all. */
+	FilesRead uint64
+	/* Uncompressed content bytes of `files_read`. The same number the progress
+	event reports as `bytesTransferred`. */
+	BytesTransferred uint64
+	/* Files whose content the commit wrote: `added + modified + moved + copied`. */
+	Files uint64
+	/* Uncompressed content size of exactly the `files` above, so the two are a
+	pair. A delete contributes none.
+
+	Distinct from [`FragmentWriteCounts::data_content_bytes`], which counts
+	fragments rather than files and excludes every fragment that needed no
+	payload. */
+	FileBytes uint64
+}
+
+func NewLoreCommitFileStatsData(opts LoreCommitFileStatsData) (LoreCommitFileStatsDataFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreCommitFileStatsDataFFI{
+		Added:              opts.Added,
+		Modified:           opts.Modified,
+		Deleted:            opts.Deleted,
+		Moved:              opts.Moved,
+		Copied:             opts.Copied,
+		DirectoriesDeleted: opts.DirectoriesDeleted,
+		FilesRead:          opts.FilesRead,
+		BytesTransferred:   opts.BytesTransferred,
+		Files:              opts.Files,
+		FileBytes:          opts.FileBytes,
+	}, cleanup
+}
+
+func (e *LoreCommitFileStatsDataFFI) Clone() LoreCommitFileStatsData {
+	return LoreCommitFileStatsData{
+		Added:              e.Added,
+		Modified:           e.Modified,
+		Deleted:            e.Deleted,
+		Moved:              e.Moved,
+		Copied:             e.Copied,
+		DirectoriesDeleted: e.DirectoriesDeleted,
+		FilesRead:          e.FilesRead,
+		BytesTransferred:   e.BytesTransferred,
+		Files:              e.Files,
+		FileBytes:          e.FileBytes,
+	}
+}
+
+type LoreFragmentStatsDataFFI struct {
+	/* Fragments handed to the store, whatever came of them. */
+	FragmentsProduced uint64
+	/* Uncompressed content bytes the produced fragments stand for. */
+	FragmentContentBytes uint64
+	/* Fragments the stores already held in the form the write wanted, so no
+	payload was loaded, compressed or uploaded for them. */
+	FragmentsDeduplicated uint64
+	/* Content bytes of `fragments_deduplicated`. */
+	DeduplicatedContentBytes uint64
+	/* Fragments that entered the write pipeline. */
+	FragmentsProcessed uint64
+	/* Content bytes of `fragments_processed`. */
+	ProcessedContentBytes uint64
+	/* Of `fragments_processed`, those that produced a stored payload of content. */
+	DataFragments uint64
+	/* Stored payload bytes of `data_fragments`, after compression where the
+	pipeline compressed them. */
+	DataPayloadBytes uint64
+	/* Uncompressed content bytes `data_fragments` stand for. Compare against
+	`data_payload_bytes` for the compression ratio. */
+	DataContentBytes uint64
+	/* Of `fragments_processed`, those that produced a stored fragment list. */
+	Fragmentlists uint64
+	/* Stored payload bytes of `fragmentlists`. */
+	FragmentlistPayloadBytes uint64
+	/* Of `fragments_processed`, those that needed no payload, so none was
+	prepared: the remote duplicated an association for them and the write did
+	not ask for the payload to be cached locally. */
+	NoPayloadFragments uint64
+	/* Content bytes `no_payload_fragments` stand for. */
+	NoPayloadContentBytes uint64
+	/* Terminal entries written to the local store. */
+	LocalWrites uint64
+	/* Of `local_writes`, those that recorded only the fragment header — the
+	payload lives on the remote and was not cached here. */
+	LocalMetadataWrites uint64
+	/* Of `local_writes`, those that also wrote a payload. */
+	LocalPayloadWrites uint64
+	/* Payload bytes written by `local_payload_writes`. */
+	LocalPayloadBytes uint64
+	/* Fragments registered with the remote. */
+	RemoteWrites uint64
+	/* Of `remote_writes`, those the remote duplicated from an association it
+	already held, so no payload crossed the wire. */
+	RemoteCopyWrites uint64
+	/* Of `remote_writes`, those whose payload was uploaded. */
+	RemotePutWrites uint64
+	/* Payload bytes uploaded by `remote_put_writes`. */
+	RemotePutBytes uint64
+	/* Fragments the remote already held under this very address, so they took
+	neither a copy nor an upload. */
+	RemoteAlreadyDurable uint64
+	/* Fragments written with no remote consulted, a local-only write having been
+	asked for. Branch latest history is one such write, which the server does
+	not store, so a commit against a remote has exactly one. */
+	LocalOnlyWrites uint64
+	/* Fragments whose upload did not land, leaving them stored only locally for
+	a later push to offer again. Their payloads are counted under
+	`local_payload_writes` too, indistinguishably from those kept by request. */
+	RemoteUploadFailed uint64
+}
+
+type LoreFragmentStatsData struct {
+	/* Fragments handed to the store, whatever came of them. */
+	FragmentsProduced uint64
+	/* Uncompressed content bytes the produced fragments stand for. */
+	FragmentContentBytes uint64
+	/* Fragments the stores already held in the form the write wanted, so no
+	payload was loaded, compressed or uploaded for them. */
+	FragmentsDeduplicated uint64
+	/* Content bytes of `fragments_deduplicated`. */
+	DeduplicatedContentBytes uint64
+	/* Fragments that entered the write pipeline. */
+	FragmentsProcessed uint64
+	/* Content bytes of `fragments_processed`. */
+	ProcessedContentBytes uint64
+	/* Of `fragments_processed`, those that produced a stored payload of content. */
+	DataFragments uint64
+	/* Stored payload bytes of `data_fragments`, after compression where the
+	pipeline compressed them. */
+	DataPayloadBytes uint64
+	/* Uncompressed content bytes `data_fragments` stand for. Compare against
+	`data_payload_bytes` for the compression ratio. */
+	DataContentBytes uint64
+	/* Of `fragments_processed`, those that produced a stored fragment list. */
+	Fragmentlists uint64
+	/* Stored payload bytes of `fragmentlists`. */
+	FragmentlistPayloadBytes uint64
+	/* Of `fragments_processed`, those that needed no payload, so none was
+	prepared: the remote duplicated an association for them and the write did
+	not ask for the payload to be cached locally. */
+	NoPayloadFragments uint64
+	/* Content bytes `no_payload_fragments` stand for. */
+	NoPayloadContentBytes uint64
+	/* Terminal entries written to the local store. */
+	LocalWrites uint64
+	/* Of `local_writes`, those that recorded only the fragment header — the
+	payload lives on the remote and was not cached here. */
+	LocalMetadataWrites uint64
+	/* Of `local_writes`, those that also wrote a payload. */
+	LocalPayloadWrites uint64
+	/* Payload bytes written by `local_payload_writes`. */
+	LocalPayloadBytes uint64
+	/* Fragments registered with the remote. */
+	RemoteWrites uint64
+	/* Of `remote_writes`, those the remote duplicated from an association it
+	already held, so no payload crossed the wire. */
+	RemoteCopyWrites uint64
+	/* Of `remote_writes`, those whose payload was uploaded. */
+	RemotePutWrites uint64
+	/* Payload bytes uploaded by `remote_put_writes`. */
+	RemotePutBytes uint64
+	/* Fragments the remote already held under this very address, so they took
+	neither a copy nor an upload. */
+	RemoteAlreadyDurable uint64
+	/* Fragments written with no remote consulted, a local-only write having been
+	asked for. Branch latest history is one such write, which the server does
+	not store, so a commit against a remote has exactly one. */
+	LocalOnlyWrites uint64
+	/* Fragments whose upload did not land, leaving them stored only locally for
+	a later push to offer again. Their payloads are counted under
+	`local_payload_writes` too, indistinguishably from those kept by request. */
+	RemoteUploadFailed uint64
+}
+
+func NewLoreFragmentStatsData(opts LoreFragmentStatsData) (LoreFragmentStatsDataFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreFragmentStatsDataFFI{
+		FragmentsProduced:        opts.FragmentsProduced,
+		FragmentContentBytes:     opts.FragmentContentBytes,
+		FragmentsDeduplicated:    opts.FragmentsDeduplicated,
+		DeduplicatedContentBytes: opts.DeduplicatedContentBytes,
+		FragmentsProcessed:       opts.FragmentsProcessed,
+		ProcessedContentBytes:    opts.ProcessedContentBytes,
+		DataFragments:            opts.DataFragments,
+		DataPayloadBytes:         opts.DataPayloadBytes,
+		DataContentBytes:         opts.DataContentBytes,
+		Fragmentlists:            opts.Fragmentlists,
+		FragmentlistPayloadBytes: opts.FragmentlistPayloadBytes,
+		NoPayloadFragments:       opts.NoPayloadFragments,
+		NoPayloadContentBytes:    opts.NoPayloadContentBytes,
+		LocalWrites:              opts.LocalWrites,
+		LocalMetadataWrites:      opts.LocalMetadataWrites,
+		LocalPayloadWrites:       opts.LocalPayloadWrites,
+		LocalPayloadBytes:        opts.LocalPayloadBytes,
+		RemoteWrites:             opts.RemoteWrites,
+		RemoteCopyWrites:         opts.RemoteCopyWrites,
+		RemotePutWrites:          opts.RemotePutWrites,
+		RemotePutBytes:           opts.RemotePutBytes,
+		RemoteAlreadyDurable:     opts.RemoteAlreadyDurable,
+		LocalOnlyWrites:          opts.LocalOnlyWrites,
+		RemoteUploadFailed:       opts.RemoteUploadFailed,
+	}, cleanup
+}
+
+func (e *LoreFragmentStatsDataFFI) Clone() LoreFragmentStatsData {
+	return LoreFragmentStatsData{
+		FragmentsProduced:        e.FragmentsProduced,
+		FragmentContentBytes:     e.FragmentContentBytes,
+		FragmentsDeduplicated:    e.FragmentsDeduplicated,
+		DeduplicatedContentBytes: e.DeduplicatedContentBytes,
+		FragmentsProcessed:       e.FragmentsProcessed,
+		ProcessedContentBytes:    e.ProcessedContentBytes,
+		DataFragments:            e.DataFragments,
+		DataPayloadBytes:         e.DataPayloadBytes,
+		DataContentBytes:         e.DataContentBytes,
+		Fragmentlists:            e.Fragmentlists,
+		FragmentlistPayloadBytes: e.FragmentlistPayloadBytes,
+		NoPayloadFragments:       e.NoPayloadFragments,
+		NoPayloadContentBytes:    e.NoPayloadContentBytes,
+		LocalWrites:              e.LocalWrites,
+		LocalMetadataWrites:      e.LocalMetadataWrites,
+		LocalPayloadWrites:       e.LocalPayloadWrites,
+		LocalPayloadBytes:        e.LocalPayloadBytes,
+		RemoteWrites:             e.RemoteWrites,
+		RemoteCopyWrites:         e.RemoteCopyWrites,
+		RemotePutWrites:          e.RemotePutWrites,
+		RemotePutBytes:           e.RemotePutBytes,
+		RemoteAlreadyDurable:     e.RemoteAlreadyDurable,
+		LocalOnlyWrites:          e.LocalOnlyWrites,
+		RemoteUploadFailed:       e.RemoteUploadFailed,
+	}
+}
+
 type LoreStorageRemoteConfigFFI struct {
 	/* gRPC endpoint of the peer storage service; authenticated with the open call's `globals.identity` */
 	RemoteUrl LoreString
@@ -2428,6 +2966,38 @@ func (e *LoreStoragePutItemFFI) Clone() LoreStoragePutItem {
 	}
 }
 
+type LoreBytesMutFFI struct {
+	/* Pointer to the start of the writable slice. */
+	Ptr unsafe.Pointer
+	/* Number of bytes available behind `ptr`. */
+	Len uintptr
+}
+
+type LoreBytesMut struct {
+	/* Pointer to the start of the writable slice. */
+	Ptr unsafe.Pointer
+	/* Number of bytes available behind `ptr`. */
+	Len uintptr
+}
+
+func NewLoreBytesMut(opts LoreBytesMut) (LoreBytesMutFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreBytesMutFFI{
+		Ptr: opts.Ptr,
+		Len: opts.Len,
+	}, cleanup
+}
+
+func (e *LoreBytesMutFFI) Clone() LoreBytesMut {
+	return LoreBytesMut{
+		Ptr: e.Ptr,
+		Len: e.Len,
+	}
+}
+
 type LoreStorageGetItemFFI struct {
 	/* Caller-chosen id echoed back in every event for this item */
 	Id uint64
@@ -2448,6 +3018,14 @@ type LoreStorageGetItemFFI struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache uint8
+	/* Writable buffer receiving the requested range, `len` stating its capacity. Zero-initialized
+	selects `GET_DATA` delivery.
+
+	The capacity is the limit: a range exceeding it fails the item with
+	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the whole
+	content's size, which with `offset` and `length` gives the bytes written; no `GET_DATA`
+	follows, and `streaming` is ignored. The buffer holds unspecified bytes when the item fails. */
+	DataOut LoreBytesMutFFI
 }
 
 type LoreStorageGetItem struct {
@@ -2470,15 +3048,25 @@ type LoreStorageGetItem struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache bool
+	/* Writable buffer receiving the requested range, `len` stating its capacity. Zero-initialized
+	selects `GET_DATA` delivery.
+
+	The capacity is the limit: a range exceeding it fails the item with
+	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the whole
+	content's size, which with `offset` and `length` gives the bytes written; no `GET_DATA`
+	follows, and `streaming` is ignored. The buffer holds unspecified bytes when the item fails. */
+	DataOut LoreBytesMut
 }
 
 func NewLoreStorageGetItem(opts LoreStorageGetItem) (LoreStorageGetItemFFI, func()) {
 	valStreaming, cleanupStreaming := Newuint8(opts.Streaming)
 	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+	valDataOut, cleanupDataOut := NewLoreBytesMut(opts.DataOut)
 
 	cleanup := func() {
 		cleanupStreaming()
 		cleanupLocalCache()
+		cleanupDataOut()
 	}
 
 	return LoreStorageGetItemFFI{
@@ -2489,6 +3077,7 @@ func NewLoreStorageGetItem(opts LoreStorageGetItem) (LoreStorageGetItemFFI, func
 		Length:     opts.Length,
 		Streaming:  valStreaming,
 		LocalCache: valLocalCache,
+		DataOut:    valDataOut,
 	}, cleanup
 }
 
@@ -2501,6 +3090,7 @@ func (e *LoreStorageGetItemFFI) Clone() LoreStorageGetItem {
 		Length:     e.Length,
 		Streaming:  e.Streaming != 0,
 		LocalCache: e.LocalCache != 0,
+		DataOut:    e.DataOut.Clone(),
 	}
 }
 
@@ -2524,6 +3114,14 @@ type LoreStorageGetResolvedItemFFI struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache uint8
+	/* Writable buffer receiving the content, `len` stating its capacity. Zero-initialized selects
+	`GET_DATA` delivery.
+
+	The capacity is the limit: content exceeding it fails the item with
+	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the content
+	size, no `GET_DATA` follows, and `streaming` is ignored. The buffer holds unspecified bytes
+	when the item fails. */
+	DataOut LoreBytesMutFFI
 }
 
 type LoreStorageGetResolvedItem struct {
@@ -2546,15 +3144,25 @@ type LoreStorageGetResolvedItem struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache bool
+	/* Writable buffer receiving the content, `len` stating its capacity. Zero-initialized selects
+	`GET_DATA` delivery.
+
+	The capacity is the limit: content exceeding it fails the item with
+	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the content
+	size, no `GET_DATA` follows, and `streaming` is ignored. The buffer holds unspecified bytes
+	when the item fails. */
+	DataOut LoreBytesMut
 }
 
 func NewLoreStorageGetResolvedItem(opts LoreStorageGetResolvedItem) (LoreStorageGetResolvedItemFFI, func()) {
 	valStreaming, cleanupStreaming := Newuint8(opts.Streaming)
 	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+	valDataOut, cleanupDataOut := NewLoreBytesMut(opts.DataOut)
 
 	cleanup := func() {
 		cleanupStreaming()
 		cleanupLocalCache()
+		cleanupDataOut()
 	}
 
 	return LoreStorageGetResolvedItemFFI{
@@ -2564,6 +3172,7 @@ func NewLoreStorageGetResolvedItem(opts LoreStorageGetResolvedItem) (LoreStorage
 		Context:    opts.Context,
 		Streaming:  valStreaming,
 		LocalCache: valLocalCache,
+		DataOut:    valDataOut,
 	}, cleanup
 }
 
@@ -2575,6 +3184,7 @@ func (e *LoreStorageGetResolvedItemFFI) Clone() LoreStorageGetResolvedItem {
 		Context:    e.Context,
 		Streaming:  e.Streaming != 0,
 		LocalCache: e.LocalCache != 0,
+		DataOut:    e.DataOut.Clone(),
 	}
 }
 
@@ -3115,6 +3725,176 @@ func (e *LoreStorageGetFileItemFFI) Clone() LoreStorageGetFileItem {
 		Id:         e.Id,
 		Partition:  e.Partition,
 		Address:    e.Address,
+		Path:       e.Path.Clone(),
+		Offset:     e.Offset,
+		Length:     e.Length,
+		LocalCache: e.LocalCache != 0,
+	}
+}
+
+type LoreStoragePutFileResolvedItemFFI struct {
+	/* Caller-chosen id echoed back in `PUT_ITEM_COMPLETE` */
+	Id uint64
+	/* Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Dedup tag stored alongside the content hash in the resulting address, and the context a
+	later `get_file_resolved` must read the key at */
+	Context LoreContext
+	/* Source path; empty, missing, or non-file rejects with `INVALID_ARGUMENTS`. A zero-length
+	file removes the key's mapping instead of publishing one */
+	Path LoreString
+	/* Also publish the content and the mapping to the remote; ignored when the handle has no
+	remote or the call is offline/local */
+	RemoteWrite uint8
+	/* Tag the fragments with `PayloadLocalCachePriority` so future remote reads always cache them
+	locally */
+	LocalCache uint8
+	/* Leaf fragment size cap for large files; `0` lets the writer choose. Ignored for files under
+	`FRAGMENT_SIZE_THRESHOLD` */
+	FixedSizeChunk uint64
+}
+
+type LoreStoragePutFileResolvedItem struct {
+	/* Caller-chosen id echoed back in `PUT_ITEM_COMPLETE` */
+	Id uint64
+	/* Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Dedup tag stored alongside the content hash in the resulting address, and the context a
+	later `get_file_resolved` must read the key at */
+	Context LoreContext
+	/* Source path; empty, missing, or non-file rejects with `INVALID_ARGUMENTS`. A zero-length
+	file removes the key's mapping instead of publishing one */
+	Path string
+	/* Also publish the content and the mapping to the remote; ignored when the handle has no
+	remote or the call is offline/local */
+	RemoteWrite bool
+	/* Tag the fragments with `PayloadLocalCachePriority` so future remote reads always cache them
+	locally */
+	LocalCache bool
+	/* Leaf fragment size cap for large files; `0` lets the writer choose. Ignored for files under
+	`FRAGMENT_SIZE_THRESHOLD` */
+	FixedSizeChunk uint64
+}
+
+func NewLoreStoragePutFileResolvedItem(opts LoreStoragePutFileResolvedItem) (LoreStoragePutFileResolvedItemFFI, func()) {
+	valPath, cleanupPath := NewLoreString(opts.Path)
+	valRemoteWrite, cleanupRemoteWrite := Newuint8(opts.RemoteWrite)
+	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+
+	cleanup := func() {
+		cleanupPath()
+		cleanupRemoteWrite()
+		cleanupLocalCache()
+	}
+
+	return LoreStoragePutFileResolvedItemFFI{
+		Id:             opts.Id,
+		Partition:      opts.Partition,
+		Key:            opts.Key,
+		Context:        opts.Context,
+		Path:           valPath,
+		RemoteWrite:    valRemoteWrite,
+		LocalCache:     valLocalCache,
+		FixedSizeChunk: opts.FixedSizeChunk,
+	}, cleanup
+}
+
+func (e *LoreStoragePutFileResolvedItemFFI) Clone() LoreStoragePutFileResolvedItem {
+	return LoreStoragePutFileResolvedItem{
+		Id:             e.Id,
+		Partition:      e.Partition,
+		Key:            e.Key,
+		Context:        e.Context,
+		Path:           e.Path.Clone(),
+		RemoteWrite:    e.RemoteWrite != 0,
+		LocalCache:     e.LocalCache != 0,
+		FixedSizeChunk: e.FixedSizeChunk,
+	}
+}
+
+type LoreStorageGetFileResolvedItemFFI struct {
+	/* Caller-chosen id echoed back in `GET_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition to resolve and read within; the zero/default partition rejects with
+	`INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to resolve, always read as `KeyType::Resolve`; a zero key rejects with
+	`INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Paired with the resolved hash to address the immutable read; the mutable store yields only
+	a hash */
+	Context LoreContext
+	/* Destination path; empty rejects with `INVALID_ARGUMENTS`. Multi-fragment writes stage via
+	`<path>.loretmp` then atomically rename */
+	Path LoreString
+	/* First content byte to write, counted from the start of the decompressed content. Past the
+	end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+	requested range starting at its own first byte, and is sized to it */
+	Length uint64
+	/* Cache fetched fragments and the mapping back to the local store, not just write the content
+	to `path` */
+	LocalCache uint8
+}
+
+type LoreStorageGetFileResolvedItem struct {
+	/* Caller-chosen id echoed back in `GET_ITEM_COMPLETE` */
+	Id uint64
+	/* Partition to resolve and read within; the zero/default partition rejects with
+	`INVALID_ARGUMENTS` */
+	Partition LorePartition
+	/* Mutable key to resolve, always read as `KeyType::Resolve`; a zero key rejects with
+	`INVALID_ARGUMENTS` */
+	Key LoreHash
+	/* Paired with the resolved hash to address the immutable read; the mutable store yields only
+	a hash */
+	Context LoreContext
+	/* Destination path; empty rejects with `INVALID_ARGUMENTS`. Multi-fragment writes stage via
+	`<path>.loretmp` then atomically rename */
+	Path string
+	/* First content byte to write, counted from the start of the decompressed content. Past the
+	end of the content rejects with `INVALID_ARGUMENTS` */
+	Offset uint64
+	/* Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+	requested range starting at its own first byte, and is sized to it */
+	Length uint64
+	/* Cache fetched fragments and the mapping back to the local store, not just write the content
+	to `path` */
+	LocalCache bool
+}
+
+func NewLoreStorageGetFileResolvedItem(opts LoreStorageGetFileResolvedItem) (LoreStorageGetFileResolvedItemFFI, func()) {
+	valPath, cleanupPath := NewLoreString(opts.Path)
+	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+
+	cleanup := func() {
+		cleanupPath()
+		cleanupLocalCache()
+	}
+
+	return LoreStorageGetFileResolvedItemFFI{
+		Id:         opts.Id,
+		Partition:  opts.Partition,
+		Key:        opts.Key,
+		Context:    opts.Context,
+		Path:       valPath,
+		Offset:     opts.Offset,
+		Length:     opts.Length,
+		LocalCache: valLocalCache,
+	}, cleanup
+}
+
+func (e *LoreStorageGetFileResolvedItemFFI) Clone() LoreStorageGetFileResolvedItem {
+	return LoreStorageGetFileResolvedItem{
+		Id:         e.Id,
+		Partition:  e.Partition,
+		Key:        e.Key,
+		Context:    e.Context,
 		Path:       e.Path.Clone(),
 		Offset:     e.Offset,
 		Length:     e.Length,
@@ -3757,7 +4537,7 @@ func (arr LoreStringArrayFFI) Get(index int) string {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index].String()
@@ -3766,11 +4546,11 @@ func (arr LoreStringArrayFFI) Get(index int) string {
 // Clone converts LoreStringArrayFFI from FFI memory to Go []string
 // This creates a copy of the data that remains valid after the callback returns
 func (arr LoreStringArrayFFI) Clone() []string {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cStrings := unsafe.Slice((*LoreString)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]string, arr.Count)
@@ -3800,7 +4580,7 @@ func (arr LoreUint8ArrayFFI) Get(index int) bool {
 		panic(fmt.Sprintf("index out of bounds: %d (len=%d)", index, arr.Count))
 	}
 	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	slice := unsafe.Slice((*uint8)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	return slice[index] != 0
@@ -3809,11 +4589,11 @@ func (arr LoreUint8ArrayFFI) Get(index int) bool {
 // Clone converts LoreUint8ArrayFFI from FFI memory to Go []bool
 // This creates a copy of the data that remains valid after the callback returns
 func (arr LoreUint8ArrayFFI) Clone() []bool {
-	if arr.Ptr == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if arr.Count == 0 {
 		return nil
+	}
+	if arr.Ptr == 0 {
+		panic("nil FFI array data pointer despite non-zero count")
 	}
 	cUint8s := unsafe.Slice((*bool)(unsafe.Pointer(arr.Ptr)), arr.Count)
 	result := make([]bool, arr.Count)
@@ -3854,11 +4634,11 @@ func NewLoreBinary(data LoreBinary) (LoreBinaryFFI, func()) {
 }
 
 func (data *LoreBinaryFFI) Clone() LoreBinary {
-	if data.Payload == 0 {
-		panic("cannot access FFI data outside the callback function")
-	}
 	if data.Length == 0 {
 		return nil
+	}
+	if data.Payload == 0 {
+		panic("nil FFI binary data pointer despite non-zero length")
 	}
 	cDataSlice := unsafe.Slice((*byte)(unsafe.Pointer(data.Payload)), data.Length)
 	result := make([]byte, data.Length)

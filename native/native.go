@@ -23,6 +23,8 @@ var (
 	loreLogConfigureFunc                   func(logConfigPtr uintptr) int32
 	loreShutdownFunc                       func() int32
 	loreSetThreadLimitFunc                 func(count uintptr) int32
+	loreSetCompressionModeFunc             func(mode uint32) int32
+	loreSetCompressionLevelFunc            func(level int32) int32
 	loreVersionFunc                        func() uintptr
 	loreAuthUserInfoFunc                   loreFuncWithCallback
 	loreAuthLoginWithTokenFunc             loreFuncWithCallback
@@ -136,9 +138,13 @@ var (
 	loreStorageCopyFunc                    loreFuncWithCallback
 	loreStoragePutFileFunc                 loreFuncWithCallback
 	loreStorageGetFileFunc                 loreFuncWithCallback
+	loreStoragePutFileResolvedFunc         loreFuncWithCallback
+	loreStorageGetFileResolvedFunc         loreFuncWithCallback
 	loreStorageUploadFunc                  loreFuncWithCallback
 	loreServiceStartFunc                   loreFuncWithCallback
 	loreServiceStopFunc                    loreFuncWithCallback
+	loreServiceSetExecutableFunc           loreFuncWithCallback
+	loreServiceSetUseAutomaticallyFunc     loreFuncWithCallback
 	loreNotificationSubscribeFunc          loreFuncWithCallback
 	loreNotificationUnsubscribeFunc        loreFuncWithCallback
 	loreRepositoryMetadataGetFunc          loreFuncWithCallback
@@ -332,9 +338,13 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreStorageCopyFunc, libHandle, "lore_storage_copy")
 	purego.RegisterLibFunc(&loreStoragePutFileFunc, libHandle, "lore_storage_put_file")
 	purego.RegisterLibFunc(&loreStorageGetFileFunc, libHandle, "lore_storage_get_file")
+	purego.RegisterLibFunc(&loreStoragePutFileResolvedFunc, libHandle, "lore_storage_put_file_resolved")
+	purego.RegisterLibFunc(&loreStorageGetFileResolvedFunc, libHandle, "lore_storage_get_file_resolved")
 	purego.RegisterLibFunc(&loreStorageUploadFunc, libHandle, "lore_storage_upload")
 	purego.RegisterLibFunc(&loreServiceStartFunc, libHandle, "lore_service_start")
 	purego.RegisterLibFunc(&loreServiceStopFunc, libHandle, "lore_service_stop")
+	purego.RegisterLibFunc(&loreServiceSetExecutableFunc, libHandle, "lore_service_set_executable")
+	purego.RegisterLibFunc(&loreServiceSetUseAutomaticallyFunc, libHandle, "lore_service_set_use_automatically")
 	purego.RegisterLibFunc(&loreNotificationSubscribeFunc, libHandle, "lore_notification_subscribe")
 	purego.RegisterLibFunc(&loreNotificationUnsubscribeFunc, libHandle, "lore_notification_unsubscribe")
 	purego.RegisterLibFunc(&loreRepositoryMetadataGetFunc, libHandle, "lore_repository_metadata_get")
@@ -363,6 +373,8 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreLogConfigureFunc, libHandle, "lore_log_configure")
 	purego.RegisterLibFunc(&loreShutdownFunc, libHandle, "lore_shutdown")
 	purego.RegisterLibFunc(&loreSetThreadLimitFunc, libHandle, "lore_set_thread_limit")
+	purego.RegisterLibFunc(&loreSetCompressionModeFunc, libHandle, "lore_set_compression_mode")
+	purego.RegisterLibFunc(&loreSetCompressionLevelFunc, libHandle, "lore_set_compression_level")
 	purego.RegisterLibFunc(&loreVersionFunc, libHandle, "lore_version")
 
 	return nil
@@ -615,10 +627,20 @@ func AuthClear(
 
 /* Resolve user identities to display names from locally stored JWT tokens.
 
-Does not contact the auth service. Decodes cached JWT tokens to extract
-display names. For user IDs without a local token, returns the raw user
+Decodes cached JWT tokens to extract display names without contacting the
+auth service. For user IDs without a local token, returns the raw user
 ID. For remote resolution with proper authorization, use
 `lore_auth_user_info` which queries the remote authentication service.
+
+When `with_identity_token` is set, identities with a locally stored token
+are answered as `AUTH_USER_TOKEN` events carrying the cached identity
+token instead of `AUTH_USER_INFO`.
+
+When `with_access_token` is set, the call requires a repository and
+additionally emits one `AUTH_IDENTITY` event carrying the
+repository-scoped authorization (access) token for the current user. A
+valid cached token is reused. Otherwise a token exchange is performed
+against the auth service, so this variant can contact the network.
 
 # Events
 
@@ -639,7 +661,9 @@ These events are emitted by all interface functions:
 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
-| `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with the resolved user id and display name | */
+| `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with the resolved user id and display name |
+| `LORE_EVENT_AUTH_USER_TOKEN` | `lore_auth_user_token_event_data_t` | Emitted instead of `AUTH_USER_INFO` when `with_identity_token` is set and a cached token is available, includes full token details |
+| `LORE_EVENT_AUTH_IDENTITY` | `lore_auth_identity_event_data_t` | Emitted when `with_access_token` is set, carries the repository-scoped authorization token for the current user | */
 func AuthLocalUserInfo(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreAuthLocalUserInfoArgsFFI,
@@ -766,7 +790,7 @@ These events are emitted by all interface functions:
 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
-| `LORE_EVENT_BRANCH_DIFF_BEGIN` | `lore_branch_diff_begin_event_data_t` | Emitted before diff results begin streaming |
+| `LORE_EVENT_BRANCH_DIFF_BEGIN` | `lore_branch_diff_begin_event_data_t` | Emitted before diff results begin streaming. Includes the resolved branch names and revisions being compared |
 | `LORE_EVENT_BRANCH_DIFF_CHANGE_BEGIN` | `lore_branch_diff_change_begin_event_data_t` | Emitted before the list of changed files begins |
 | `LORE_EVENT_BRANCH_DIFF_CHANGE` | `lore_branch_diff_change_event_data_t` | Emitted for each changed file between the two branches |
 | `LORE_EVENT_BRANCH_DIFF_CHANGE_END` | `lore_branch_diff_change_end_event_data_t` | Emitted after all changed files have been reported |
@@ -1206,7 +1230,7 @@ These events are emitted by all interface functions:
 | `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted periodically during file realization |
 | `LORE_EVENT_REVISION_SYNC_REVISION` | `lore_revision_sync_revision_event_data_t` | Emitted with the resulting revision after switch |
 | `LORE_EVENT_FILTER_EXCLUDE` | `lore_filter_exclude_event_data_t` | Emitted for each path excluded by view or ignore filters |
-| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a partial revision reference | */
+| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a revision number | */
 func BranchSwitch(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreBranchSwitchArgsFFI,
@@ -2830,7 +2854,7 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_REVISION_DIFF_FILE` | `lore_revision_diff_file_event_data_t` | Emitted for each file that differs between the two revisions |
-| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a partial or numbered revision reference | */
+| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a revision number | */
 func RevisionDiff(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreRevisionDiffArgsFFI,
@@ -2869,7 +2893,7 @@ func RevisionFind(
 	return callLoreFunction(&loreRevisionFindFunc, globals, args, config)
 }
 
-/* Retrieve the commit history of the current branch.
+/* Retrieve the revision history of the current branch.
 
 # Events
 
@@ -3084,7 +3108,7 @@ These events are emitted by all interface functions:
 | `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file deleted, modified, added, or merged during sync |
 | `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted periodically during file realization and once at completion with cumulative update/delete/automerge/conflict counts |
 | `LORE_EVENT_REVISION_SYNC_REVISION` | `lore_revision_sync_revision_event_data_t` | Emitted once at the end with the resulting revision, branch, and merge/conflict flags |
-| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a partial or numbered revision reference |
+| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a revision number |
 | `LORE_EVENT_FILTER_EXCLUDE` | `lore_filter_exclude_event_data_t` | Emitted for each path excluded by view or ignore filters |
 | `LORE_EVENT_BRANCH_MERGE_START_BEGIN` | `lore_branch_merge_start_begin_event_data_t` | Emitted when an auto-merge is initiated (diverged branches) |
 | `LORE_EVENT_BRANCH_MERGE_START_END` | `lore_branch_merge_start_end_event_data_t` | Emitted when the auto-merge operation completes |
@@ -3504,11 +3528,13 @@ func StorageGetResolved(
 
 /* Store one or more buffers and publish a mutable key naming each, in one round trip.
 
-`lore_storage_put` followed by `lore_storage_mutable_store`, fused into one request when the
-content fits a single fragment. The key is published under `LORE_KEY_TYPE_RESOLVE`, making it
-readable by `lore_storage_get_resolved`, and the mapping is written only once the content is
-stored — so a key published this way never resolves to content that is not there. Writing the
-same key type directly with `lore_storage_mutable_store` carries no such guarantee.
+`lore_storage_put` followed by `lore_storage_mutable_store`, with the mapping riding on
+whichever request carries the content's top-level fragment rather than costing one of its own.
+The key is published under `LORE_KEY_TYPE_RESOLVE`, making it readable by
+`lore_storage_get_resolved`, and the mapping is written only once the content is stored — so a
+key published this way never resolves to content that is not there. Writing the same key type
+directly with `lore_storage_mutable_store` carries no such guarantee. Content the server
+already holds uploads nothing, so its key takes a mapping write instead — still one request.
 
 The local store always receives both the content and the mapping. `remote_write = 1` also
 publishes them remotely, matching `lore_storage_put`; there is no local-then-remote fallback.
@@ -3716,16 +3742,90 @@ func StoragePutFile(
 
 /* Write content-addressed payloads to filesystem paths.
 
-Each item emits `LORE_EVENT_STORAGE_GET_ITEM_COMPLETE`. No HEADER or
-DATA events are produced — the payload is written straight to disk.
-On partial-write failure the library leaves whatever state the
-failure produced; cleanup is the caller's responsibility. */
+Each item emits `LORE_EVENT_STORAGE_GET_ITEM_COMPLETE`. No HEADER or DATA events are produced —
+the payload is written straight to disk. Multi-fragment writes stage through `<path>.loretmp`
+and rename atomically, and a failure mid-write removes the temp file, so the target is either
+the finished range or untouched. An `offset` past the end of the content is rejected with
+`INVALID_ARGUMENTS` without opening the target, so a destination that was already there
+survives. */
 func StorageGetFile(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStorageGetFileArgsFFI,
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreStorageGetFileFunc, globals, args, config)
+}
+
+/* Store one or more files and publish a mutable key naming each, in one round trip.
+
+`lore_storage_put_resolved` reading its content from a path instead of a buffer, and identical
+to it in everything but the source: the key is published under `LORE_KEY_TYPE_RESOLVE`, the
+mapping is written only once the content is stored, publishing is last-writer-wins, and
+`remote_write = 1` publishes remotely as well as locally.
+
+The caller never loads the file, and the library holds no more than one fragment of it: a file
+at or below the fragment threshold is read once into the single fragment it becomes, a larger
+one chunks straight off disk.
+
+A zero `key` or a zero `partition` rejects with `INVALID_ARGUMENTS`, as does a missing,
+unreadable, or non-file `path` — a path that cannot be read is never taken for a delete, so a
+typo cannot retract a live key. A **zero-length** file does retract it, exactly as a
+zero-length `data` does in `lore_storage_put_resolved`.
+
+A remote content upload that fails still leaves a successful local write, so the key is not
+published remotely and `stored_remote` is `0` while `error_code` stays `NONE`. Check
+`stored_remote`, not `error_code`, to confirm the key is visible to other clients.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_PUT_ITEM_COMPLETE` | `lore_storage_put_item_complete_event_data_t` | Emitted once per input item; `address` is the content the key now resolves to, and `stored_local`/`stored_remote` report where it landed |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
+func StoragePutFileResolved(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStoragePutFileResolvedArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreStoragePutFileResolvedFunc, globals, args, config)
+}
+
+/* Resolve one or more mutable keys and write the content they name to filesystem paths, in one
+round trip.
+
+`lore_storage_get_resolved` writing to a path instead of to the callback. Nothing is held whole
+on either side of the boundary: the resolve and the read of the root fragment share one request,
+and the content goes to disk fragment by fragment at its own offset, so a key naming something
+large needs neither the `streaming` mode nor a buffer for it. No
+`LORE_EVENT_STORAGE_GET_HEADER` or `LORE_EVENT_STORAGE_GET_DATA` is emitted, as with
+`lore_storage_get_file`.
+
+The terminal event's `address` is the *resolved* address, so a caller still learns the
+key-to-hash mapping. A key with no mapping, or one naming absent content, reports
+`error_code = ADDRESS_NOT_FOUND`, carries a zero address, and leaves `path` untouched — there is
+no zero-hash truncation as in `lore_storage_get_file`, because a resolve that finds nothing is a
+miss rather than an address for empty content.
+
+`offset` and `length` select part of the content and multi-fragment writes stage through
+`<path>.loretmp` before an atomic rename, both as in `lore_storage_get_file`: the file holds
+exactly the requested range from its own first byte, and the target is either the finished range
+or untouched. A start past the end is rejected with `INVALID_ARGUMENTS` without opening the
+target, so a destination that was already there survives.
+
+# Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_STORAGE_GET_ITEM_COMPLETE` | `lore_storage_get_item_complete_event_data_t` | Terminal per-item event, carrying the resolved address |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
+func StorageGetFileResolved(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreStorageGetFileResolvedArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreStorageGetFileResolvedFunc, globals, args, config)
 }
 
 /* Push locally-stored, not-yet-durable content to the remote store.
@@ -3743,7 +3843,11 @@ func StorageUpload(
 	return callLoreFunction(&loreStorageUploadFunc, globals, args, config)
 }
 
-/* Start the Lore background service.
+/* Start the Lore background service, unless one is already running.
+
+Connects to the running service, and starts one when nothing is listening.
+Returns `0` once a service is reachable, whether it was already running or
+was started by this call.
 
 # Events
 
@@ -3767,7 +3871,10 @@ func ServiceStart(
 	return callLoreFunction(&loreServiceStartFunc, globals, args, config)
 }
 
-/* Stop the Lore background service.
+/* Stop the running Lore background service.
+
+Does not start a service in order to stop one. Returns `0` when no service
+is running, since that is the state the call asks for.
 
 # Events
 
@@ -3789,6 +3896,63 @@ func ServiceStop(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreServiceStopFunc, globals, args, config)
+}
+
+/* Name the executable the Lore background service runs from, for this machine.
+
+Written to the user-level global config, so it holds for later commands and
+for other clients that read it. An empty `executable` clears the setting.
+Naming it decides which build serves the machine, rather than leaving that to
+whichever client happens to start a service first.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
+func ServiceSetExecutable(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreServiceSetExecutableArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreServiceSetExecutableFunc, globals, args, config)
+}
+
+/* Set whether commands are carried out by the Lore background service.
+
+Written to the user-level global config, so the service stays in use for
+later commands rather than for one command at a time. A non-zero `enabled`
+turns it on; zero turns it off.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
+func ServiceSetUseAutomatically(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreServiceSetUseAutomaticallyArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreServiceSetUseAutomaticallyFunc, globals, args, config)
 }
 
 /* Subscribe to repository notifications.
@@ -3894,7 +4058,11 @@ func RepositoryInstanceList(
 	return callLoreFunction(&loreRepositoryInstanceListFunc, globals, args, config)
 }
 
-/* Remove stale instances of the repository that are no longer present. */
+/* Remove stale instances of the repository: those whose path no longer
+exists, those whose path holds no checkout, and those whose path now holds
+a repository naming a different current instance. Each removed instance is
+reported through a `RepositoryInstance` event whose `stale` field gives the
+reason. */
 func RepositoryInstancePrune(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreRepositoryInstancePruneArgsFFI,
@@ -4366,6 +4534,22 @@ func SetThreadLimit(count uintptr) (int32, error) {
 		return -1, err
 	}
 	result := loreSetThreadLimitFunc(count)
+	return result, nil
+}
+
+func SetCompressionMode(mode uint32) (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+	result := loreSetCompressionModeFunc(mode)
+	return result, nil
+}
+
+func SetCompressionLevel(level int32) (int32, error) {
+	if err := ensureLibrary(); err != nil {
+		return -1, err
+	}
+	result := loreSetCompressionLevelFunc(level)
 	return result, nil
 }
 

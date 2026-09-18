@@ -25,8 +25,6 @@ type LoreGlobalArgs struct {
 	Remote bool
 	/* Dry run mode, only report what would have been changed and perform no changes to local file system */
 	DryRun bool
-	/* Avoid recording last access timestamps in the data stores */
-	NoAtime bool
 	/* Maximum number of parallel connections for bulk data transfer */
 	MaxConnections uint32
 	/* Search limit when iterating revisions */
@@ -68,6 +66,21 @@ type LoreGlobalArgs struct {
 	Supplying either token puts the call in external-credential mode: `identity`
 	must be left empty, since it is read from the token. */
 	AccessToken string
+	/* How much an operation reports about what it cost.
+
+	- `0` — no statistics event, and no per-fragment counters kept for one.
+	- `1` — one statistics event when the operation finishes: per-action file
+	counts, and the fragment, local-store and remote-store totals.
+	- `2` — also a `FragmentWrite` event per stored fragment, which describes
+	the shape of what was written rather than its sums. One event per
+	fragment is the cost of this level.
+
+	A level above the highest known behaves as the highest known. */
+	Stats uint32
+	/* How often an operation emits progress events, in milliseconds. Applies
+	whatever `stats` is set to, statistics being reported once at the end
+	rather than on an interval. Zero takes [`DEFAULT_EVENT_INTERVAL_MS`]. */
+	EventIntervalMs uint64
 }
 
 type LoreGlobalArgsFFI struct {
@@ -93,8 +106,6 @@ type LoreGlobalArgsFFI struct {
 	Remote uint8
 	/* Dry run mode, only report what would have been changed and perform no changes to local file system */
 	DryRun uint8
-	/* Avoid recording last access timestamps in the data stores */
-	NoAtime uint8
 	/* Maximum number of parallel connections for bulk data transfer */
 	MaxConnections uint32
 	/* Search limit when iterating revisions */
@@ -136,6 +147,21 @@ type LoreGlobalArgsFFI struct {
 	Supplying either token puts the call in external-credential mode: `identity`
 	must be left empty, since it is read from the token. */
 	AccessToken LoreString
+	/* How much an operation reports about what it cost.
+
+	- `0` — no statistics event, and no per-fragment counters kept for one.
+	- `1` — one statistics event when the operation finishes: per-action file
+	counts, and the fragment, local-store and remote-store totals.
+	- `2` — also a `FragmentWrite` event per stored fragment, which describes
+	the shape of what was written rather than its sums. One event per
+	fragment is the cost of this level.
+
+	A level above the highest known behaves as the highest known. */
+	Stats uint32
+	/* How often an operation emits progress events, in milliseconds. Applies
+	whatever `stats` is set to, statistics being reported once at the end
+	rather than on an interval. Zero takes [`DEFAULT_EVENT_INTERVAL_MS`]. */
+	EventIntervalMs uint64
 }
 
 func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
@@ -148,7 +174,6 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valLocal, cleanupLocal := Newuint8(opts.Local)
 	valRemote, cleanupRemote := Newuint8(opts.Remote)
 	valDryRun, cleanupDryRun := Newuint8(opts.DryRun)
-	valNoAtime, cleanupNoAtime := Newuint8(opts.NoAtime)
 	valSearchNearest, cleanupSearchNearest := Newuint8(opts.SearchNearest)
 	valNoGc, cleanupNoGc := Newuint8(opts.NoGc)
 	valInMemory, cleanupInMemory := Newuint8(opts.InMemory)
@@ -168,7 +193,6 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		cleanupLocal()
 		cleanupRemote()
 		cleanupDryRun()
-		cleanupNoAtime()
 		cleanupSearchNearest()
 		cleanupNoGc()
 		cleanupInMemory()
@@ -189,7 +213,6 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		Local:                 valLocal,
 		Remote:                valRemote,
 		DryRun:                valDryRun,
-		NoAtime:               valNoAtime,
 		MaxConnections:        opts.MaxConnections,
 		SearchLimit:           opts.SearchLimit,
 		SearchNearest:         valSearchNearest,
@@ -204,6 +227,8 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		Cache:                 valCache,
 		IdentityToken:         valIdentityToken,
 		AccessToken:           valAccessToken,
+		Stats:                 opts.Stats,
+		EventIntervalMs:       opts.EventIntervalMs,
 	}, cleanup
 }
 
@@ -357,8 +382,11 @@ type LoreAuthLocalUserInfoArgs struct {
 	AuthEndpoint string
 	/* User identities to resolve; empty resolves the current user */
 	UserIds []string
-	/* Emit cached token details for identities with a local token */
-	WithToken bool
+	/* Emit cached identity token details for identities with a local token */
+	WithIdentityToken bool
+	/* Emit the repository's authorization (access) token. Requires running
+	inside a repository */
+	WithAccessToken bool
 }
 
 type LoreAuthLocalUserInfoArgsFFI struct {
@@ -366,25 +394,31 @@ type LoreAuthLocalUserInfoArgsFFI struct {
 	AuthEndpoint LoreString
 	/* User identities to resolve; empty resolves the current user */
 	UserIds LoreStringArrayFFI
-	/* Emit cached token details for identities with a local token */
-	WithToken uint8
+	/* Emit cached identity token details for identities with a local token */
+	WithIdentityToken uint8
+	/* Emit the repository's authorization (access) token. Requires running
+	inside a repository */
+	WithAccessToken uint8
 }
 
 func NewLoreAuthLocalUserInfoArgs(opts LoreAuthLocalUserInfoArgs) (LoreAuthLocalUserInfoArgsFFI, func()) {
 	valAuthEndpoint, cleanupAuthEndpoint := NewLoreString(opts.AuthEndpoint)
 	valUserIds, cleanupUserIds := NewLoreStringArray(opts.UserIds)
-	valWithToken, cleanupWithToken := Newuint8(opts.WithToken)
+	valWithIdentityToken, cleanupWithIdentityToken := Newuint8(opts.WithIdentityToken)
+	valWithAccessToken, cleanupWithAccessToken := Newuint8(opts.WithAccessToken)
 
 	cleanup := func() {
 		cleanupAuthEndpoint()
 		cleanupUserIds()
-		cleanupWithToken()
+		cleanupWithIdentityToken()
+		cleanupWithAccessToken()
 	}
 
 	return LoreAuthLocalUserInfoArgsFFI{
-		AuthEndpoint: valAuthEndpoint,
-		UserIds:      valUserIds,
-		WithToken:    valWithToken,
+		AuthEndpoint:      valAuthEndpoint,
+		UserIds:           valUserIds,
+		WithIdentityToken: valWithIdentityToken,
+		WithAccessToken:   valWithAccessToken,
 	}, cleanup
 }
 
@@ -703,6 +737,10 @@ type LoreBranchMergeIntoArgs struct {
 	Link string
 	/* Merge only the main repository, skipping all linked repositories */
 	IgnoreLinks bool
+	/* Metadata keys to carry from the current branch onto the revision
+	created on the target branch. Empty carries nothing; the single entry
+	`*` carries every key that is not reserved to the merge itself. */
+	InheritMetadata []string
 }
 
 type LoreBranchMergeIntoArgsFFI struct {
@@ -716,6 +754,10 @@ type LoreBranchMergeIntoArgsFFI struct {
 	Link LoreString
 	/* Merge only the main repository, skipping all linked repositories */
 	IgnoreLinks uint8
+	/* Metadata keys to carry from the current branch onto the revision
+	created on the target branch. Empty carries nothing; the single entry
+	`*` carries every key that is not reserved to the merge itself. */
+	InheritMetadata LoreStringArrayFFI
 }
 
 func NewLoreBranchMergeIntoArgs(opts LoreBranchMergeIntoArgs) (LoreBranchMergeIntoArgsFFI, func()) {
@@ -723,20 +765,23 @@ func NewLoreBranchMergeIntoArgs(opts LoreBranchMergeIntoArgs) (LoreBranchMergeIn
 	valMessage, cleanupMessage := NewLoreString(opts.Message)
 	valLink, cleanupLink := NewLoreString(opts.Link)
 	valIgnoreLinks, cleanupIgnoreLinks := Newuint8(opts.IgnoreLinks)
+	valInheritMetadata, cleanupInheritMetadata := NewLoreStringArray(opts.InheritMetadata)
 
 	cleanup := func() {
 		cleanupBranch()
 		cleanupMessage()
 		cleanupLink()
 		cleanupIgnoreLinks()
+		cleanupInheritMetadata()
 	}
 
 	return LoreBranchMergeIntoArgsFFI{
-		Branch:      valBranch,
-		BranchId:    opts.BranchId,
-		Message:     valMessage,
-		Link:        valLink,
-		IgnoreLinks: valIgnoreLinks,
+		Branch:          valBranch,
+		BranchId:        opts.BranchId,
+		Message:         valMessage,
+		Link:            valLink,
+		IgnoreLinks:     valIgnoreLinks,
+		InheritMetadata: valInheritMetadata,
 	}, cleanup
 }
 
@@ -839,6 +884,10 @@ type LoreBranchMergeStartArgs struct {
 	Link string
 	/* Merge only the main repository, skipping all linked repositories */
 	IgnoreLinks bool
+	/* Metadata keys to carry from the source revision onto the merge
+	revision. Empty carries nothing; the single entry `*` carries every
+	key that is not reserved to the merge itself. */
+	InheritMetadata []string
 }
 
 type LoreBranchMergeStartArgsFFI struct {
@@ -852,6 +901,10 @@ type LoreBranchMergeStartArgsFFI struct {
 	Link LoreString
 	/* Merge only the main repository, skipping all linked repositories */
 	IgnoreLinks uint8
+	/* Metadata keys to carry from the source revision onto the merge
+	revision. Empty carries nothing; the single entry `*` carries every
+	key that is not reserved to the merge itself. */
+	InheritMetadata LoreStringArrayFFI
 }
 
 func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMergeStartArgsFFI, func()) {
@@ -860,6 +913,7 @@ func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMerge
 	valNoCommit, cleanupNoCommit := Newuint8(opts.NoCommit)
 	valLink, cleanupLink := NewLoreString(opts.Link)
 	valIgnoreLinks, cleanupIgnoreLinks := Newuint8(opts.IgnoreLinks)
+	valInheritMetadata, cleanupInheritMetadata := NewLoreStringArray(opts.InheritMetadata)
 
 	cleanup := func() {
 		cleanupBranch()
@@ -867,14 +921,16 @@ func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMerge
 		cleanupNoCommit()
 		cleanupLink()
 		cleanupIgnoreLinks()
+		cleanupInheritMetadata()
 	}
 
 	return LoreBranchMergeStartArgsFFI{
-		Branch:      valBranch,
-		Message:     valMessage,
-		NoCommit:    valNoCommit,
-		Link:        valLink,
-		IgnoreLinks: valIgnoreLinks,
+		Branch:          valBranch,
+		Message:         valMessage,
+		NoCommit:        valNoCommit,
+		Link:            valLink,
+		IgnoreLinks:     valIgnoreLinks,
+		InheritMetadata: valInheritMetadata,
 	}, cleanup
 }
 
@@ -2199,10 +2255,10 @@ type LoreRepositoryCloneArgs struct {
 	View string
 	/* Clone without any files */
 	Bare bool
-	/* Clone virtually using split-write filesystem */
-	Virtually bool
 	/* Use direct file write */
 	DirectFileWrite bool
+	/* Which VFS to use, if any */
+	Vfs LoreVfsType
 	/* (Optional) Layer module */
 	Layer string
 	/* (Optional) Layer metadata key to link revisions with */
@@ -2235,10 +2291,10 @@ type LoreRepositoryCloneArgsFFI struct {
 	View LoreString
 	/* Clone without any files */
 	Bare uint8
-	/* Clone virtually using split-write filesystem */
-	Virtually uint8
 	/* Use direct file write */
 	DirectFileWrite uint8
+	/* Which VFS to use, if any */
+	Vfs LoreVfsType
 	/* (Optional) Layer module */
 	Layer LoreString
 	/* (Optional) Layer metadata key to link revisions with */
@@ -2267,7 +2323,6 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 	valRevision, cleanupRevision := NewLoreString(opts.Revision)
 	valView, cleanupView := NewLoreString(opts.View)
 	valBare, cleanupBare := Newuint8(opts.Bare)
-	valVirtually, cleanupVirtually := Newuint8(opts.Virtually)
 	valDirectFileWrite, cleanupDirectFileWrite := Newuint8(opts.DirectFileWrite)
 	valLayer, cleanupLayer := NewLoreString(opts.Layer)
 	valLayerMetadata, cleanupLayerMetadata := NewLoreString(opts.LayerMetadata)
@@ -2283,7 +2338,6 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 		cleanupRevision()
 		cleanupView()
 		cleanupBare()
-		cleanupVirtually()
 		cleanupDirectFileWrite()
 		cleanupLayer()
 		cleanupLayerMetadata()
@@ -2300,8 +2354,8 @@ func NewLoreRepositoryCloneArgs(opts LoreRepositoryCloneArgs) (LoreRepositoryClo
 		Revision:             valRevision,
 		View:                 valView,
 		Bare:                 valBare,
-		Virtually:            valVirtually,
 		DirectFileWrite:      valDirectFileWrite,
+		Vfs:                  opts.Vfs,
 		Layer:                valLayer,
 		LayerMetadata:        valLayerMetadata,
 		Prefetch:             valPrefetch,
@@ -2372,12 +2426,16 @@ func NewLoreRepositoryDumpArgs(opts LoreRepositoryDumpArgs) (LoreRepositoryDumpA
 }
 
 type LoreRepositoryCreateArgs struct {
-	/* URL to the repository */
+	/* URL to the repository. Treated as the repository name instead when the call is
+	offline or local, where an empty value names it after the directory it is
+	created in. A URL naming no host is an error otherwise. */
 	RepositoryUrl string
 	/* Optional repository description */
 	Description string
 	/* Optional repository ID, set to empty string to generate a new ID */
 	Id string
+	/* Which VFS to use, if any */
+	Vfs LoreVfsType
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
 	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
 	UseSharedStore LoreSharedStoreMode
@@ -2386,12 +2444,16 @@ type LoreRepositoryCreateArgs struct {
 }
 
 type LoreRepositoryCreateArgsFFI struct {
-	/* URL to the repository */
+	/* URL to the repository. Treated as the repository name instead when the call is
+	offline or local, where an empty value names it after the directory it is
+	created in. A URL naming no host is an error otherwise. */
 	RepositoryUrl LoreString
 	/* Optional repository description */
 	Description LoreString
 	/* Optional repository ID, set to empty string to generate a new ID */
 	Id LoreString
+	/* Which VFS to use, if any */
+	Vfs LoreVfsType
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
 	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
 	UseSharedStore LoreSharedStoreMode
@@ -2416,6 +2478,7 @@ func NewLoreRepositoryCreateArgs(opts LoreRepositoryCreateArgs) (LoreRepositoryC
 		RepositoryUrl:   valRepositoryUrl,
 		Description:     valDescription,
 		Id:              valId,
+		Vfs:             opts.Vfs,
 		UseSharedStore:  opts.UseSharedStore,
 		SharedStorePath: valSharedStorePath,
 	}, cleanup
@@ -2778,8 +2841,6 @@ type LoreRevisionCommitArgs struct {
 	LayerPaths []string
 	/* Array of messages corresponding to each layer path (parallel array with `layer_paths`) */
 	LayerMessages []string
-	/* Emit per-fragment write stats during the commit */
-	Stats bool
 }
 
 type LoreRevisionCommitArgsFFI struct {
@@ -2797,8 +2858,6 @@ type LoreRevisionCommitArgsFFI struct {
 	LayerPaths LoreStringArrayFFI
 	/* Array of messages corresponding to each layer path (parallel array with `layer_paths`) */
 	LayerMessages LoreStringArrayFFI
-	/* Emit per-fragment write stats during the commit */
-	Stats uint8
 }
 
 func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitArgsFFI, func()) {
@@ -2809,7 +2868,6 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 	valLayer, cleanupLayer := NewLoreString(opts.Layer)
 	valLayerPaths, cleanupLayerPaths := NewLoreStringArray(opts.LayerPaths)
 	valLayerMessages, cleanupLayerMessages := NewLoreStringArray(opts.LayerMessages)
-	valStats, cleanupStats := Newuint8(opts.Stats)
 
 	cleanup := func() {
 		cleanupMessage()
@@ -2819,7 +2877,6 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 		cleanupLayer()
 		cleanupLayerPaths()
 		cleanupLayerMessages()
-		cleanupStats()
 	}
 
 	return LoreRevisionCommitArgsFFI{
@@ -2830,7 +2887,6 @@ func NewLoreRevisionCommitArgs(opts LoreRevisionCommitArgs) (LoreRevisionCommitA
 		Layer:         valLayer,
 		LayerPaths:    valLayerPaths,
 		LayerMessages: valLayerMessages,
-		Stats:         valStats,
 	}, cleanup
 }
 
@@ -2967,7 +3023,8 @@ type LoreRevisionHistoryArgs struct {
 	Revision string
 	/* Restrict to this branch; empty for current */
 	Branch string
-	/* Stop at revisions created before this date (Unix timestamp; 0 disables) */
+	/* Stop at revisions created before this date (milliseconds since the
+	Unix epoch; 0 disables) */
 	Date uint64
 	/* Maximum number of revisions to return; 0 for unlimited */
 	Length uint32
@@ -2980,7 +3037,8 @@ type LoreRevisionHistoryArgsFFI struct {
 	Revision LoreString
 	/* Restrict to this branch; empty for current */
 	Branch LoreString
-	/* Stop at revisions created before this date (Unix timestamp; 0 disables) */
+	/* Stop at revisions created before this date (milliseconds since the
+	Unix epoch; 0 disables) */
 	Date uint64
 	/* Maximum number of revisions to return; 0 for unlimited */
 	Length uint32
@@ -3446,6 +3504,15 @@ type LoreStorageOpenArgs struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig bool
+	/* Skip re-hashing a loaded payload and checking it against the address it was read from.
+
+	Zero keeps the check, which is the default: a store handing back bytes under a content
+	address should be able to say they are the bytes that address names. A caller whose own
+	layer already assures integrity - one that scrubs its store on a schedule, say - pays for
+	the check on every byte of every read and learns nothing new from it, and can set this.
+
+	Applies to every read on the handle. */
+	SkipVerify bool
 	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
 	incremental background GC for the handle; `0` then selects the default. Shared disk backends
 	inherit the first opener's value */
@@ -3464,6 +3531,15 @@ type LoreStorageOpenArgsFFI struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig uint8
+	/* Skip re-hashing a loaded payload and checking it against the address it was read from.
+
+	Zero keeps the check, which is the default: a store handing back bytes under a content
+	address should be able to say they are the bytes that address names. A caller whose own
+	layer already assures integrity - one that scrubs its store on a schedule, say - pays for
+	the check on every byte of every read and learns nothing new from it, and can set this.
+
+	Applies to every read on the handle. */
+	SkipVerify uint8
 	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
 	incremental background GC for the handle; `0` then selects the default. Shared disk backends
 	inherit the first opener's value */
@@ -3477,11 +3553,13 @@ func NewLoreStorageOpenArgs(opts LoreStorageOpenArgs) (LoreStorageOpenArgsFFI, f
 	valRepositoryPath, cleanupRepositoryPath := NewLoreString(opts.RepositoryPath)
 	valInMemory, cleanupInMemory := Newuint8(opts.InMemory)
 	valHasRemoteConfig, cleanupHasRemoteConfig := Newuint8(opts.HasRemoteConfig)
+	valSkipVerify, cleanupSkipVerify := Newuint8(opts.SkipVerify)
 
 	cleanup := func() {
 		cleanupRepositoryPath()
 		cleanupInMemory()
 		cleanupHasRemoteConfig()
+		cleanupSkipVerify()
 	}
 
 	return LoreStorageOpenArgsFFI{
@@ -3489,6 +3567,7 @@ func NewLoreStorageOpenArgs(opts LoreStorageOpenArgs) (LoreStorageOpenArgsFFI, f
 		InMemory:             valInMemory,
 		RemoteConfig:         opts.RemoteConfig,
 		HasRemoteConfig:      valHasRemoteConfig,
+		SkipVerify:           valSkipVerify,
 		CacheTargetBytes:     opts.CacheTargetBytes,
 		CacheTargetFragments: opts.CacheTargetFragments,
 	}, cleanup
@@ -3887,6 +3966,62 @@ func NewLoreStorageGetFileArgs(opts LoreStorageGetFileArgs) (LoreStorageGetFileA
 	}, cleanup
 }
 
+type LoreStoragePutFileResolvedArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Files to store and publish; each runs independently and emits its own `PUT_ITEM_COMPLETE` */
+	Items LoreStoragePutFileResolvedItemArray
+}
+
+type LoreStoragePutFileResolvedArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Files to store and publish; each runs independently and emits its own `PUT_ITEM_COMPLETE` */
+	Items LoreStoragePutFileResolvedItemArrayFFI
+}
+
+func NewLoreStoragePutFileResolvedArgs(opts LoreStoragePutFileResolvedArgs) (LoreStoragePutFileResolvedArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStoragePutFileResolvedItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStoragePutFileResolvedArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
+type LoreStorageGetFileResolvedArgs struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to resolve and destination paths; each runs independently and emits its own
+	`GET_ITEM_COMPLETE` */
+	Items LoreStorageGetFileResolvedItemArray
+}
+
+type LoreStorageGetFileResolvedArgsFFI struct {
+	/* Open storage handle */
+	Handle LoreStore
+	/* Keys to resolve and destination paths; each runs independently and emits its own
+	`GET_ITEM_COMPLETE` */
+	Items LoreStorageGetFileResolvedItemArrayFFI
+}
+
+func NewLoreStorageGetFileResolvedArgs(opts LoreStorageGetFileResolvedArgs) (LoreStorageGetFileResolvedArgsFFI, func()) {
+	valItems, cleanupItems := NewLoreStorageGetFileResolvedItemArray(opts.Items)
+
+	cleanup := func() {
+		cleanupItems()
+	}
+
+	return LoreStorageGetFileResolvedArgsFFI{
+		Handle: opts.Handle,
+		Items:  valItems,
+	}, cleanup
+}
+
 type LoreStorageUploadArgs struct {
 	/* Open storage handle; must have been opened with `remote_config` */
 	Handle LoreStore
@@ -3933,24 +4068,66 @@ func NewLoreServiceStartArgs(opts LoreServiceStartArgs) (LoreServiceStartArgsFFI
 }
 
 type LoreServiceStopArgs struct {
-	/* Stop all repositories rather than just the current one */
-	All bool
+	Unused int
 }
 
 type LoreServiceStopArgsFFI struct {
-	/* Stop all repositories rather than just the current one */
-	All uint8
+	Unused int
 }
 
 func NewLoreServiceStopArgs(opts LoreServiceStopArgs) (LoreServiceStopArgsFFI, func()) {
-	valAll, cleanupAll := Newuint8(opts.All)
 
 	cleanup := func() {
-		cleanupAll()
 	}
 
 	return LoreServiceStopArgsFFI{
-		All: valAll,
+		Unused: opts.Unused,
+	}, cleanup
+}
+
+type LoreServiceSetExecutableArgs struct {
+	/* Path of the executable to start as the service. Empty clears the setting,
+	which returns to resolving one from the running program. */
+	Executable string
+}
+
+type LoreServiceSetExecutableArgsFFI struct {
+	/* Path of the executable to start as the service. Empty clears the setting,
+	which returns to resolving one from the running program. */
+	Executable LoreString
+}
+
+func NewLoreServiceSetExecutableArgs(opts LoreServiceSetExecutableArgs) (LoreServiceSetExecutableArgsFFI, func()) {
+	valExecutable, cleanupExecutable := NewLoreString(opts.Executable)
+
+	cleanup := func() {
+		cleanupExecutable()
+	}
+
+	return LoreServiceSetExecutableArgsFFI{
+		Executable: valExecutable,
+	}, cleanup
+}
+
+type LoreServiceSetUseAutomaticallyArgs struct {
+	/* Carry out commands in the service rather than in the process that was run */
+	Enabled bool
+}
+
+type LoreServiceSetUseAutomaticallyArgsFFI struct {
+	/* Carry out commands in the service rather than in the process that was run */
+	Enabled uint8
+}
+
+func NewLoreServiceSetUseAutomaticallyArgs(opts LoreServiceSetUseAutomaticallyArgs) (LoreServiceSetUseAutomaticallyArgsFFI, func()) {
+	valEnabled, cleanupEnabled := Newuint8(opts.Enabled)
+
+	cleanup := func() {
+		cleanupEnabled()
+	}
+
+	return LoreServiceSetUseAutomaticallyArgsFFI{
+		Enabled: valEnabled,
 	}, cleanup
 }
 
