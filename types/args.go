@@ -1006,6 +1006,33 @@ func NewLoreBranchResetArgs(opts LoreBranchResetArgs) (LoreBranchResetArgsFFI, f
 	}, cleanup
 }
 
+type LoreBranchLatestListArgs struct {
+	/* Branch to list, current branch if empty */
+	Branch string
+	/* Maximum entries to return (`0` uses the default of 30) */
+	Limit uint32
+}
+
+type LoreBranchLatestListArgsFFI struct {
+	/* Branch to list, current branch if empty */
+	Branch LoreString
+	/* Maximum entries to return (`0` uses the default of 30) */
+	Limit uint32
+}
+
+func NewLoreBranchLatestListArgs(opts LoreBranchLatestListArgs) (LoreBranchLatestListArgsFFI, func()) {
+	valBranch, cleanupBranch := NewLoreString(opts.Branch)
+
+	cleanup := func() {
+		cleanupBranch()
+	}
+
+	return LoreBranchLatestListArgsFFI{
+		Branch: valBranch,
+		Limit:  opts.Limit,
+	}, cleanup
+}
+
 type LoreBranchPushArgs struct {
 	/* Optional branch to push, current branch if not given */
 	Branch string
@@ -1489,6 +1516,8 @@ type LoreFileResetToLastMergedArgs struct {
 	Branch string
 	/* Purge untracked files */
 	Purge bool
+	/* Merge side to restore, 0 = resolved (the merge revision), 1 = self ("mine"), 2 = other ("theirs") */
+	MergeSide uint32
 }
 
 type LoreFileResetToLastMergedArgsFFI struct {
@@ -1498,6 +1527,8 @@ type LoreFileResetToLastMergedArgsFFI struct {
 	Branch LoreString
 	/* Purge untracked files */
 	Purge uint8
+	/* Merge side to restore, 0 = resolved (the merge revision), 1 = self ("mine"), 2 = other ("theirs") */
+	MergeSide uint32
 }
 
 func NewLoreFileResetToLastMergedArgs(opts LoreFileResetToLastMergedArgs) (LoreFileResetToLastMergedArgsFFI, func()) {
@@ -1512,9 +1543,10 @@ func NewLoreFileResetToLastMergedArgs(opts LoreFileResetToLastMergedArgs) (LoreF
 	}
 
 	return LoreFileResetToLastMergedArgsFFI{
-		Paths:  valPaths,
-		Branch: valBranch,
-		Purge:  valPurge,
+		Paths:     valPaths,
+		Branch:    valBranch,
+		Purge:     valPurge,
+		MergeSide: opts.MergeSide,
 	}, cleanup
 }
 
@@ -2217,6 +2249,24 @@ func NewLoreLinkListArgs(opts LoreLinkListArgs) (LoreLinkListArgsFFI, func()) {
 	}, cleanup
 }
 
+type LoreLinkListStagedArgs struct {
+	Unused int
+}
+
+type LoreLinkListStagedArgsFFI struct {
+	Unused int
+}
+
+func NewLoreLinkListStagedArgs(opts LoreLinkListStagedArgs) (LoreLinkListStagedArgsFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreLinkListStagedArgsFFI{
+		Unused: opts.Unused,
+	}, cleanup
+}
+
 type LoreLinkUpdateArgs struct {
 	/* Path within this repository of the link to update */
 	LinkPath string
@@ -2481,6 +2531,30 @@ func NewLoreRepositoryCreateArgs(opts LoreRepositoryCreateArgs) (LoreRepositoryC
 		Vfs:             opts.Vfs,
 		UseSharedStore:  opts.UseSharedStore,
 		SharedStorePath: valSharedStorePath,
+	}, cleanup
+}
+
+type LoreRepositoryDeleteArgs struct {
+	/* URL of the remote repository to delete, or a name or ID resolved against the remote of
+	the repository at `repository_path` */
+	RepositoryUrl string
+}
+
+type LoreRepositoryDeleteArgsFFI struct {
+	/* URL of the remote repository to delete, or a name or ID resolved against the remote of
+	the repository at `repository_path` */
+	RepositoryUrl LoreString
+}
+
+func NewLoreRepositoryDeleteArgs(opts LoreRepositoryDeleteArgs) (LoreRepositoryDeleteArgsFFI, func()) {
+	valRepositoryUrl, cleanupRepositoryUrl := NewLoreString(opts.RepositoryUrl)
+
+	cleanup := func() {
+		cleanupRepositoryUrl()
+	}
+
+	return LoreRepositoryDeleteArgsFFI{
+		RepositoryUrl: valRepositoryUrl,
 	}, cleanup
 }
 
@@ -3208,6 +3282,9 @@ type LoreRevisionSyncArgs struct {
 	DependencyRecursive bool
 	/* Maximum dependency traversal depth; 0 means unlimited */
 	DependencyDepthLimit uint32
+	/* View filter file to leave the working files materialized under; empty to keep the view the
+	instance holds */
+	View string
 }
 
 type LoreRevisionSyncArgsFFI struct {
@@ -3225,6 +3302,9 @@ type LoreRevisionSyncArgsFFI struct {
 	DependencyRecursive uint8
 	/* Maximum dependency traversal depth; 0 means unlimited */
 	DependencyDepthLimit uint32
+	/* View filter file to leave the working files materialized under; empty to keep the view the
+	instance holds */
+	View LoreString
 }
 
 func NewLoreRevisionSyncArgs(opts LoreRevisionSyncArgs) (LoreRevisionSyncArgsFFI, func()) {
@@ -3234,6 +3314,7 @@ func NewLoreRevisionSyncArgs(opts LoreRevisionSyncArgs) (LoreRevisionSyncArgsFFI
 	valRootFiles, cleanupRootFiles := NewLoreStringArray(opts.RootFiles)
 	valDependencyTags, cleanupDependencyTags := NewLoreStringArray(opts.DependencyTags)
 	valDependencyRecursive, cleanupDependencyRecursive := Newuint8(opts.DependencyRecursive)
+	valView, cleanupView := NewLoreString(opts.View)
 
 	cleanup := func() {
 		cleanupRevision()
@@ -3242,6 +3323,7 @@ func NewLoreRevisionSyncArgs(opts LoreRevisionSyncArgs) (LoreRevisionSyncArgsFFI
 		cleanupRootFiles()
 		cleanupDependencyTags()
 		cleanupDependencyRecursive()
+		cleanupView()
 	}
 
 	return LoreRevisionSyncArgsFFI{
@@ -3252,6 +3334,85 @@ func NewLoreRevisionSyncArgs(opts LoreRevisionSyncArgs) (LoreRevisionSyncArgsFFI
 		DependencyTags:       valDependencyTags,
 		DependencyRecursive:  valDependencyRecursive,
 		DependencyDepthLimit: opts.DependencyDepthLimit,
+		View:                 valView,
+	}, cleanup
+}
+
+type LoreRevisionBisectArgs struct {
+	/* Starting (known-good) revision of the bisect range */
+	Start string
+	/* Ending (known-bad) revision of the bisect range */
+	End string
+}
+
+type LoreRevisionBisectArgsFFI struct {
+	/* Starting (known-good) revision of the bisect range */
+	Start LoreString
+	/* Ending (known-bad) revision of the bisect range */
+	End LoreString
+}
+
+func NewLoreRevisionBisectArgs(opts LoreRevisionBisectArgs) (LoreRevisionBisectArgsFFI, func()) {
+	valStart, cleanupStart := NewLoreString(opts.Start)
+	valEnd, cleanupEnd := NewLoreString(opts.End)
+
+	cleanup := func() {
+		cleanupStart()
+		cleanupEnd()
+	}
+
+	return LoreRevisionBisectArgsFFI{
+		Start: valStart,
+		End:   valEnd,
+	}, cleanup
+}
+
+type LoreRevisionCherryPickArgs struct {
+	/* Revision to cherry pick */
+	Revision string
+	/* Message to use for an auto-commit if no conflicts arise; empty uses the
+	picked revision's message */
+	Message string
+	/* Disable auto-commit even if no conflicts arise */
+	NoCommit bool
+	/* Metadata keys to carry from the picked revision onto the revision this
+	creates. Empty carries nothing; the single entry `*` carries every key
+	that is not reserved to the cherry-pick itself. */
+	InheritMetadata []string
+}
+
+type LoreRevisionCherryPickArgsFFI struct {
+	/* Revision to cherry pick */
+	Revision LoreString
+	/* Message to use for an auto-commit if no conflicts arise; empty uses the
+	picked revision's message */
+	Message LoreString
+	/* Disable auto-commit even if no conflicts arise */
+	NoCommit uint8
+	/* Metadata keys to carry from the picked revision onto the revision this
+	creates. Empty carries nothing; the single entry `*` carries every key
+	that is not reserved to the cherry-pick itself. */
+	InheritMetadata LoreStringArrayFFI
+}
+
+func NewLoreRevisionCherryPickArgs(opts LoreRevisionCherryPickArgs) (LoreRevisionCherryPickArgsFFI, func()) {
+	valRevision, cleanupRevision := NewLoreString(opts.Revision)
+	valMessage, cleanupMessage := NewLoreString(opts.Message)
+	valNoCommit, cleanupNoCommit := Newuint8(opts.NoCommit)
+	valInheritMetadata, cleanupInheritMetadata := NewLoreStringArray(opts.InheritMetadata)
+
+	cleanup := func() {
+		cleanupRevision()
+		cleanupMessage()
+		cleanupNoCommit()
+		cleanupInheritMetadata()
+	}
+
+	return LoreRevisionCherryPickArgsFFI{
+		Revision:        valRevision,
+		Message:         valMessage,
+		NoCommit:        valNoCommit,
+		InheritMetadata: valInheritMetadata,
 	}, cleanup
 }
 
@@ -3470,6 +3631,28 @@ func NewLoreSharedStoreInfoArgs(opts LoreSharedStoreInfoArgs) (LoreSharedStoreIn
 
 	return LoreSharedStoreInfoArgsFFI{
 		Unused: opts.Unused,
+	}, cleanup
+}
+
+type LoreSharedStoreListArgs struct {
+	/* Whether to load each shared store to search for each instance using it. */
+	IncludeInstances bool
+}
+
+type LoreSharedStoreListArgsFFI struct {
+	/* Whether to load each shared store to search for each instance using it. */
+	IncludeInstances uint8
+}
+
+func NewLoreSharedStoreListArgs(opts LoreSharedStoreListArgs) (LoreSharedStoreListArgsFFI, func()) {
+	valIncludeInstances, cleanupIncludeInstances := Newuint8(opts.IncludeInstances)
+
+	cleanup := func() {
+		cleanupIncludeInstances()
+	}
+
+	return LoreSharedStoreListArgsFFI{
+		IncludeInstances: valIncludeInstances,
 	}, cleanup
 }
 
@@ -4087,13 +4270,15 @@ func NewLoreServiceStopArgs(opts LoreServiceStopArgs) (LoreServiceStopArgsFFI, f
 
 type LoreServiceSetExecutableArgs struct {
 	/* Path of the executable to start as the service. Empty clears the setting,
-	which returns to resolving one from the running program. */
+	which prevents auto-starting the service but can still can connect to an
+	already running service. */
 	Executable string
 }
 
 type LoreServiceSetExecutableArgsFFI struct {
 	/* Path of the executable to start as the service. Empty clears the setting,
-	which returns to resolving one from the running program. */
+	which prevents auto-starting the service but can still can connect to an
+	already running service. */
 	Executable LoreString
 }
 

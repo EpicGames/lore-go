@@ -3394,15 +3394,15 @@ type LoreStoragePutItemCompleteEventDataFFI struct {
 	/* The computed content address of the stored item. */
 	Address LoreAddress
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
-	/* Non-zero when the local store holds the content. Appended after the original three
-	fields, so a consumer reading only those is unaffected — `serde(default)` lets an older
-	payload that lacks the field deserialize, as events cross the IPC boundary. */
+	Error LoreErrorDetailFFI
+	/* Non-zero when the local store holds the content. Trailing, so a payload that lacks it still
+	decodes: the IPC wire format is non-self-describing, where only a missing trailing field is
+	recoverable. */
 	StoredLocal uint8
 	/* Non-zero when the content reached the remote, or was already durable there. A remote
-	write that fails still reports `error_code = NONE` if the local write succeeded — this is
-	how a caller tells the two apart. For fragmented content it is the intersection across
-	every fragment, so it is set only when the whole tree is remote. */
+	write that fails still reports success if the local write succeeded — this is how a
+	caller tells the two apart. For fragmented content it is the intersection across every
+	fragment, so it is set only when the whole tree is remote. */
 	StoredRemote uint8
 }
 
@@ -3412,15 +3412,15 @@ type LoreStoragePutItemCompleteEventData struct {
 	/* The computed content address of the stored item. */
 	Address LoreAddress
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
-	/* Non-zero when the local store holds the content. Appended after the original three
-	fields, so a consumer reading only those is unaffected — `serde(default)` lets an older
-	payload that lacks the field deserialize, as events cross the IPC boundary. */
+	Error LoreErrorDetail
+	/* Non-zero when the local store holds the content. Trailing, so a payload that lacks it still
+	decodes: the IPC wire format is non-self-describing, where only a missing trailing field is
+	recoverable. */
 	StoredLocal bool
 	/* Non-zero when the content reached the remote, or was already durable there. A remote
-	write that fails still reports `error_code = NONE` if the local write succeeded — this is
-	how a caller tells the two apart. For fragmented content it is the intersection across
-	every fragment, so it is set only when the whole tree is remote. */
+	write that fails still reports success if the local write succeeded — this is how a
+	caller tells the two apart. For fragmented content it is the intersection across every
+	fragment, so it is set only when the whole tree is remote. */
 	StoredRemote bool
 }
 type LoreStorageGetHeaderEventDataFFI struct {
@@ -3467,7 +3467,7 @@ type LoreStorageGetItemCompleteEventDataFFI struct {
 	/* The content address of the item. */
 	Address LoreAddress
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageGetItemCompleteEventData struct {
@@ -3476,7 +3476,7 @@ type LoreStorageGetItemCompleteEventData struct {
 	/* The content address of the item. */
 	Address LoreAddress
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageGetMetadataItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3486,7 +3486,7 @@ type LoreStorageGetMetadataItemCompleteEventDataFFI struct {
 	/* The metadata fragment for the item. */
 	Fragment LoreFragmentFFI
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageGetMetadataItemCompleteEventData struct {
@@ -3497,7 +3497,7 @@ type LoreStorageGetMetadataItemCompleteEventData struct {
 	/* The metadata fragment for the item. */
 	Fragment LoreFragment
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageCopyItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3511,7 +3511,7 @@ type LoreStorageCopyItemCompleteEventDataFFI struct {
 	/* The context of the item in the target. */
 	TargetContext LoreContext
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageCopyItemCompleteEventData struct {
@@ -3526,7 +3526,7 @@ type LoreStorageCopyItemCompleteEventData struct {
 	/* The context of the item in the target. */
 	TargetContext LoreContext
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageObliterateItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3542,7 +3542,7 @@ type LoreStorageObliterateItemCompleteEventDataFFI struct {
 	/* 1 when the remote side was skipped. */
 	RemoteSkipped uint8
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageObliterateItemCompleteEventData struct {
@@ -3559,7 +3559,7 @@ type LoreStorageObliterateItemCompleteEventData struct {
 	/* 1 when the remote side was skipped. */
 	RemoteSkipped bool
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageUploadItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3569,7 +3569,7 @@ type LoreStorageUploadItemCompleteEventDataFFI struct {
 	/* 1 when the item was already durable and no upload was performed. */
 	AlreadyDurable uint8
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageUploadItemCompleteEventData struct {
@@ -3580,7 +3580,7 @@ type LoreStorageUploadItemCompleteEventData struct {
 	/* 1 when the item was already durable and no upload was performed. */
 	AlreadyDurable bool
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreRevisionTreeLoadedEventDataFFI struct {
 	/* Registry id for the loaded revision tree. */
@@ -3949,7 +3949,7 @@ type LoreStorageMutableLoadItemCompleteEventDataFFI struct {
 	/* The value stored for the key. */
 	Value LoreHash
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageMutableLoadItemCompleteEventData struct {
@@ -3958,20 +3958,20 @@ type LoreStorageMutableLoadItemCompleteEventData struct {
 	/* The value stored for the key. */
 	Value LoreHash
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageMutableStoreItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
 	Id uint64
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageMutableStoreItemCompleteEventData struct {
 	/* Correlation id of the item. */
 	Id uint64
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI struct {
 	/* Correlation id of the item. */
@@ -3979,7 +3979,7 @@ type LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI struct {
 	/* The value the key held before the swap. */
 	Previous LoreHash
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageMutableCompareAndSwapItemCompleteEventData struct {
@@ -3988,7 +3988,7 @@ type LoreStorageMutableCompareAndSwapItemCompleteEventData struct {
 	/* The value the key held before the swap. */
 	Previous LoreHash
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreStorageMutableListEntryEventDataFFI struct {
 	/* Correlation id of the listing item. */
@@ -4011,14 +4011,14 @@ type LoreStorageMutableListItemCompleteEventDataFFI struct {
 	/* Correlation id of the listing item. */
 	Id uint64
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetailFFI
 }
 
 type LoreStorageMutableListItemCompleteEventData struct {
 	/* Correlation id of the listing item. */
 	Id uint64
 	/* The outcome for the item. */
-	ErrorCode LoreErrorCode
+	Error LoreErrorDetail
 }
 type LoreEvictionBeginEventDataFFI struct {
 	/* Fragment capacity the pass is reducing the store toward. */
@@ -6913,7 +6913,7 @@ func (e *LoreStoragePutItemCompleteEventDataFFI) Clone() LoreStoragePutItemCompl
 	return LoreStoragePutItemCompleteEventData{
 		Id:           e.Id,
 		Address:      e.Address,
-		ErrorCode:    e.ErrorCode,
+		Error:        e.Error.Clone(),
 		StoredLocal:  e.StoredLocal != 0,
 		StoredRemote: e.StoredRemote != 0,
 	}
@@ -6935,17 +6935,17 @@ func (e *LoreStorageGetDataEventDataFFI) Clone() LoreStorageGetDataEventData {
 }
 func (e *LoreStorageGetItemCompleteEventDataFFI) Clone() LoreStorageGetItemCompleteEventData {
 	return LoreStorageGetItemCompleteEventData{
-		Id:        e.Id,
-		Address:   e.Address,
-		ErrorCode: e.ErrorCode,
+		Id:      e.Id,
+		Address: e.Address,
+		Error:   e.Error.Clone(),
 	}
 }
 func (e *LoreStorageGetMetadataItemCompleteEventDataFFI) Clone() LoreStorageGetMetadataItemCompleteEventData {
 	return LoreStorageGetMetadataItemCompleteEventData{
-		Id:        e.Id,
-		Address:   e.Address,
-		Fragment:  e.Fragment.Clone(),
-		ErrorCode: e.ErrorCode,
+		Id:       e.Id,
+		Address:  e.Address,
+		Fragment: e.Fragment.Clone(),
+		Error:    e.Error.Clone(),
 	}
 }
 func (e *LoreStorageCopyItemCompleteEventDataFFI) Clone() LoreStorageCopyItemCompleteEventData {
@@ -6955,7 +6955,7 @@ func (e *LoreStorageCopyItemCompleteEventDataFFI) Clone() LoreStorageCopyItemCom
 		TargetPartition: e.TargetPartition,
 		SourceAddress:   e.SourceAddress,
 		TargetContext:   e.TargetContext,
-		ErrorCode:       e.ErrorCode,
+		Error:           e.Error.Clone(),
 	}
 }
 func (e *LoreStorageObliterateItemCompleteEventDataFFI) Clone() LoreStorageObliterateItemCompleteEventData {
@@ -6966,7 +6966,7 @@ func (e *LoreStorageObliterateItemCompleteEventDataFFI) Clone() LoreStorageOblit
 		RemoteSuccess: e.RemoteSuccess != 0,
 		LocalSkipped:  e.LocalSkipped != 0,
 		RemoteSkipped: e.RemoteSkipped != 0,
-		ErrorCode:     e.ErrorCode,
+		Error:         e.Error.Clone(),
 	}
 }
 func (e *LoreStorageUploadItemCompleteEventDataFFI) Clone() LoreStorageUploadItemCompleteEventData {
@@ -6974,7 +6974,7 @@ func (e *LoreStorageUploadItemCompleteEventDataFFI) Clone() LoreStorageUploadIte
 		Id:             e.Id,
 		Address:        e.Address,
 		AlreadyDurable: e.AlreadyDurable != 0,
-		ErrorCode:      e.ErrorCode,
+		Error:          e.Error.Clone(),
 	}
 }
 func (e *LoreRevisionTreeLoadedEventDataFFI) Clone() LoreRevisionTreeLoadedEventData {
@@ -7112,22 +7112,22 @@ func (e *LoreRevisionTreeInfoEventDataFFI) Clone() LoreRevisionTreeInfoEventData
 }
 func (e *LoreStorageMutableLoadItemCompleteEventDataFFI) Clone() LoreStorageMutableLoadItemCompleteEventData {
 	return LoreStorageMutableLoadItemCompleteEventData{
-		Id:        e.Id,
-		Value:     e.Value,
-		ErrorCode: e.ErrorCode,
+		Id:    e.Id,
+		Value: e.Value,
+		Error: e.Error.Clone(),
 	}
 }
 func (e *LoreStorageMutableStoreItemCompleteEventDataFFI) Clone() LoreStorageMutableStoreItemCompleteEventData {
 	return LoreStorageMutableStoreItemCompleteEventData{
-		Id:        e.Id,
-		ErrorCode: e.ErrorCode,
+		Id:    e.Id,
+		Error: e.Error.Clone(),
 	}
 }
 func (e *LoreStorageMutableCompareAndSwapItemCompleteEventDataFFI) Clone() LoreStorageMutableCompareAndSwapItemCompleteEventData {
 	return LoreStorageMutableCompareAndSwapItemCompleteEventData{
-		Id:        e.Id,
-		Previous:  e.Previous,
-		ErrorCode: e.ErrorCode,
+		Id:       e.Id,
+		Previous: e.Previous,
+		Error:    e.Error.Clone(),
 	}
 }
 func (e *LoreStorageMutableListEntryEventDataFFI) Clone() LoreStorageMutableListEntryEventData {
@@ -7139,8 +7139,8 @@ func (e *LoreStorageMutableListEntryEventDataFFI) Clone() LoreStorageMutableList
 }
 func (e *LoreStorageMutableListItemCompleteEventDataFFI) Clone() LoreStorageMutableListItemCompleteEventData {
 	return LoreStorageMutableListItemCompleteEventData{
-		Id:        e.Id,
-		ErrorCode: e.ErrorCode,
+		Id:    e.Id,
+		Error: e.Error.Clone(),
 	}
 }
 func (e *LoreEvictionBeginEventDataFFI) Clone() LoreEvictionBeginEventData {

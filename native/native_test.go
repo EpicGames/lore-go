@@ -3195,8 +3195,8 @@ func TestLoreStoragePutGet(t *testing.T) {
 		Callback: func(event *types.LoreEventFFI, _ uint64) {
 			if event.Tag == types.LoreEventTag_STORAGE_PUT_ITEM_COMPLETE {
 				if d, ok := event.GetData().(*types.LoreStoragePutItemCompleteEventDataFFI); ok {
-					if d.ErrorCode != 0 {
-						t.Errorf("PUT_ITEM_COMPLETE id=%d ErrorCode=%d", d.Id, d.ErrorCode)
+					if d.Error.ErrorCode != 0 {
+						t.Errorf("PUT_ITEM_COMPLETE id=%d ErrorCode=%d", d.Id, d.Error.ErrorCode)
 						return
 					}
 					putAddresses[d.Id] = d.Address.Clone()
@@ -3253,8 +3253,8 @@ func TestLoreStoragePutGet(t *testing.T) {
 				}
 			case types.LoreEventTag_STORAGE_GET_ITEM_COMPLETE:
 				if d, ok := event.GetData().(*types.LoreStorageGetItemCompleteEventDataFFI); ok {
-					if d.ErrorCode != 0 {
-						t.Errorf("GET_ITEM_COMPLETE id=%d ErrorCode=%d", d.Id, d.ErrorCode)
+					if d.Error.ErrorCode != 0 {
+						t.Errorf("GET_ITEM_COMPLETE id=%d ErrorCode=%d", d.Id, d.Error.ErrorCode)
 					}
 					completeCount++
 				}

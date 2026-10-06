@@ -3022,7 +3022,7 @@ type LoreStorageGetItemFFI struct {
 	selects `GET_DATA` delivery.
 
 	The capacity is the limit: a range exceeding it fails the item with
-	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the whole
+	`Oversized` rather than truncating. `GET_HEADER` reports the whole
 	content's size, which with `offset` and `length` gives the bytes written; no `GET_DATA`
 	follows, and `streaming` is ignored. The buffer holds unspecified bytes when the item fails. */
 	DataOut LoreBytesMutFFI
@@ -3052,7 +3052,7 @@ type LoreStorageGetItem struct {
 	selects `GET_DATA` delivery.
 
 	The capacity is the limit: a range exceeding it fails the item with
-	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the whole
+	`Oversized` rather than truncating. `GET_HEADER` reports the whole
 	content's size, which with `offset` and `length` gives the bytes written; no `GET_DATA`
 	follows, and `streaming` is ignored. The buffer holds unspecified bytes when the item fails. */
 	DataOut LoreBytesMut
@@ -3118,7 +3118,7 @@ type LoreStorageGetResolvedItemFFI struct {
 	`GET_DATA` delivery.
 
 	The capacity is the limit: content exceeding it fails the item with
-	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the content
+	`Oversized` rather than truncating. `GET_HEADER` reports the content
 	size, no `GET_DATA` follows, and `streaming` is ignored. The buffer holds unspecified bytes
 	when the item fails. */
 	DataOut LoreBytesMutFFI
@@ -3148,7 +3148,7 @@ type LoreStorageGetResolvedItem struct {
 	`GET_DATA` delivery.
 
 	The capacity is the limit: content exceeding it fails the item with
-	`LORE_ERROR_CODE_INVALID_ARGUMENTS` rather than truncating. `GET_HEADER` reports the content
+	`Oversized` rather than truncating. `GET_HEADER` reports the content
 	size, no `GET_DATA` follows, and `streaming` is ignored. The buffer holds unspecified bytes
 	when the item fails. */
 	DataOut LoreBytesMut

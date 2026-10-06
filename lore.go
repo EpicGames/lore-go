@@ -1254,6 +1254,39 @@ func BranchReset(
 	}
 }
 
+/* List the revisions the LATEST of a branch has held, most recent first.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Branch Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_BRANCH_LATEST_LIST_ENTRY` | `lore_branch_latest_list_entry_event_data_t` | Emitted for each revision the branch LATEST has held, most recent first | */
+func BranchLatestList(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreBranchLatestListArgsFFI,
+) *LoreCall[types.LoreBranchLatestListArgsFFI] {
+	return &LoreCall[types.LoreBranchLatestListArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.BranchLatestList,
+	}
+}
+
 /* Push local branch commits to the remote repository.
 
 # Events
@@ -2378,6 +2411,39 @@ func LinkList(
 	}
 }
 
+/* List the links whose linked repositories hold staged changes, including nested links.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Link Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LINK_STAGED_ENTRY` | `lore_link_staged_entry_event_data_t` | Emitted for each link with staged changes | */
+func LinkListStaged(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreLinkListStagedArgsFFI,
+) *LoreCall[types.LoreLinkListStagedArgsFFI] {
+	return &LoreCall[types.LoreLinkListStagedArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.LinkListStaged,
+	}
+}
+
 /* Update properties of an existing repository link.
 
 # Events
@@ -2551,6 +2617,33 @@ func RepositoryCreate(
 		globals:  globals,
 		args:     args,
 		execFunc: native.RepositoryCreate,
+	}
+}
+
+/* Delete a Lore repository on the remote server.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
+func RepositoryDelete(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRepositoryDeleteArgsFFI,
+) *LoreCall[types.LoreRepositoryDeleteArgsFFI] {
+	return &LoreCall[types.LoreRepositoryDeleteArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RepositoryDelete,
 	}
 }
 
@@ -3299,6 +3392,95 @@ func RevisionSync(
 	}
 }
 
+/* Take one step of a bisect between two revisions, synchronizing the working directory to the
+revision halfway between them.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Bisect Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_REVISION_BISECT` | `lore_revision_bisect_event_data_t` | Emitted once the working directory is synchronized to the selected revision, with the revision numbers of the range and whether the search is done |
+
+## Sync Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_REVISION_SYNC_TARGET` | `lore_revision_sync_target_event_data_t` | Emitted once after resolving the selected revision |
+| `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file deleted, modified, added, or merged during sync |
+| `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted periodically during file realization and once at completion |
+| `LORE_EVENT_REVISION_SYNC_REVISION` | `lore_revision_sync_revision_event_data_t` | Emitted once at the end with the resulting revision |
+| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a revision |
+| `LORE_EVENT_FILTER_EXCLUDE` | `lore_filter_exclude_event_data_t` | Emitted for each path excluded by view or ignore filters | */
+func RevisionBisect(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionBisectArgsFFI,
+) *LoreCall[types.LoreRevisionBisectArgsFFI] {
+	return &LoreCall[types.LoreRevisionBisectArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionBisect,
+	}
+}
+
+/* Cherry-pick a revision onto the current branch, applying its changes to the working tree.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Cherry-Pick Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_CHERRY_PICK_START_BEGIN` | `lore_cherry_pick_start_begin_event_data_t` | Emitted when cherry-pick begins, includes picked revision info |
+| `LORE_EVENT_CHERRY_PICK_START_END` | `lore_cherry_pick_start_end_event_data_t` | Emitted when cherry-pick completes, includes conflict flag |
+| `LORE_EVENT_CHERRY_PICK_CONFLICT_FILE` | `lore_cherry_pick_conflict_file_event_data_t` | Emitted for each file with an unresolved cherry-pick conflict |
+| `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted while the picked changes are applied |
+| `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file modified during cherry-pick realization |
+| `LORE_EVENT_FILE_STAGE_FILE` | `lore_file_stage_file_event_data_t` | Emitted for each file staged for deletion during cherry-pick |
+| `LORE_EVENT_REVISION_COMMIT_BEGIN` | `lore_revision_commit_begin_event_data_t` | Emitted when auto-commit starts (no conflicts) |
+| `LORE_EVENT_REVISION_COMMIT_PROGRESS` | `lore_revision_commit_progress_event_data_t` | Emitted during auto-commit |
+| `LORE_EVENT_REVISION_COMMIT_END` | `lore_revision_commit_end_event_data_t` | Emitted when auto-commit completes |
+| `LORE_EVENT_REVISION_COMMIT_REVISION` | `lore_revision_commit_revision_event_data_t` | Emitted with the committed cherry-pick revision |
+| `LORE_EVENT_METADATA` | `lore_metadata_event_data_t` | Emitted for metadata of the auto-commit |
+| `LORE_EVENT_FRAGMENT_WRITE` | `lore_fragment_write_event_data_t` | Emitted for fragments written during auto-commit | */
+func RevisionCherryPick(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionCherryPickArgsFFI,
+) *LoreCall[types.LoreRevisionCherryPickArgsFFI] {
+	return &LoreCall[types.LoreRevisionCherryPickArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.RevisionCherryPick,
+	}
+}
+
 /* Revert a revision, applying its inverse changes to the working tree.
 
 # Events
@@ -3612,6 +3794,39 @@ func SharedStoreInfo(
 		globals:  globals,
 		args:     args,
 		execFunc: native.SharedStoreInfo,
+	}
+}
+
+/* List every registered shared store.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Shared Store Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_SHARED_STORE_LIST` | `lore_shared_store_list_event_data_t` | Emitted on success carrying every registered shared store, and the instances using each when `include_instances` is set | */
+func SharedStoreList(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreSharedStoreListArgsFFI,
+) *LoreCall[types.LoreSharedStoreListArgsFFI] {
+	return &LoreCall[types.LoreSharedStoreListArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.SharedStoreList,
 	}
 }
 

@@ -50,6 +50,7 @@ var (
 	loreBranchMergeStartFunc               loreFuncWithCallback
 	loreBranchSwitchFunc                   loreFuncWithCallback
 	loreBranchResetFunc                    loreFuncWithCallback
+	loreBranchLatestListFunc               loreFuncWithCallback
 	loreBranchPushFunc                     loreFuncWithCallback
 	loreBranchMetadataGetFunc              loreFuncWithCallback
 	loreBranchMetadataSetFunc              loreFuncWithCallback
@@ -85,11 +86,13 @@ var (
 	loreLinkRemoveFunc                     loreFuncWithCallback
 	loreLinkInfoFunc                       loreFuncWithCallback
 	loreLinkListFunc                       loreFuncWithCallback
+	loreLinkListStagedFunc                 loreFuncWithCallback
 	loreLinkUpdateFunc                     loreFuncWithCallback
 	loreRepositoryCloneFunc                loreFuncWithCallback
 	loreRepositoryInfoFunc                 loreFuncWithCallback
 	loreRepositoryDumpFunc                 loreFuncWithCallback
 	loreRepositoryCreateFunc               loreFuncWithCallback
+	loreRepositoryDeleteFunc               loreFuncWithCallback
 	loreRepositoryFlushFunc                loreFuncWithCallback
 	loreRepositoryGcFunc                   loreFuncWithCallback
 	loreRepositoryReleaseFunc              loreFuncWithCallback
@@ -112,6 +115,8 @@ var (
 	loreRevisionMetadataListFunc           loreFuncWithCallback
 	loreRevisionMetadataSetFunc            loreFuncWithCallback
 	loreRevisionSyncFunc                   loreFuncWithCallback
+	loreRevisionBisectFunc                 loreFuncWithCallback
+	loreRevisionCherryPickFunc             loreFuncWithCallback
 	loreRevisionRevertFunc                 loreFuncWithCallback
 	loreRevisionRevertAbortFunc            loreFuncWithCallback
 	loreRevisionRevertUnresolveFunc        loreFuncWithCallback
@@ -121,6 +126,7 @@ var (
 	loreRevisionRevertResolveTheirsFunc    loreFuncWithCallback
 	loreSharedStoreCreateFunc              loreFuncWithCallback
 	loreSharedStoreInfoFunc                loreFuncWithCallback
+	loreSharedStoreListFunc                loreFuncWithCallback
 	loreSharedStoreSetUseAutomaticallyFunc loreFuncWithCallback
 	loreStorageOpenFunc                    loreFuncWithCallback
 	loreStoragePutFunc                     loreFuncWithCallback
@@ -250,6 +256,7 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreBranchMergeStartFunc, libHandle, "lore_branch_merge_start")
 	purego.RegisterLibFunc(&loreBranchSwitchFunc, libHandle, "lore_branch_switch")
 	purego.RegisterLibFunc(&loreBranchResetFunc, libHandle, "lore_branch_reset")
+	purego.RegisterLibFunc(&loreBranchLatestListFunc, libHandle, "lore_branch_latest_list")
 	purego.RegisterLibFunc(&loreBranchPushFunc, libHandle, "lore_branch_push")
 	purego.RegisterLibFunc(&loreBranchMetadataGetFunc, libHandle, "lore_branch_metadata_get")
 	purego.RegisterLibFunc(&loreBranchMetadataSetFunc, libHandle, "lore_branch_metadata_set")
@@ -285,11 +292,13 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreLinkRemoveFunc, libHandle, "lore_link_remove")
 	purego.RegisterLibFunc(&loreLinkInfoFunc, libHandle, "lore_link_info")
 	purego.RegisterLibFunc(&loreLinkListFunc, libHandle, "lore_link_list")
+	purego.RegisterLibFunc(&loreLinkListStagedFunc, libHandle, "lore_link_list_staged")
 	purego.RegisterLibFunc(&loreLinkUpdateFunc, libHandle, "lore_link_update")
 	purego.RegisterLibFunc(&loreRepositoryCloneFunc, libHandle, "lore_repository_clone")
 	purego.RegisterLibFunc(&loreRepositoryInfoFunc, libHandle, "lore_repository_info")
 	purego.RegisterLibFunc(&loreRepositoryDumpFunc, libHandle, "lore_repository_dump")
 	purego.RegisterLibFunc(&loreRepositoryCreateFunc, libHandle, "lore_repository_create")
+	purego.RegisterLibFunc(&loreRepositoryDeleteFunc, libHandle, "lore_repository_delete")
 	purego.RegisterLibFunc(&loreRepositoryFlushFunc, libHandle, "lore_repository_flush")
 	purego.RegisterLibFunc(&loreRepositoryGcFunc, libHandle, "lore_repository_gc")
 	purego.RegisterLibFunc(&loreRepositoryReleaseFunc, libHandle, "lore_repository_release")
@@ -312,6 +321,8 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreRevisionMetadataListFunc, libHandle, "lore_revision_metadata_list")
 	purego.RegisterLibFunc(&loreRevisionMetadataSetFunc, libHandle, "lore_revision_metadata_set")
 	purego.RegisterLibFunc(&loreRevisionSyncFunc, libHandle, "lore_revision_sync")
+	purego.RegisterLibFunc(&loreRevisionBisectFunc, libHandle, "lore_revision_bisect")
+	purego.RegisterLibFunc(&loreRevisionCherryPickFunc, libHandle, "lore_revision_cherry_pick")
 	purego.RegisterLibFunc(&loreRevisionRevertFunc, libHandle, "lore_revision_revert")
 	purego.RegisterLibFunc(&loreRevisionRevertAbortFunc, libHandle, "lore_revision_revert_abort")
 	purego.RegisterLibFunc(&loreRevisionRevertUnresolveFunc, libHandle, "lore_revision_revert_unresolve")
@@ -321,6 +332,7 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreRevisionRevertResolveTheirsFunc, libHandle, "lore_revision_revert_resolve_theirs")
 	purego.RegisterLibFunc(&loreSharedStoreCreateFunc, libHandle, "lore_shared_store_create")
 	purego.RegisterLibFunc(&loreSharedStoreInfoFunc, libHandle, "lore_shared_store_info")
+	purego.RegisterLibFunc(&loreSharedStoreListFunc, libHandle, "lore_shared_store_list")
 	purego.RegisterLibFunc(&loreSharedStoreSetUseAutomaticallyFunc, libHandle, "lore_shared_store_set_use_automatically")
 	purego.RegisterLibFunc(&loreStorageOpenFunc, libHandle, "lore_storage_open")
 	purego.RegisterLibFunc(&loreStoragePutFunc, libHandle, "lore_storage_put")
@@ -1267,6 +1279,36 @@ func BranchReset(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreBranchResetFunc, globals, args, config)
+}
+
+/* List the revisions the LATEST of a branch has held, most recent first.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Branch Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_BRANCH_LATEST_LIST_ENTRY` | `lore_branch_latest_list_entry_event_data_t` | Emitted for each revision the branch LATEST has held, most recent first | */
+func BranchLatestList(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreBranchLatestListArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreBranchLatestListFunc, globals, args, config)
 }
 
 /* Push local branch commits to the remote repository.
@@ -2288,6 +2330,36 @@ func LinkList(
 	return callLoreFunction(&loreLinkListFunc, globals, args, config)
 }
 
+/* List the links whose linked repositories hold staged changes, including nested links.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Link Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LINK_STAGED_ENTRY` | `lore_link_staged_entry_event_data_t` | Emitted for each link with staged changes | */
+func LinkListStaged(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreLinkListStagedArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreLinkListStagedFunc, globals, args, config)
+}
+
 /* Update properties of an existing repository link.
 
 # Events
@@ -2447,6 +2519,30 @@ func RepositoryCreate(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreRepositoryCreateFunc, globals, args, config)
+}
+
+/* Delete a Lore repository on the remote server.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination | */
+func RepositoryDelete(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRepositoryDeleteArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRepositoryDeleteFunc, globals, args, config)
 }
 
 /* Flush pending repository state to persistent storage.
@@ -3128,6 +3224,89 @@ func RevisionSync(
 	return callLoreFunction(&loreRevisionSyncFunc, globals, args, config)
 }
 
+/* Take one step of a bisect between two revisions, synchronizing the working directory to the
+revision halfway between them.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Bisect Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_REVISION_BISECT` | `lore_revision_bisect_event_data_t` | Emitted once the working directory is synchronized to the selected revision, with the revision numbers of the range and whether the search is done |
+
+## Sync Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_REVISION_SYNC_TARGET` | `lore_revision_sync_target_event_data_t` | Emitted once after resolving the selected revision |
+| `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file deleted, modified, added, or merged during sync |
+| `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted periodically during file realization and once at completion |
+| `LORE_EVENT_REVISION_SYNC_REVISION` | `lore_revision_sync_revision_event_data_t` | Emitted once at the end with the resulting revision |
+| `LORE_EVENT_REVISION_RESOLVE` | `lore_revision_resolve_event_data_t` | Emitted when resolving a revision |
+| `LORE_EVENT_FILTER_EXCLUDE` | `lore_filter_exclude_event_data_t` | Emitted for each path excluded by view or ignore filters | */
+func RevisionBisect(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionBisectArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionBisectFunc, globals, args, config)
+}
+
+/* Cherry-pick a revision onto the current branch, applying its changes to the working tree.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Cherry-Pick Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_CHERRY_PICK_START_BEGIN` | `lore_cherry_pick_start_begin_event_data_t` | Emitted when cherry-pick begins, includes picked revision info |
+| `LORE_EVENT_CHERRY_PICK_START_END` | `lore_cherry_pick_start_end_event_data_t` | Emitted when cherry-pick completes, includes conflict flag |
+| `LORE_EVENT_CHERRY_PICK_CONFLICT_FILE` | `lore_cherry_pick_conflict_file_event_data_t` | Emitted for each file with an unresolved cherry-pick conflict |
+| `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted while the picked changes are applied |
+| `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file modified during cherry-pick realization |
+| `LORE_EVENT_FILE_STAGE_FILE` | `lore_file_stage_file_event_data_t` | Emitted for each file staged for deletion during cherry-pick |
+| `LORE_EVENT_REVISION_COMMIT_BEGIN` | `lore_revision_commit_begin_event_data_t` | Emitted when auto-commit starts (no conflicts) |
+| `LORE_EVENT_REVISION_COMMIT_PROGRESS` | `lore_revision_commit_progress_event_data_t` | Emitted during auto-commit |
+| `LORE_EVENT_REVISION_COMMIT_END` | `lore_revision_commit_end_event_data_t` | Emitted when auto-commit completes |
+| `LORE_EVENT_REVISION_COMMIT_REVISION` | `lore_revision_commit_revision_event_data_t` | Emitted with the committed cherry-pick revision |
+| `LORE_EVENT_METADATA` | `lore_metadata_event_data_t` | Emitted for metadata of the auto-commit |
+| `LORE_EVENT_FRAGMENT_WRITE` | `lore_fragment_write_event_data_t` | Emitted for fragments written during auto-commit | */
+func RevisionCherryPick(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRevisionCherryPickArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRevisionCherryPickFunc, globals, args, config)
+}
+
 /* Revert a revision, applying its inverse changes to the working tree.
 
 # Events
@@ -3415,6 +3594,36 @@ func SharedStoreInfo(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreSharedStoreInfoFunc, globals, args, config)
+}
+
+/* List every registered shared store.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Shared Store Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_SHARED_STORE_LIST` | `lore_shared_store_list_event_data_t` | Emitted on success carrying every registered shared store, and the instances using each when `include_instances` is set | */
+func SharedStoreList(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreSharedStoreListArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreSharedStoreListFunc, globals, args, config)
 }
 
 /* Set whether to automatically use the shared store.
