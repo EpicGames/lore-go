@@ -25,7 +25,8 @@ type LoreGlobalArgs struct {
 	Remote bool
 	/* Dry run mode, only report what would have been changed and perform no changes to local file system */
 	DryRun bool
-	/* Maximum number of parallel connections for bulk data transfer */
+	/* Number of parallel storage connections for bulk data transfer, 0 for the default of 1.
+	At most 10 are opened */
 	MaxConnections uint32
 	/* Search limit when iterating revisions */
 	SearchLimit uint32
@@ -43,10 +44,14 @@ type LoreGlobalArgs struct {
 	/* Maximum number of parallel compression tasks */
 	CompressTaskLimit uint64
 	/* Keep store references alive after a repository call completes to avoid
-	repeated store open/close cycles for consecutive API calls in the same process. */
+	repeated store open/close cycles for consecutive API calls in the same process.
+	The stores stay locked meanwhile, so another process using them waits. With
+	`LORE_STORE_RETAIN` set to `1` or `true` in the environment of the process running
+	the call, the stores are kept after every call whether or not this is set,
+	unlocked, and the next call reloads them only if another process changed them. */
 	StoreKeepAlive bool
-	/* Duration in seconds to keep store references alive. Only used when
-	`store_keep_alive` is set. 0 means use the default (10 seconds). */
+	/* Duration in seconds to keep store references alive, when `store_keep_alive` or
+	`LORE_STORE_RETAIN` is set. 0 means use the default (10 seconds). */
 	StoreKeepAliveSeconds uint64
 	/* Force sync data to storage media during store flush */
 	SyncData bool
@@ -81,6 +86,16 @@ type LoreGlobalArgs struct {
 	whatever `stats` is set to, statistics being reported once at the end
 	rather than on an interval. Zero takes [`DEFAULT_EVENT_INTERVAL_MS`]. */
 	EventIntervalMs uint64
+	/* Which authentication path to take if the server advertises both its
+	gRPC auth service and an OIDC issuer. */
+	AuthMode LoreAuthMode
+	/* Treat the remote as a trusted source, for a caller within its
+	infrastructure where performance comes first: payloads fetched from it
+	have only their sizes checked against their length, are never hashed,
+	and are decompressed only where their content is read. A storage handle
+	takes it from the globals it is opened with. Any non-zero value trusts
+	the remote, so a caller zeroes the whole struct, padding included */
+	TrustRemote bool
 }
 
 type LoreGlobalArgsFFI struct {
@@ -106,7 +121,8 @@ type LoreGlobalArgsFFI struct {
 	Remote uint8
 	/* Dry run mode, only report what would have been changed and perform no changes to local file system */
 	DryRun uint8
-	/* Maximum number of parallel connections for bulk data transfer */
+	/* Number of parallel storage connections for bulk data transfer, 0 for the default of 1.
+	At most 10 are opened */
 	MaxConnections uint32
 	/* Search limit when iterating revisions */
 	SearchLimit uint32
@@ -124,10 +140,14 @@ type LoreGlobalArgsFFI struct {
 	/* Maximum number of parallel compression tasks */
 	CompressTaskLimit uint64
 	/* Keep store references alive after a repository call completes to avoid
-	repeated store open/close cycles for consecutive API calls in the same process. */
+	repeated store open/close cycles for consecutive API calls in the same process.
+	The stores stay locked meanwhile, so another process using them waits. With
+	`LORE_STORE_RETAIN` set to `1` or `true` in the environment of the process running
+	the call, the stores are kept after every call whether or not this is set,
+	unlocked, and the next call reloads them only if another process changed them. */
 	StoreKeepAlive uint8
-	/* Duration in seconds to keep store references alive. Only used when
-	`store_keep_alive` is set. 0 means use the default (10 seconds). */
+	/* Duration in seconds to keep store references alive, when `store_keep_alive` or
+	`LORE_STORE_RETAIN` is set. 0 means use the default (10 seconds). */
 	StoreKeepAliveSeconds uint64
 	/* Force sync data to storage media during store flush */
 	SyncData uint8
@@ -162,6 +182,16 @@ type LoreGlobalArgsFFI struct {
 	whatever `stats` is set to, statistics being reported once at the end
 	rather than on an interval. Zero takes [`DEFAULT_EVENT_INTERVAL_MS`]. */
 	EventIntervalMs uint64
+	/* Which authentication path to take if the server advertises both its
+	gRPC auth service and an OIDC issuer. */
+	AuthMode LoreAuthMode
+	/* Treat the remote as a trusted source, for a caller within its
+	infrastructure where performance comes first: payloads fetched from it
+	have only their sizes checked against their length, are never hashed,
+	and are decompressed only where their content is read. A storage handle
+	takes it from the globals it is opened with. Any non-zero value trusts
+	the remote, so a caller zeroes the whole struct, padding included */
+	TrustRemote uint8
 }
 
 func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
@@ -182,6 +212,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valCache, cleanupCache := Newuint8(opts.Cache)
 	valIdentityToken, cleanupIdentityToken := NewLoreString(opts.IdentityToken)
 	valAccessToken, cleanupAccessToken := NewLoreString(opts.AccessToken)
+	valTrustRemote, cleanupTrustRemote := Newuint8(opts.TrustRemote)
 
 	cleanup := func() {
 		cleanupRepositoryPath()
@@ -201,6 +232,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		cleanupCache()
 		cleanupIdentityToken()
 		cleanupAccessToken()
+		cleanupTrustRemote()
 	}
 
 	return LoreGlobalArgsFFI{
@@ -229,6 +261,8 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		AccessToken:           valAccessToken,
 		Stats:                 opts.Stats,
 		EventIntervalMs:       opts.EventIntervalMs,
+		AuthMode:              opts.AuthMode,
+		TrustRemote:           valTrustRemote,
 	}, cleanup
 }
 
@@ -888,6 +922,10 @@ type LoreBranchMergeStartArgs struct {
 	revision. Empty carries nothing; the single entry `*` carries every
 	key that is not reserved to the merge itself. */
 	InheritMetadata []string
+	/* Array of link relative paths that have specific auto commit messages */
+	LinkPaths []string
+	/* Array of messages corresponding to each link path (parallel array with `link_paths`) */
+	LinkMessages []string
 }
 
 type LoreBranchMergeStartArgsFFI struct {
@@ -905,6 +943,10 @@ type LoreBranchMergeStartArgsFFI struct {
 	revision. Empty carries nothing; the single entry `*` carries every
 	key that is not reserved to the merge itself. */
 	InheritMetadata LoreStringArrayFFI
+	/* Array of link relative paths that have specific auto commit messages */
+	LinkPaths LoreStringArrayFFI
+	/* Array of messages corresponding to each link path (parallel array with `link_paths`) */
+	LinkMessages LoreStringArrayFFI
 }
 
 func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMergeStartArgsFFI, func()) {
@@ -914,6 +956,8 @@ func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMerge
 	valLink, cleanupLink := NewLoreString(opts.Link)
 	valIgnoreLinks, cleanupIgnoreLinks := Newuint8(opts.IgnoreLinks)
 	valInheritMetadata, cleanupInheritMetadata := NewLoreStringArray(opts.InheritMetadata)
+	valLinkPaths, cleanupLinkPaths := NewLoreStringArray(opts.LinkPaths)
+	valLinkMessages, cleanupLinkMessages := NewLoreStringArray(opts.LinkMessages)
 
 	cleanup := func() {
 		cleanupBranch()
@@ -922,6 +966,8 @@ func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMerge
 		cleanupLink()
 		cleanupIgnoreLinks()
 		cleanupInheritMetadata()
+		cleanupLinkPaths()
+		cleanupLinkMessages()
 	}
 
 	return LoreBranchMergeStartArgsFFI{
@@ -931,6 +977,8 @@ func NewLoreBranchMergeStartArgs(opts LoreBranchMergeStartArgs) (LoreBranchMerge
 		Link:            valLink,
 		IgnoreLinks:     valIgnoreLinks,
 		InheritMetadata: valInheritMetadata,
+		LinkPaths:       valLinkPaths,
+		LinkMessages:    valLinkMessages,
 	}, cleanup
 }
 
@@ -1333,6 +1381,74 @@ func NewLoreFileHistoryArgs(opts LoreFileHistoryArgs) (LoreFileHistoryArgsFFI, f
 		Branch:   valBranch,
 		Length:   opts.Length,
 		Depth:    opts.Depth,
+	}, cleanup
+}
+
+type LoreFileAuditArgs struct {
+	/* A path to a file */
+	Path string
+	/* Revision to read the file at, in any form a revision specifier takes: a
+	whole hash signature, `[branch]@<number>`, `[branch]@LATEST` or
+	`<branch>@<hash>`, optionally followed by `~<count>` to step back that many
+	parents. Empty reads the revision the instance is synced to and accounts for
+	the file on disk */
+	Revision string
+	/* Revisions of the file's predecessor chain to walk, `0` for the default of
+	100 and `UINT32_MAX` for the whole chain. Zero means the default rather
+	than no limit, as `lore_file_history_args_t::length` does, so a
+	zero-initialized value is bounded */
+	MaxRevisions uint32
+	/* Count a line that differs only in trailing whitespace as changed.
+	Trailing whitespace is ignored by default, so the field is stated as the
+	refusal and a zero-initialized value carries the default */
+	NoIgnoreSpaceAtEol bool
+	/* Collapse runs of internal whitespace to a single space before comparing,
+	which leaves a reindented line with the revision that wrote its text */
+	IgnoreSpaceChange bool
+}
+
+type LoreFileAuditArgsFFI struct {
+	/* A path to a file */
+	Path LoreString
+	/* Revision to read the file at, in any form a revision specifier takes: a
+	whole hash signature, `[branch]@<number>`, `[branch]@LATEST` or
+	`<branch>@<hash>`, optionally followed by `~<count>` to step back that many
+	parents. Empty reads the revision the instance is synced to and accounts for
+	the file on disk */
+	Revision LoreString
+	/* Revisions of the file's predecessor chain to walk, `0` for the default of
+	100 and `UINT32_MAX` for the whole chain. Zero means the default rather
+	than no limit, as `lore_file_history_args_t::length` does, so a
+	zero-initialized value is bounded */
+	MaxRevisions uint32
+	/* Count a line that differs only in trailing whitespace as changed.
+	Trailing whitespace is ignored by default, so the field is stated as the
+	refusal and a zero-initialized value carries the default */
+	NoIgnoreSpaceAtEol uint8
+	/* Collapse runs of internal whitespace to a single space before comparing,
+	which leaves a reindented line with the revision that wrote its text */
+	IgnoreSpaceChange uint8
+}
+
+func NewLoreFileAuditArgs(opts LoreFileAuditArgs) (LoreFileAuditArgsFFI, func()) {
+	valPath, cleanupPath := NewLoreString(opts.Path)
+	valRevision, cleanupRevision := NewLoreString(opts.Revision)
+	valNoIgnoreSpaceAtEol, cleanupNoIgnoreSpaceAtEol := Newuint8(opts.NoIgnoreSpaceAtEol)
+	valIgnoreSpaceChange, cleanupIgnoreSpaceChange := Newuint8(opts.IgnoreSpaceChange)
+
+	cleanup := func() {
+		cleanupPath()
+		cleanupRevision()
+		cleanupNoIgnoreSpaceAtEol()
+		cleanupIgnoreSpaceChange()
+	}
+
+	return LoreFileAuditArgsFFI{
+		Path:               valPath,
+		Revision:           valRevision,
+		MaxRevisions:       opts.MaxRevisions,
+		NoIgnoreSpaceAtEol: valNoIgnoreSpaceAtEol,
+		IgnoreSpaceChange:  valIgnoreSpaceChange,
 	}, cleanup
 }
 
@@ -3687,14 +3803,9 @@ type LoreStorageOpenArgs struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig bool
-	/* Skip re-hashing a loaded payload and checking it against the address it was read from.
-
-	Zero keeps the check, which is the default: a store handing back bytes under a content
-	address should be able to say they are the bytes that address names. A caller whose own
-	layer already assures integrity - one that scrubs its store on a schedule, say - pays for
-	the check on every byte of every read and learns nothing new from it, and can set this.
-
-	Applies to every read on the handle. */
+	/* Alias of `globals.trust_remote` for this handle: the handle trusts its remote when either is
+	set, so payloads fetched from it have only their sizes checked against their length and are
+	never hashed. Payloads the local store holds are never hashed either way. */
 	SkipVerify bool
 	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
 	incremental background GC for the handle; `0` then selects the default. Shared disk backends
@@ -3714,14 +3825,9 @@ type LoreStorageOpenArgsFFI struct {
 	RemoteConfig LoreStorageRemoteConfig
 	/* Activate `remote_config`; otherwise the handle has no remote */
 	HasRemoteConfig uint8
-	/* Skip re-hashing a loaded payload and checking it against the address it was read from.
-
-	Zero keeps the check, which is the default: a store handing back bytes under a content
-	address should be able to say they are the bytes that address names. A caller whose own
-	layer already assures integrity - one that scrubs its store on a schedule, say - pays for
-	the check on every byte of every read and learns nothing new from it, and can set this.
-
-	Applies to every read on the handle. */
+	/* Alias of `globals.trust_remote` for this handle: the handle trusts its remote when either is
+	set, so payloads fetched from it have only their sizes checked against their length and are
+	never hashed. Payloads the local store holds are never hashed either way. */
 	SkipVerify uint8
 	/* Soft cap on total immutable-store bytes (compactor target). A non-zero cache target enables
 	incremental background GC for the handle; `0` then selects the default. Shared disk backends
@@ -4264,6 +4370,24 @@ func NewLoreServiceStopArgs(opts LoreServiceStopArgs) (LoreServiceStopArgsFFI, f
 	}
 
 	return LoreServiceStopArgsFFI{
+		Unused: opts.Unused,
+	}, cleanup
+}
+
+type LoreServiceStatusArgs struct {
+	Unused int
+}
+
+type LoreServiceStatusArgsFFI struct {
+	Unused int
+}
+
+func NewLoreServiceStatusArgs(opts LoreServiceStatusArgs) (LoreServiceStatusArgsFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreServiceStatusArgsFFI{
 		Unused: opts.Unused,
 	}, cleanup
 }

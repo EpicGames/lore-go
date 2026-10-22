@@ -3114,8 +3114,13 @@ type LoreStorageGetResolvedItemFFI struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache uint8
+	/* Deliver one `GET_FRAGMENT` per leaf fragment in content order in place of `GET_DATA`, each
+	carrying the leaf's fragment and its payload as stored, with `streaming` ignored. No leaf
+	is expanded or checked against its hash. An item with `data_out` supplied rejects with
+	`INVALID_ARGUMENTS` */
+	Fragments uint8
 	/* Writable buffer receiving the content, `len` stating its capacity. Zero-initialized selects
-	`GET_DATA` delivery.
+	delivery in events.
 
 	The capacity is the limit: content exceeding it fails the item with
 	`Oversized` rather than truncating. `GET_HEADER` reports the content
@@ -3144,8 +3149,13 @@ type LoreStorageGetResolvedItem struct {
 	/* Cache fetched bytes back to the local store even without the producer's
 	`PayloadLocalCachePriority` hint */
 	LocalCache bool
+	/* Deliver one `GET_FRAGMENT` per leaf fragment in content order in place of `GET_DATA`, each
+	carrying the leaf's fragment and its payload as stored, with `streaming` ignored. No leaf
+	is expanded or checked against its hash. An item with `data_out` supplied rejects with
+	`INVALID_ARGUMENTS` */
+	Fragments bool
 	/* Writable buffer receiving the content, `len` stating its capacity. Zero-initialized selects
-	`GET_DATA` delivery.
+	delivery in events.
 
 	The capacity is the limit: content exceeding it fails the item with
 	`Oversized` rather than truncating. `GET_HEADER` reports the content
@@ -3157,11 +3167,13 @@ type LoreStorageGetResolvedItem struct {
 func NewLoreStorageGetResolvedItem(opts LoreStorageGetResolvedItem) (LoreStorageGetResolvedItemFFI, func()) {
 	valStreaming, cleanupStreaming := Newuint8(opts.Streaming)
 	valLocalCache, cleanupLocalCache := Newuint8(opts.LocalCache)
+	valFragments, cleanupFragments := Newuint8(opts.Fragments)
 	valDataOut, cleanupDataOut := NewLoreBytesMut(opts.DataOut)
 
 	cleanup := func() {
 		cleanupStreaming()
 		cleanupLocalCache()
+		cleanupFragments()
 		cleanupDataOut()
 	}
 
@@ -3172,6 +3184,7 @@ func NewLoreStorageGetResolvedItem(opts LoreStorageGetResolvedItem) (LoreStorage
 		Context:    opts.Context,
 		Streaming:  valStreaming,
 		LocalCache: valLocalCache,
+		Fragments:  valFragments,
 		DataOut:    valDataOut,
 	}, cleanup
 }
@@ -3184,6 +3197,7 @@ func (e *LoreStorageGetResolvedItemFFI) Clone() LoreStorageGetResolvedItem {
 		Context:    e.Context,
 		Streaming:  e.Streaming != 0,
 		LocalCache: e.LocalCache != 0,
+		Fragments:  e.Fragments != 0,
 		DataOut:    e.DataOut.Clone(),
 	}
 }

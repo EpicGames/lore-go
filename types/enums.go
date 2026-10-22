@@ -77,6 +77,27 @@ const (
 	LoreErrorCode_SLOW_DOWN         LoreErrorCode = 31
 )
 
+type LoreFileAuditOutcome int32
+
+const (
+	LoreFileAuditOutcome_ATTRIBUTED          LoreFileAuditOutcome = 0
+	LoreFileAuditOutcome_UNCOMMITTED         LoreFileAuditOutcome = 1
+	LoreFileAuditOutcome_BUDGET_EXHAUSTED    LoreFileAuditOutcome = 2
+	LoreFileAuditOutcome_OBLITERATED         LoreFileAuditOutcome = 3
+	LoreFileAuditOutcome_BINARY_IN_HISTORY   LoreFileAuditOutcome = 4
+	LoreFileAuditOutcome_LINK_UNAVAILABLE    LoreFileAuditOutcome = 5
+	LoreFileAuditOutcome_CONTENT_UNAVAILABLE LoreFileAuditOutcome = 6
+	LoreFileAuditOutcome_UNRESOLVED          LoreFileAuditOutcome = 7
+)
+
+type LoreAuthMode int32
+
+const (
+	LoreAuthMode_AUTO LoreAuthMode = 0
+	LoreAuthMode_GRPC LoreAuthMode = 1
+	LoreAuthMode_OIDC LoreAuthMode = 2
+)
+
 type LoreVfsType int32
 
 const (
@@ -363,4 +384,9 @@ const (
 	LoreEventTag_REVISION_TREE_METADATA_CLEAR_COMPLETE          LoreEventTag = 230
 	LoreEventTag_REVISION_COMMIT_STATS                          LoreEventTag = 231
 	LoreEventTag_BRANCH_PUSH_STATS                              LoreEventTag = 232
+	LoreEventTag_SERVICE_STATUS                                 LoreEventTag = 233
+	LoreEventTag_SERVICE_MESSAGE                                LoreEventTag = 234
+	LoreEventTag_AUTH_PENDING                                   LoreEventTag = 235
+	LoreEventTag_STORAGE_GET_FRAGMENT                           LoreEventTag = 236
+	LoreEventTag_FILE_AUDIT                                     LoreEventTag = 237
 )

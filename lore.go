@@ -624,7 +624,8 @@ These events are emitted by all interface functions:
 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
-| `LORE_EVENT_AUTH_URL` | `lore_auth_url_event_data_t` | Emitted with the login URL when no_browser mode is requested |
+| `LORE_EVENT_AUTH_URL` | `lore_auth_url_event_data_t` | Emitted with the login URL when no_browser mode is requested, and whenever the login has a code the user may need to enter or confirm at that URL, browser or not. `user_code` holds the code, or is empty |
+| `LORE_EVENT_AUTH_PENDING` | `lore_auth_pending_event_data_t` | Emitted before each wait while the login awaits the user's approval, with the seconds elapsed, the seconds until the next poll, and the seconds left before the session expires. |
 | `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with user id and display name after successful interactive authentication | */
 func AuthLoginInteractive(
 	globals *types.LoreGlobalArgsFFI,
@@ -1495,6 +1496,54 @@ func FileHistory(
 		globals:  globals,
 		args:     args,
 		execFunc: native.FileHistory,
+	}
+}
+
+/* Attribute each line of a file to the revision that last changed it.
+
+One `LORE_EVENT_FILE_AUDIT` event carries each range of consecutive lines
+sharing an attribution. Each range arrives as soon as the step of the walk
+that resolves it ends. The walk resolves the most recently changed lines
+first, so ranges arrive in that order, not in line order. Each range is
+complete and never needs joining with another. A caller with what it needs
+may stop reading; the events already delivered stand.
+
+A range names its revision and repository, not the revision's metadata. Read
+the metadata with `lore_revision_info`, once per distinct revision.
+
+An error that ends the walk, such as a lost connection to the remote, ends
+the audit: every line is still delivered, those the walk did not reach with
+the outcome `LORE_FILE_AUDIT_OUTCOME_UNRESOLVED`, and `LORE_EVENT_COMPLETE`
+carries the error.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## File Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_FILE_AUDIT` | `lore_file_audit_event_data_t` | Emitted for each range of consecutive lines sharing an attribution | */
+func FileAudit(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreFileAuditArgsFFI,
+) *LoreCall[types.LoreFileAuditArgsFFI] {
+	return &LoreCall[types.LoreFileAuditArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.FileAudit,
 	}
 }
 
@@ -2479,6 +2528,12 @@ func LinkUpdate(
 
 /* Clone a remote repository to a local path.
 
+A clone needs the remote, so the `offline` global argument does not keep it from connecting: it
+prepares the clone for working offline instead. With `offline` or `cache`, a clone that writes
+its files caches every file metadata block of the cloned revision, which staging and committing
+write to, so both work without the remote, and fails if it cannot. A bare clone writes no files
+and reads them from the remote when a call needs them.
+
 # Events
 
 Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
@@ -2500,7 +2555,7 @@ These events are emitted by all interface functions:
 |-----|-----------|-------------|
 | `LORE_EVENT_REPOSITORY_CLONE_BEGIN` | `lore_repository_clone_begin_event_data_t` | Emitted when clone begins, includes remote URL and target path |
 | `LORE_EVENT_REPOSITORY_CLONE_PROGRESS` | `lore_repository_clone_progress_event_data_t` | Emitted periodically during clone with progress data |
-| `LORE_EVENT_REPOSITORY_CLONE_END` | `lore_repository_clone_end_event_data_t` | Emitted when clone completes successfully |
+| `LORE_EVENT_REPOSITORY_CLONE_END` | `lore_repository_clone_end_event_data_t` | Emitted only when the clone succeeds; `LORE_EVENT_COMPLETE` reports the outcome of every clone |
 | `LORE_EVENT_REVISION_SYNC_TARGET` | `lore_revision_sync_target_event_data_t` | Emitted after resolving the target revision to sync during clone |
 | `LORE_EVENT_REVISION_SYNC_FILE` | `lore_revision_sync_file_event_data_t` | Emitted for each file written during initial sync |
 | `LORE_EVENT_REVISION_SYNC_PROGRESS` | `lore_revision_sync_progress_event_data_t` | Emitted periodically during initial file sync |
@@ -2703,9 +2758,10 @@ func RepositoryGc(
 
 /* Release all cached store references for the given repository path.
 
-Frees in-memory store data and releases file-backed store cache entries.
-Any active repository contexts for this path remain valid, but once they
-are dropped the stores will be freed. Subsequent opens will create fresh stores.
+Frees cached in-memory store data. Disk-backed stores are not forced closed:
+each is released once nothing uses it, and a later open reuses one that is still
+alive, which the store epoch keeps current with what other processes wrote.
+Any active repository contexts for this path remain valid.
 
 # Events
 
@@ -3859,6 +3915,11 @@ func SharedStoreSetUseAutomatically(
 
 /* Open a content-addressed storage handle.
 
+A disk-backed handle claims its stores for this process until it is released, so
+another process using the same stores waits until then. The claim ends once the
+flush `lore_storage_close` starts has finished and every revision tree loaded
+against the handle has been closed.
+
 # Events
 
 | Tag | Data Type | Description |
@@ -3934,12 +3995,17 @@ single reassembled buffer, exactly as `lore_storage_get` does. Without it the wh
 materialised in memory before the first byte reaches the callback, so a key naming something
 large should set it.
 
+Set `fragments` to receive one `LORE_EVENT_STORAGE_GET_FRAGMENT` per leaf fragment in place of
+`LORE_EVENT_STORAGE_GET_DATA`, each carrying the leaf's `lore_fragment_t` and its payload as
+stored. No leaf is expanded or checked against its hash.
+
 # Events
 
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_STORAGE_GET_HEADER` | `lore_storage_get_header_event_data_t` | Size of the item's reassembled content, emitted before any DATA events |
 | `LORE_EVENT_STORAGE_GET_DATA` | `lore_storage_get_data_event_data_t` | Payload bytes — valid only during the callback invocation. One event per item, or one per leaf fragment when `streaming` is set |
+| `LORE_EVENT_STORAGE_GET_FRAGMENT` | `lore_storage_get_fragment_event_data_t` | One leaf fragment and its payload, in content order, when `fragments` is set. The payload is valid only during the callback invocation |
 | `LORE_EVENT_STORAGE_GET_ITEM_COMPLETE` | `lore_storage_get_item_complete_event_data_t` | Terminal per-item event |
 | `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
 | `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | `status` is `0` iff every item succeeded, else the error code | */
@@ -4010,7 +4076,12 @@ func StoragePutResolved(
 
 Subsequent calls against the same handle return `InvalidArguments`.
 Close does not block on the flush it spawns — `Complete` fires after
-the in-flight counter drains, not after the flush finishes. */
+the in-flight counter drains, not after the flush finishes. The handle's
+claim on its stores ends once that flush has finished and every revision
+tree loaded against the handle has been closed. With `LORE_STORE_RETAIN`
+set to `1` or `true`, a disk-backed handle's stores stay in memory without
+the claim for the window `store_keep_alive_seconds` gives, so a
+`lore_storage_open` of the same repository in that window reuses them. */
 func StorageClose(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreStorageCloseArgsFFI,
@@ -4350,7 +4421,9 @@ func ServiceStart(
 /* Stop the running Lore background service.
 
 Does not start a service in order to stop one. Returns `0` when no service
-is running, since that is the state the call asks for.
+is running, since that is the state the call asks for. A mount the service
+cannot release because something holds it refuses the stop with `MountsBusy`,
+unless the global `force` argument is set, which detaches busy mounts lazily.
 
 # Events
 
@@ -4374,6 +4447,47 @@ func ServiceStop(
 		globals:  globals,
 		args:     args,
 		execFunc: native.ServiceStop,
+	}
+}
+
+/* Report whether the Lore background service is running, and its metadata.
+
+Answers from inside the service when called there, and otherwise reaches the
+one that is listening. Nothing listening is an answer rather than a failure:
+the call returns `0` with `running` set to `0`, so a caller branches on the
+event rather than on a connection error. Also hands back the log messages the
+service buffered while no command was running, emptying the buffer as it
+reads it.
+
+# Events
+
+Events are delivered via the callback as `lore_event_t`. Use the `tag` field to identify the event type.
+
+## Standard Events
+
+These events are emitted by all interface functions:
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_LOG` | `lore_log_event_data_t` | Diagnostic messages throughout execution |
+| `LORE_EVENT_ERROR` | `lore_error_event_data_t` | Emitted for a non-fatal error during the operation |
+| `LORE_EVENT_COMPLETE` | `lore_complete_event_data_t` | Always emitted at the end; `status` is `0` on success or the error code on failure |
+| `LORE_EVENT_END` | `lore_end_event_data_t` | Always emitted after `COMPLETE` to signal callback termination |
+
+## Operation-Specific Events
+
+| Tag | Data Type | Description |
+|-----|-----------|-------------|
+| `LORE_EVENT_SERVICE_STATUS` | `lore_service_status_event_data_t` | Service running state and metadata |
+| `LORE_EVENT_SERVICE_MESSAGE` | `lore_service_message_event_data_t` | A log message the service buffered outside command execution | */
+func ServiceStatus(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreServiceStatusArgsFFI,
+) *LoreCall[types.LoreServiceStatusArgsFFI] {
+	return &LoreCall[types.LoreServiceStatusArgsFFI]{
+		globals:  globals,
+		args:     args,
+		execFunc: native.ServiceStatus,
 	}
 }
 
@@ -4606,6 +4720,9 @@ func RepositoryConfigGet(
 `(store, repository, revision_hash)` tuple. `revision_hash == 0` opens an
 empty tree suitable for committing an initial revision.
 
+The tree keeps the storage handle's claim on its stores for as long as it is
+open, past `lore_storage_close` on that handle.
+
 | Terminal event                       | Payload                                | Notes                                              |
 |--------------------------------------|----------------------------------------|----------------------------------------------------|
 | `LORE_EVENT_REVISION_TREE_LOADED`    | `lore_revision_tree_loaded_event_data_t` | Emitted on success carrying the opened handle id | */
@@ -4624,7 +4741,9 @@ func RevisionTreeLoad(
 
 Subsequent calls against the same handle return `InvalidArguments`. The
 call blocks until every in-flight op on the handle has paired its
-decrement.
+decrement. Closing a tree on a storage handle that is already closed
+flushes what the tree wrote since, and closing the last one releases
+what was keeping that handle's claim on its stores.
 
 | Terminal event                              | Payload                                       | Notes                                              |
 |---------------------------------------------|-----------------------------------------------|----------------------------------------------------|

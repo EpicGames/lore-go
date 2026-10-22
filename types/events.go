@@ -91,9 +91,7 @@ type LoreCompleteEventDataFFI struct {
 	/* The completion status code of the operation. */
 	Status int32
 	/* The error detail for the operation. The empty default detail on
-	success; the populated detail on failure. `#[serde(default)]` lets an
-	older payload that lacks this field deserialize: the detail then reads
-	back as the empty default with an empty trace list. */
+	success; the populated detail on failure. */
 	Error LoreErrorDetailFFI
 }
 
@@ -101,9 +99,7 @@ type LoreCompleteEventData struct {
 	/* The completion status code of the operation. */
 	Status int32
 	/* The error detail for the operation. The empty default detail on
-	success; the populated detail on failure. `#[serde(default)]` lets an
-	older payload that lacks this field deserialize: the detail then reads
-	back as the empty default with an empty trace list. */
+	success; the populated detail on failure. */
 	Error LoreErrorDetail
 }
 type LoreMetadataEventDataFFI struct {
@@ -165,11 +161,17 @@ type LoreMaintenanceEventData struct {
 type LoreAuthUrlEventDataFFI struct {
 	/* Authentication URL */
 	Url LoreString
+	/* Code the user enters or confirms at `url`. Empty when the login
+	doesn't ask for one. */
+	UserCode LoreString
 }
 
 type LoreAuthUrlEventData struct {
 	/* Authentication URL */
 	Url string
+	/* Code the user enters or confirms at `url`. Empty when the login
+	doesn't ask for one. */
+	UserCode string
 }
 type LoreAuthUserInfoEventDataFFI struct {
 	/* User identity */
@@ -3395,9 +3397,7 @@ type LoreStoragePutItemCompleteEventDataFFI struct {
 	Address LoreAddress
 	/* The outcome for the item. */
 	Error LoreErrorDetailFFI
-	/* Non-zero when the local store holds the content. Trailing, so a payload that lacks it still
-	decodes: the IPC wire format is non-self-describing, where only a missing trailing field is
-	recoverable. */
+	/* Non-zero when the local store holds the content. */
 	StoredLocal uint8
 	/* Non-zero when the content reached the remote, or was already durable there. A remote
 	write that fails still reports success if the local write succeeded — this is how a
@@ -3413,9 +3413,7 @@ type LoreStoragePutItemCompleteEventData struct {
 	Address LoreAddress
 	/* The outcome for the item. */
 	Error LoreErrorDetail
-	/* Non-zero when the local store holds the content. Trailing, so a payload that lacks it still
-	decodes: the IPC wire format is non-self-describing, where only a missing trailing field is
-	recoverable. */
+	/* Non-zero when the local store holds the content. */
 	StoredLocal bool
 	/* Non-zero when the content reached the remote, or was already durable there. A remote
 	write that fails still reports success if the local write succeeded — this is how a
@@ -4135,6 +4133,117 @@ type LoreBranchPushStatsEventData struct {
 	Copied uint64
 	/* Fragments whose payload was uploaded. */
 	Put uint64
+}
+type LoreServiceStatusEventDataFFI struct {
+	/* Whether the service is running: 1 for running, 0 for not running. */
+	Running uint8
+	/* Path to the service binary. */
+	BinaryPath LoreString
+	/* Milliseconds since the service started. */
+	UptimeMs uint64
+	/* Number of active client connections. */
+	ConnectionCount uint32
+	/* Number of SWFS mounts currently active. */
+	SwfsMountCount uint32
+}
+
+type LoreServiceStatusEventData struct {
+	/* Whether the service is running: 1 for running, 0 for not running. */
+	Running bool
+	/* Path to the service binary. */
+	BinaryPath string
+	/* Milliseconds since the service started. */
+	UptimeMs uint64
+	/* Number of active client connections. */
+	ConnectionCount uint32
+	/* Number of SWFS mounts currently active. */
+	SwfsMountCount uint32
+}
+type LoreServiceMessageEventDataFFI struct {
+	/* The severity level of the log message. */
+	Level LoreLogLevel
+	/* The log message text. */
+	Message LoreString
+}
+
+type LoreServiceMessageEventData struct {
+	/* The severity level of the log message. */
+	Level LoreLogLevel
+	/* The log message text. */
+	Message string
+}
+type LoreAuthPendingEventDataFFI struct {
+	/* Whole seconds since polling began. */
+	ElapsedSecs uint64
+	/* Whole seconds until the next poll. */
+	IntervalSecs uint64
+	/* Whole seconds left before the session expires unapproved. */
+	RemainingSecs uint64
+}
+
+type LoreAuthPendingEventData struct {
+	/* Whole seconds since polling began. */
+	ElapsedSecs uint64
+	/* Whole seconds until the next poll. */
+	IntervalSecs uint64
+	/* Whole seconds left before the session expires unapproved. */
+	RemainingSecs uint64
+}
+type LoreStorageGetFragmentEventDataFFI struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The content address of the item. */
+	Address LoreAddress
+	/* The byte offset of this leaf within the item's content. */
+	Offset uint64
+	/* The leaf's fragment, describing `bytes`: the compression among its flags, the payload size
+	and the content size the payload expands to. */
+	Fragment LoreFragmentFFI
+	/* The leaf's payload, compressed as `fragment` states. */
+	Bytes LoreBytesFFI
+}
+
+type LoreStorageGetFragmentEventData struct {
+	/* Correlation id of the item. */
+	Id uint64
+	/* The content address of the item. */
+	Address LoreAddress
+	/* The byte offset of this leaf within the item's content. */
+	Offset uint64
+	/* The leaf's fragment, describing `bytes`: the compression among its flags, the payload size
+	and the content size the payload expands to. */
+	Fragment LoreFragment
+	/* The leaf's payload, compressed as `fragment` states. */
+	Bytes LoreBytes
+}
+type LoreFileAuditEventDataFFI struct {
+	/* Identifier of the repository the range came from. A walk that follows
+	the file into a linked repository reports that repository. */
+	Repository LoreRepositoryId
+	/* Revision that last changed the range. Zero unless `outcome` is
+	`Attributed`. */
+	Revision LoreHash
+	/* First line of the range, 1-based. */
+	LineFirst uint32
+	/* Last line of the range, 1-based and inclusive. */
+	LineLast uint32
+	/* What the range resolved to, or why it did not resolve. */
+	Outcome LoreFileAuditOutcome
+}
+
+type LoreFileAuditEventData struct {
+	/* Identifier of the repository the range came from. A walk that follows
+	the file into a linked repository reports that repository. */
+	Repository LoreRepositoryId
+	/* Revision that last changed the range. Zero unless `outcome` is
+	`Attributed`. */
+	Revision LoreHash
+	/* First line of the range, 1-based. */
+	LineFirst uint32
+	/* Last line of the range, 1-based and inclusive. */
+	LineLast uint32
+	/* What the range resolved to, or why it did not resolve. */
+	Outcome LoreFileAuditOutcome
 }
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
@@ -5069,6 +5178,26 @@ func (e *LoreEventFFI) asBranchPushStatsEventDataFFI() *LoreBranchPushStatsEvent
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreBranchPushStatsEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asServiceStatusEventDataFFI() *LoreServiceStatusEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreServiceStatusEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asServiceMessageEventDataFFI() *LoreServiceMessageEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreServiceMessageEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asAuthPendingEventDataFFI() *LoreAuthPendingEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreAuthPendingEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asStorageGetFragmentEventDataFFI() *LoreStorageGetFragmentEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreStorageGetFragmentEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asFileAuditEventDataFFI() *LoreFileAuditEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreFileAuditEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -5538,6 +5667,16 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asRevisionCommitStatsEventDataFFI()
 	case LoreEventTag_BRANCH_PUSH_STATS:
 		return e.asBranchPushStatsEventDataFFI()
+	case LoreEventTag_SERVICE_STATUS:
+		return e.asServiceStatusEventDataFFI()
+	case LoreEventTag_SERVICE_MESSAGE:
+		return e.asServiceMessageEventDataFFI()
+	case LoreEventTag_AUTH_PENDING:
+		return e.asAuthPendingEventDataFFI()
+	case LoreEventTag_STORAGE_GET_FRAGMENT:
+		return e.asStorageGetFragmentEventDataFFI()
+	case LoreEventTag_FILE_AUDIT:
+		return e.asFileAuditEventDataFFI()
 	default:
 		return nil
 	}
@@ -5587,7 +5726,8 @@ func (e *LoreMaintenanceEventDataFFI) Clone() LoreMaintenanceEventData {
 }
 func (e *LoreAuthUrlEventDataFFI) Clone() LoreAuthUrlEventData {
 	return LoreAuthUrlEventData{
-		Url: e.Url.Clone(),
+		Url:      e.Url.Clone(),
+		UserCode: e.UserCode.Clone(),
 	}
 }
 func (e *LoreAuthUserInfoEventDataFFI) Clone() LoreAuthUserInfoEventData {
@@ -7199,6 +7339,46 @@ func (e *LoreBranchPushStatsEventDataFFI) Clone() LoreBranchPushStatsEventData {
 		Put:          e.Put,
 	}
 }
+func (e *LoreServiceStatusEventDataFFI) Clone() LoreServiceStatusEventData {
+	return LoreServiceStatusEventData{
+		Running:         e.Running != 0,
+		BinaryPath:      e.BinaryPath.Clone(),
+		UptimeMs:        e.UptimeMs,
+		ConnectionCount: e.ConnectionCount,
+		SwfsMountCount:  e.SwfsMountCount,
+	}
+}
+func (e *LoreServiceMessageEventDataFFI) Clone() LoreServiceMessageEventData {
+	return LoreServiceMessageEventData{
+		Level:   e.Level,
+		Message: e.Message.Clone(),
+	}
+}
+func (e *LoreAuthPendingEventDataFFI) Clone() LoreAuthPendingEventData {
+	return LoreAuthPendingEventData{
+		ElapsedSecs:   e.ElapsedSecs,
+		IntervalSecs:  e.IntervalSecs,
+		RemainingSecs: e.RemainingSecs,
+	}
+}
+func (e *LoreStorageGetFragmentEventDataFFI) Clone() LoreStorageGetFragmentEventData {
+	return LoreStorageGetFragmentEventData{
+		Id:       e.Id,
+		Address:  e.Address,
+		Offset:   e.Offset,
+		Fragment: e.Fragment.Clone(),
+		Bytes:    e.Bytes.Clone(),
+	}
+}
+func (e *LoreFileAuditEventDataFFI) Clone() LoreFileAuditEventData {
+	return LoreFileAuditEventData{
+		Repository: e.Repository,
+		Revision:   e.Revision,
+		LineFirst:  e.LineFirst,
+		LineLast:   e.LineLast,
+		Outcome:    e.Outcome,
+	}
+}
 
 // Clone creates a Go-native copy of the event data
 // This copy is safe to keep after the callback returns
@@ -8368,6 +8548,31 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asBranchPushStatsEventDataFFI().Clone(),
+		}
+	case LoreEventTag_SERVICE_STATUS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asServiceStatusEventDataFFI().Clone(),
+		}
+	case LoreEventTag_SERVICE_MESSAGE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asServiceMessageEventDataFFI().Clone(),
+		}
+	case LoreEventTag_AUTH_PENDING:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asAuthPendingEventDataFFI().Clone(),
+		}
+	case LoreEventTag_STORAGE_GET_FRAGMENT:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asStorageGetFragmentEventDataFFI().Clone(),
+		}
+	case LoreEventTag_FILE_AUDIT:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asFileAuditEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{
