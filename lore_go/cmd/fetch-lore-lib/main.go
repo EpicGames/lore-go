@@ -20,6 +20,9 @@
 //     or "triple" (rust target triples, e.g. -x86_64-unknown-linux-gnu).
 //   - loreArtifactFormat: "direct" (download the raw library file) or "archive"
 //     (download a .tar.gz/.zip bundle and extract the library member).
+//
+// An "archive" build's name and branch are in its base URL (e.g. .../nightly/<name>),
+// so they never alter its version.
 
 package main
 
@@ -96,7 +99,8 @@ func bakedConfig() buildConfig {
 //
 //	stable release            -> vX.Y.Z
 //	prerelease (composite)    -> vX.Y.Z-<sibling>_<primary>
-//	prerelease with name      -> vX.Y.Z-<sibling>_<primary>-NAME
+//	prerelease with name      -> vX.Y.Z-<sibling>_<primary>-NAME  (direct only;
+//	                             an archive build's name is in its base URL)
 //
 // version is baked from the full, un-normalized build version (e.g.
 // "0.8.2-nightly"); a leading 'v' is added if missing.
@@ -115,7 +119,7 @@ func (c buildConfig) fileVersion() string {
 	if revision != "" {
 		fileVersion += "-" + revision
 	}
-	if c.name != "" {
+	if c.name != "" && c.format != "archive" {
 		fileVersion += "-" + c.name
 	}
 	return fileVersion
@@ -126,10 +130,11 @@ func (c buildConfig) fileVersion() string {
 // release pipeline disambiguates the directory with a branch suffix
 // ("-lore_<sibling-branch>__urc_<primary-branch>"); otherwise it equals the
 // file version. Stable releases live directly under the version tag, so this
-// returns fileVersion for them too.
+// returns fileVersion for them too, as does the archive layout, whose folder is
+// always the file version.
 func (c buildConfig) dirVersion() string {
 	fileVersion := c.fileVersion()
-	if c.name != "" {
+	if c.name != "" || c.format == "archive" {
 		return fileVersion
 	}
 	primary := c.branch
@@ -271,23 +276,24 @@ func downloadToTemp(url, pattern string) (string, error) {
 	return tmp.Name(), nil
 }
 
-// extractMember writes the named member (matched by base name) from the archive
-// to destPath. Supports gzipped tar and zip.
-func extractMember(archivePath, kind, member, destPath string) error {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
+// extractMembers writes each wanted member (matched by base name) to its
+// destination in one pass, since a tar.gz can only be read front to back. It
+// returns the members it found. Supports gzipped tar and zip.
+func extractMembers(archivePath, kind string, dests map[string]string) (map[string]bool, error) {
+	found := make(map[string]bool, len(dests))
+	var err error
 	switch kind {
 	case "tar.gz":
-		return extractTarGzMember(archivePath, member, destPath)
+		err = extractTarGz(archivePath, dests, found)
 	case "zip":
-		return extractZipMember(archivePath, member, destPath)
+		err = extractZip(archivePath, dests, found)
 	default:
-		return fmt.Errorf("unsupported archive kind: %s", kind)
+		err = fmt.Errorf("unsupported archive kind: %s", kind)
 	}
+	return found, err
 }
 
-func extractTarGzMember(archivePath, member, destPath string) error {
+func extractTarGz(archivePath string, dests map[string]string, found map[string]bool) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return err
@@ -299,76 +305,84 @@ func extractTarGzMember(archivePath, member, destPath string) error {
 	}
 	defer gz.Close()
 	tr := tar.NewReader(gz)
-	for {
+	for len(found) < len(dests) {
 		hdr, err := tr.Next()
 		if err == io.EOF {
-			break
+			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("failed to read tar: %w", err)
 		}
-		if filepath.Base(hdr.Name) != member {
+		name := filepath.Base(hdr.Name)
+		dest, ok := dests[name]
+		if !ok || found[name] {
 			continue
 		}
-		out, err := os.Create(destPath)
-		if err != nil {
-			return fmt.Errorf("failed to create destination: %w", err)
+		if err := writeMember(tr, name, dest); err != nil {
+			return err
 		}
-		defer out.Close()
-		written, err := io.Copy(out, tr) //nolint:gosec // trusted release archive
-		if err != nil {
-			return fmt.Errorf("failed to extract %s: %w", member, err)
-		}
-		fmt.Printf("  Extracted %s (%d bytes)\n", member, written)
-		return nil
+		found[name] = true
 	}
-	return fmt.Errorf("member %s not found in archive", member)
+	return nil
 }
 
-func extractZipMember(archivePath, member, destPath string) error {
+func extractZip(archivePath string, dests map[string]string, found map[string]bool) error {
 	zr, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to open zip: %w", err)
 	}
 	defer zr.Close()
 	for _, zf := range zr.File {
-		if filepath.Base(zf.Name) != member {
+		name := filepath.Base(zf.Name)
+		dest, ok := dests[name]
+		if !ok || found[name] {
 			continue
 		}
 		rc, err := zf.Open()
 		if err != nil {
-			return fmt.Errorf("failed to open %s: %w", member, err)
+			return fmt.Errorf("failed to open %s: %w", name, err)
 		}
-		defer rc.Close()
-		out, err := os.Create(destPath)
+		err = writeMember(rc, name, dest)
+		rc.Close()
 		if err != nil {
-			return fmt.Errorf("failed to create destination: %w", err)
+			return err
 		}
-		defer out.Close()
-		written, err := io.Copy(out, rc) //nolint:gosec // trusted release archive
-		if err != nil {
-			return fmt.Errorf("failed to extract %s: %w", member, err)
-		}
-		fmt.Printf("  Extracted %s (%d bytes)\n", member, written)
-		return nil
+		found[name] = true
 	}
-	return fmt.Errorf("member %s not found in archive", member)
+	return nil
+}
+
+func writeMember(r io.Reader, name, destPath string) error {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	out, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to create destination: %w", err)
+	}
+	defer out.Close()
+	written, err := io.Copy(out, r) //nolint:gosec // trusted release archive
+	if err != nil {
+		return fmt.Errorf("failed to extract %s: %w", name, err)
+	}
+	fmt.Printf("  Extracted %s (%d bytes)\n", name, written)
+	return nil
 }
 
 func versionFilePath(dir string) string {
 	return filepath.Join(dir, ".lore-version")
 }
 
-func checkVersion(dir, expectedVersionTag string) bool {
+func checkVersion(dir, source string) bool {
 	data, err := os.ReadFile(versionFilePath(dir))
 	if err != nil {
 		return false
 	}
-	return strings.TrimSpace(string(data)) == expectedVersionTag
+	return strings.TrimSpace(string(data)) == source
 }
 
-func writeVersion(dir, versionTag string) error {
-	return os.WriteFile(versionFilePath(dir), []byte(versionTag+"\n"), 0o644)
+func writeVersion(dir, source string) error {
+	return os.WriteFile(versionFilePath(dir), []byte(source+"\n"), 0o644)
 }
 
 // noExt strips the final extension from a filename (e.g. liblore.dylib ->
@@ -383,14 +397,6 @@ func noExt(name string) string {
 func downloadOptional(url, destPath string) {
 	if err := download(url, destPath); err != nil {
 		fmt.Printf("  (optional) %s not fetched: %v\n", filepath.Base(destPath), err)
-	}
-}
-
-// extractMemberOptional extracts an archive member best-effort, ignoring a
-// missing member or extraction error (used for bundled license files).
-func extractMemberOptional(archivePath, kind, member, destPath string) {
-	if err := extractMember(archivePath, kind, member, destPath); err != nil {
-		fmt.Printf("  (optional) %s not extracted: %v\n", member, err)
 	}
 }
 
@@ -417,7 +423,6 @@ func main() {
 
 	cfg := bakedConfig()
 	fileVersion := cfg.fileVersion()
-	dirVersion := cfg.dirVersion()
 
 	platform, err := cfg.resolvePlatform(*targetOS, *targetArch)
 	if err != nil {
@@ -427,9 +432,27 @@ func main() {
 
 	destPath := filepath.Join(*outputDir, platform.localName)
 
-	// Skip if the destination already has the right version
+	libPath := os.Getenv("LORE_LIB_PATH")
+	source := libPath
+	var dirURL string
+	if libPath == "" {
+		baseURL := os.Getenv("LORE_RELEASE_BASE_URL")
+		if baseURL == "" {
+			baseURL = loreReleaseBaseURL
+		}
+		if baseURL == "" {
+			fmt.Fprintln(os.Stderr,
+				"Error: no Lore release base URL configured. Set LORE_RELEASE_BASE_URL or rebuild the SDK with $LORE_RELEASE_BASE_URL set.")
+			os.Exit(1)
+		}
+		dirURL = fmt.Sprintf("%s/%s", strings.TrimRight(baseURL, "/"), cfg.dirVersion())
+		source = fmt.Sprintf("%s/%s", dirURL, platform.artifactName)
+	}
+
+	// The marker records the source rather than the version: builds from
+	// different branches or names can share a version.
 	if _, err := os.Stat(destPath); err == nil {
-		if checkVersion(*outputDir, fileVersion) {
+		if checkVersion(*outputDir, source) {
 			fmt.Printf("Lore library %s already present at %s\n", fileVersion, destPath)
 			return
 		}
@@ -437,7 +460,7 @@ func main() {
 		os.Remove(destPath)
 	}
 
-	if libPath := os.Getenv("LORE_LIB_PATH"); libPath != "" {
+	if libPath != "" {
 		if _, err := os.Stat(libPath); err != nil {
 			fmt.Fprintf(os.Stderr,
 				"Error: LORE_LIB_PATH=%s: %v\n", libPath, err)
@@ -449,47 +472,43 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		baseURL := os.Getenv("LORE_RELEASE_BASE_URL")
-		if baseURL == "" {
-			baseURL = loreReleaseBaseURL
-		}
-		if baseURL == "" {
-			fmt.Fprintln(os.Stderr,
-				"Error: no Lore release base URL configured. Set LORE_RELEASE_BASE_URL or rebuild the SDK with $LORE_RELEASE_BASE_URL set.")
-			os.Exit(1)
-		}
-		dirURL := fmt.Sprintf("%s/%s", strings.TrimRight(baseURL, "/"), dirVersion)
-		url := fmt.Sprintf("%s/%s", dirURL, platform.artifactName)
-
 		fmt.Printf("Downloading Lore %s for %s/%s...\n", fileVersion, *targetOS, *targetArch)
-		fmt.Printf("  URL: %s\n", url)
+		fmt.Printf("  URL: %s\n", source)
 		fmt.Printf("  Destination: %s\n", destPath)
 
 		if platform.archiveKind == "" {
-			if err := download(url, destPath); err != nil {
+			if err := download(source, destPath); err != nil {
 				fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
 				os.Exit(1)
 			}
 			// License files ship as separate files alongside the library.
 			fetchDirectLicenses(dirURL, platform, *outputDir)
 		} else {
-			tmp, err := downloadToTemp(url, "lore-lib-*."+platform.archiveKind)
+			tmp, err := downloadToTemp(source, "lore-lib-*."+platform.archiveKind)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
 				os.Exit(1)
 			}
 			defer os.Remove(tmp)
-			if err := extractMember(tmp, platform.archiveKind, platform.member, destPath); err != nil {
+			// License files are bundled inside the release archive: LICENSE.txt
+			// and THIRD-PARTY-NOTICES.txt in an open-source build,
+			// Lore_Licenses.txt in a private one.
+			dests := map[string]string{platform.member: destPath}
+			for _, name := range []string{"LICENSE.txt", "Lore_Licenses.txt", "THIRD-PARTY-NOTICES.txt"} {
+				dests[name] = filepath.Join(*outputDir, name)
+			}
+			found, err := extractMembers(tmp, platform.archiveKind, dests)
+			if err == nil && !found[platform.member] {
+				err = fmt.Errorf("member %s not found in archive", platform.member)
+			}
+			if err != nil {
 				fmt.Fprintf(os.Stderr, "Extract failed: %v\n", err)
 				os.Exit(1)
 			}
-			// License files are bundled inside the release archive.
-			extractMemberOptional(tmp, platform.archiveKind, "LICENSE.txt", filepath.Join(*outputDir, "LICENSE.txt"))
-			extractMemberOptional(tmp, platform.archiveKind, "THIRD-PARTY-NOTICES.txt", filepath.Join(*outputDir, "THIRD-PARTY-NOTICES.txt"))
 		}
 	}
 
-	if err := writeVersion(*outputDir, fileVersion); err != nil {
+	if err := writeVersion(*outputDir, source); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write version marker: %v\n", err)
 	}
 

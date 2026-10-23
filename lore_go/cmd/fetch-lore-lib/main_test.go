@@ -2,7 +2,14 @@
 
 package main
 
-import "testing"
+import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 // Covers the four distribution variants:
 //   open-source release -> bundled triple-named archives under v0.8.1
@@ -23,6 +30,11 @@ func TestResolveArtifact(t *testing.T) {
 	ossNightly.format, ossNightly.naming = "direct", "triple"
 	privNightly := nightly
 	privNightly.format, privNightly.naming = "direct", "short"
+
+	// A named branch build of the archive layout keeps the plain version.
+	archiveNightly := nightly
+	archiveNightly.format, archiveNightly.naming = "archive", "triple"
+	archiveNightly.name, archiveNightly.branch = "probe", "feature/x"
 
 	cases := []struct {
 		name         string
@@ -54,6 +66,9 @@ func TestResolveArtifact(t *testing.T) {
 		{"priv-nightly/darwin", privNightly, "darwin", "arm64", "v0.8.2-nightly-129_3612", "liblore-v0.8.2-nightly-129_3612-macos-arm64.dylib", "", ""},
 		{"priv-nightly/linux-arm64", privNightly, "linux", "arm64", "v0.8.2-nightly-129_3612", "liblore-v0.8.2-nightly-129_3612-linux-arm64.so", "", ""},
 		{"priv-nightly/windows", privNightly, "windows", "amd64", "v0.8.2-nightly-129_3612", "lore-v0.8.2-nightly-129_3612.dll", "", ""},
+
+		// --- archive prerelease (named, on a branch): triple archive under the plain version ---
+		{"archive-nightly/linux-amd64", archiveNightly, "linux", "amd64", "v0.8.2-nightly-129_3612", "liblore-v0.8.2-nightly-129_3612-x86_64-unknown-linux-gnu.tar.gz", "tar.gz", "liblore.so"},
 	}
 
 	for _, tc := range cases {
@@ -122,5 +137,58 @@ func TestDirVersionFeatureBranch(t *testing.T) {
 	}
 	if got := cfg.dirVersion(); got != wantDir {
 		t.Errorf("dirVersion = %q, want %q", got, wantDir)
+	}
+}
+
+// One pass extracts every wanted member present and reports which were found.
+func TestExtractMembers(t *testing.T) {
+	dir := t.TempDir()
+	members := map[string]string{"./liblore.so": "lib", "./Lore_Licenses.txt": "licenses", "./lore.h": "header"}
+
+	tgz := filepath.Join(dir, "a.tar.gz")
+	f, _ := os.Create(tgz)
+	gw := gzip.NewWriter(f)
+	tw := tar.NewWriter(gw)
+	for name, body := range members {
+		_ = tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(body))})
+		_, _ = tw.Write([]byte(body))
+	}
+	tw.Close()
+	gw.Close()
+	f.Close()
+
+	zp := filepath.Join(dir, "a.zip")
+	f, _ = os.Create(zp)
+	zw := zip.NewWriter(f)
+	for name, body := range members {
+		w, _ := zw.Create(name[2:])
+		_, _ = w.Write([]byte(body))
+	}
+	zw.Close()
+	f.Close()
+
+	for _, tc := range []struct{ kind, path string }{{"tar.gz", tgz}, {"zip", zp}} {
+		t.Run(tc.kind, func(t *testing.T) {
+			out := t.TempDir()
+			dests := map[string]string{
+				"liblore.so":        filepath.Join(out, "liblore.so"),
+				"Lore_Licenses.txt": filepath.Join(out, "Lore_Licenses.txt"),
+				"LICENSE.txt":       filepath.Join(out, "LICENSE.txt"),
+			}
+			found, err := extractMembers(tc.path, tc.kind, dests)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := map[string]string{"liblore.so": "lib", "Lore_Licenses.txt": "licenses"}
+			if len(found) != len(want) {
+				t.Errorf("found = %v, want %v", found, want)
+			}
+			for name, body := range want {
+				got, err := os.ReadFile(dests[name])
+				if !found[name] || err != nil || string(got) != body {
+					t.Errorf("%s: found=%v content=%q err=%v, want %q", name, found[name], got, err, body)
+				}
+			}
+		})
 	}
 }
