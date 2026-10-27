@@ -298,6 +298,12 @@ type LoreAuthLoginWithTokenArgs struct {
 	/* Auth service URL with scheme (e.g. `ucs-auth://auth.example.com`); used
 	directly when non-empty, required when no remote URL is available */
 	AuthUrl string
+	/* Client ID of a confidential client registered with the auth service. When
+	non-empty, logs in as that client with `client_secret`, and `token` and
+	`token_type` must be empty */
+	ClientId string
+	/* Secret of the client `client_id` names */
+	ClientSecret string
 }
 
 type LoreAuthLoginWithTokenArgsFFI struct {
@@ -310,6 +316,12 @@ type LoreAuthLoginWithTokenArgsFFI struct {
 	/* Auth service URL with scheme (e.g. `ucs-auth://auth.example.com`); used
 	directly when non-empty, required when no remote URL is available */
 	AuthUrl LoreString
+	/* Client ID of a confidential client registered with the auth service. When
+	non-empty, logs in as that client with `client_secret`, and `token` and
+	`token_type` must be empty */
+	ClientId LoreString
+	/* Secret of the client `client_id` names */
+	ClientSecret LoreString
 }
 
 func NewLoreAuthLoginWithTokenArgs(opts LoreAuthLoginWithTokenArgs) (LoreAuthLoginWithTokenArgsFFI, func()) {
@@ -317,19 +329,25 @@ func NewLoreAuthLoginWithTokenArgs(opts LoreAuthLoginWithTokenArgs) (LoreAuthLog
 	valToken, cleanupToken := NewLoreString(opts.Token)
 	valTokenType, cleanupTokenType := NewLoreString(opts.TokenType)
 	valAuthUrl, cleanupAuthUrl := NewLoreString(opts.AuthUrl)
+	valClientId, cleanupClientId := NewLoreString(opts.ClientId)
+	valClientSecret, cleanupClientSecret := NewLoreString(opts.ClientSecret)
 
 	cleanup := func() {
 		cleanupRemoteUrl()
 		cleanupToken()
 		cleanupTokenType()
 		cleanupAuthUrl()
+		cleanupClientId()
+		cleanupClientSecret()
 	}
 
 	return LoreAuthLoginWithTokenArgsFFI{
-		RemoteUrl: valRemoteUrl,
-		Token:     valToken,
-		TokenType: valTokenType,
-		AuthUrl:   valAuthUrl,
+		RemoteUrl:    valRemoteUrl,
+		Token:        valToken,
+		TokenType:    valTokenType,
+		AuthUrl:      valAuthUrl,
+		ClientId:     valClientId,
+		ClientSecret: valClientSecret,
 	}, cleanup
 }
 
