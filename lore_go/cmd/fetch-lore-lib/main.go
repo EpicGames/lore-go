@@ -23,6 +23,11 @@
 //
 // An "archive" build's name and branch are in its base URL (e.g. .../nightly/<name>),
 // so they never alter its version.
+//
+// linux/arm64 has two libraries: one tuned for Graviton3+ (Neoverse V1,
+// neoverse-512tvb), which dies with SIGILL on older Arm CPUs, and a generic one.
+// -linux-arm64-build (default $LORE_LINUX_ARM64_BUILD, then "auto") picks
+// between them; see resolveLinuxArm64Build.
 
 package main
 
@@ -79,6 +84,81 @@ type buildConfig struct {
 	siblingBranch   string
 	format          string // "direct" | "archive"
 	naming          string // "short" | "triple"
+	// Chosen at fetch time, not baked: linuxArm64Graviton or linuxArm64Generic.
+	// Empty means Graviton.
+	linuxArm64Build string
+}
+
+const (
+	linuxArm64Auto     = "auto"
+	linuxArm64Graviton = "graviton"
+	linuxArm64Generic  = "generic"
+)
+
+// gravitonFeatures are the /proc/cpuinfo flags for the extensions the
+// neoverse-512tvb target enables; CPUs lacking any of them cannot run the
+// Graviton library.
+var gravitonFeatures = []string{"sve", "bf16", "i8mm"}
+
+func cpuinfoHasGravitonFeatures(cpuinfo string) bool {
+	for _, line := range strings.Split(cpuinfo, "\n") {
+		key, value, ok := strings.Cut(line, ":")
+		if !ok || strings.TrimSpace(key) != "Features" {
+			continue
+		}
+		have := make(map[string]bool)
+		for _, f := range strings.Fields(value) {
+			have[f] = true
+		}
+		for _, f := range gravitonFeatures {
+			if !have[f] {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// resolveLinuxArm64Build maps the requested build to linuxArm64Graviton or
+// linuxArm64Generic. It returns "" for targets other than linux/arm64.
+//
+// "auto" inspects the CPU only when fetching for this host, since the library
+// is meant to run here. For any other target the build machine says nothing
+// about the deployment machine, so auto picks the generic library, which runs
+// on every arm64 CPU. Only the archive layout publishes a generic library;
+// direct layouts predate it, so auto keeps Graviton there.
+func resolveLinuxArm64Build(requested, format, targetOS, targetArch, hostOS, hostArch string, readCPUInfo func() (string, error)) (build, reason string, err error) {
+	if targetOS != "linux" || targetArch != "arm64" {
+		return "", "", nil
+	}
+	switch requested {
+	case linuxArm64Graviton:
+		return linuxArm64Graviton, "requested", nil
+	case linuxArm64Generic:
+		if format != "archive" {
+			return "", "", fmt.Errorf("the generic linux/arm64 library is only published as an archive build; this SDK fetches %q builds", format)
+		}
+		return linuxArm64Generic, "requested", nil
+	case "", linuxArm64Auto:
+	default:
+		return "", "", fmt.Errorf("unknown linux/arm64 build %q (want %s, %s or %s)", requested, linuxArm64Auto, linuxArm64Generic, linuxArm64Graviton)
+	}
+
+	if format != "archive" {
+		return linuxArm64Graviton, "auto: only build in the direct layout", nil
+	}
+	if hostOS != targetOS || hostArch != targetArch {
+		return linuxArm64Generic, "auto: fetching for another machine", nil
+	}
+	cpuinfo, err := readCPUInfo()
+	if err != nil {
+		return linuxArm64Generic, fmt.Sprintf("auto: cannot read CPU features (%v)", err), nil
+	}
+	if cpuinfoHasGravitonFeatures(cpuinfo) {
+		return linuxArm64Graviton, "auto: CPU supports " + strings.Join(gravitonFeatures, "/"), nil
+	}
+	return linuxArm64Generic, "auto: CPU lacks " + strings.Join(gravitonFeatures, "/"), nil
 }
 
 func bakedConfig() buildConfig {
@@ -175,6 +255,9 @@ func (c buildConfig) resolvePlatform(goos, goarch string) (*platformInfo, error)
 	localName, rawExt, short, triple, archiveExt, err := platformTokens(goos, goarch)
 	if err != nil {
 		return nil, err
+	}
+	if goos == "linux" && goarch == "arm64" && c.linuxArm64Build == linuxArm64Generic {
+		triple = "aarch64-unknown-linux-gnu"
 	}
 	fileVersion := c.fileVersion()
 
@@ -419,10 +502,33 @@ func main() {
 	outputDir := flag.String("o", ".", "output directory for the native library")
 	targetOS := flag.String("os", runtime.GOOS, "target OS (e.g. linux, darwin, windows)")
 	targetArch := flag.String("arch", runtime.GOARCH, "target architecture (e.g. amd64, arm64)")
+	defaultArm64Build := os.Getenv("LORE_LINUX_ARM64_BUILD")
+	if defaultArm64Build == "" {
+		defaultArm64Build = linuxArm64Auto
+	}
+	arm64Build := flag.String("linux-arm64-build", defaultArm64Build,
+		"linux/arm64 library: auto, generic (any arm64 CPU) or graviton (Graviton3+/Neoverse V1+ only)")
 	flag.Parse()
 
 	cfg := bakedConfig()
 	fileVersion := cfg.fileVersion()
+
+	libPath := os.Getenv("LORE_LIB_PATH")
+	if libPath == "" {
+		build, reason, err := resolveLinuxArm64Build(*arm64Build, cfg.format, *targetOS, *targetArch,
+			runtime.GOOS, runtime.GOARCH, func() (string, error) {
+				data, err := os.ReadFile("/proc/cpuinfo")
+				return string(data), err
+			})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		if build != "" {
+			fmt.Printf("Using the %s linux/arm64 library (%s)\n", build, reason)
+		}
+		cfg.linuxArm64Build = build
+	}
 
 	platform, err := cfg.resolvePlatform(*targetOS, *targetArch)
 	if err != nil {
@@ -432,7 +538,6 @@ func main() {
 
 	destPath := filepath.Join(*outputDir, platform.localName)
 
-	libPath := os.Getenv("LORE_LIB_PATH")
 	source := libPath
 	var dirURL string
 	if libPath == "" {
