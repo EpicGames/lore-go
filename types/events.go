@@ -191,14 +191,22 @@ type LoreAuthUserTokenEventDataFFI struct {
 	Id LoreString
 	/* Display name for the user */
 	Name LoreString
-	/* The token string */
+	/* The token string, or empty when the caller did not ask for it */
 	Token LoreString
 	/* Preferred username from the token */
 	PreferredUsername LoreString
 	/* Non-zero if the identity is a service account */
 	FlagServiceAccount uint8
-	/* Expiry time in milliseconds since UNIX epoch, or 0 if unavailable */
+	/* Expiry time of `token` in milliseconds since UNIX epoch, or 0 if unavailable */
 	Expires uint64
+	/* When the stored refresh token stops working, in milliseconds since the UNIX epoch. 0
+	if there is no refresh token, or if the provider did not give a deadline. */
+	RefreshExpires uint64
+	/* Non-zero if a refresh token is stored for the identity */
+	Refreshable uint8
+	/* Non-zero if `token` has not expired, or if it has but the stored refresh token can still
+	renew it */
+	SessionValid uint8
 }
 
 type LoreAuthUserTokenEventData struct {
@@ -206,14 +214,22 @@ type LoreAuthUserTokenEventData struct {
 	Id string
 	/* Display name for the user */
 	Name string
-	/* The token string */
+	/* The token string, or empty when the caller did not ask for it */
 	Token string
 	/* Preferred username from the token */
 	PreferredUsername string
 	/* Non-zero if the identity is a service account */
 	FlagServiceAccount bool
-	/* Expiry time in milliseconds since UNIX epoch, or 0 if unavailable */
+	/* Expiry time of `token` in milliseconds since UNIX epoch, or 0 if unavailable */
 	Expires uint64
+	/* When the stored refresh token stops working, in milliseconds since the UNIX epoch. 0
+	if there is no refresh token, or if the provider did not give a deadline. */
+	RefreshExpires uint64
+	/* Non-zero if a refresh token is stored for the identity */
+	Refreshable bool
+	/* Non-zero if `token` has not expired, or if it has but the stored refresh token can still
+	renew it */
+	SessionValid bool
 }
 type LoreAuthIdentityEventDataFFI struct {
 	/* Auth service URL */
@@ -4245,6 +4261,75 @@ type LoreFileAuditEventData struct {
 	/* What the range resolved to, or why it did not resolve. */
 	Outcome LoreFileAuditOutcome
 }
+type LoreRepositoryInstanceDeleteBeginEventDataFFI struct {
+	/* Identifier of the instance being deleted */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the instance */
+	Path LoreString
+	/* Whether this is a SWFS-backed instance */
+	IsSwfs uint8
+	/* Whether this is a dry-run (preview only) */
+	DryRun uint8
+}
+
+type LoreRepositoryInstanceDeleteBeginEventData struct {
+	/* Identifier of the instance being deleted */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the instance */
+	Path string
+	/* Whether this is a SWFS-backed instance */
+	IsSwfs bool
+	/* Whether this is a dry-run (preview only) */
+	DryRun bool
+}
+type LoreRepositoryInstanceDeleteProgressEventDataFFI struct {
+	/* Current phase of the delete operation */
+	Phase LoreRepositoryInstanceDeletePhase
+}
+
+type LoreRepositoryInstanceDeleteProgressEventData struct {
+	/* Current phase of the delete operation */
+	Phase LoreRepositoryInstanceDeletePhase
+}
+type LoreRepositoryInstanceDeleteCompleteEventDataFFI struct {
+	/* Identifier of the deleted instance */
+	InstanceId LoreInstanceId
+}
+
+type LoreRepositoryInstanceDeleteCompleteEventData struct {
+	/* Identifier of the deleted instance */
+	InstanceId LoreInstanceId
+}
+type LoreRepositoryInstanceMoveBeginEventDataFFI struct {
+	/* Identifier of the instance being moved */
+	InstanceId LoreInstanceId
+	/* Original filesystem path of the instance */
+	SourcePath LoreString
+	/* New filesystem path for the instance */
+	TargetPath LoreString
+}
+
+type LoreRepositoryInstanceMoveBeginEventData struct {
+	/* Identifier of the instance being moved */
+	InstanceId LoreInstanceId
+	/* Original filesystem path of the instance */
+	SourcePath string
+	/* New filesystem path for the instance */
+	TargetPath string
+}
+type LoreRepositoryInstanceMoveCompleteEventDataFFI struct {
+	/* Identifier of the moved instance */
+	InstanceId LoreInstanceId
+	/* New filesystem path of the instance */
+	TargetPath LoreString
+}
+
+type LoreRepositoryInstanceMoveCompleteEventData struct {
+	/* Identifier of the moved instance */
+	InstanceId LoreInstanceId
+	/* New filesystem path of the instance */
+	TargetPath string
+}
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
@@ -5198,6 +5283,26 @@ func (e *LoreEventFFI) asFileAuditEventDataFFI() *LoreFileAuditEventDataFFI {
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreFileAuditEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asRepositoryInstanceDeleteBeginEventDataFFI() *LoreRepositoryInstanceDeleteBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceDeleteBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceDeleteProgressEventDataFFI() *LoreRepositoryInstanceDeleteProgressEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceDeleteProgressEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceDeleteCompleteEventDataFFI() *LoreRepositoryInstanceDeleteCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceDeleteCompleteEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceMoveBeginEventDataFFI() *LoreRepositoryInstanceMoveBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceMoveBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceMoveCompleteEventDataFFI() *LoreRepositoryInstanceMoveCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceMoveCompleteEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -5677,6 +5782,16 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asStorageGetFragmentEventDataFFI()
 	case LoreEventTag_FILE_AUDIT:
 		return e.asFileAuditEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_BEGIN:
+		return e.asRepositoryInstanceDeleteBeginEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_PROGRESS:
+		return e.asRepositoryInstanceDeleteProgressEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_COMPLETE:
+		return e.asRepositoryInstanceDeleteCompleteEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_MOVE_BEGIN:
+		return e.asRepositoryInstanceMoveBeginEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_MOVE_COMPLETE:
+		return e.asRepositoryInstanceMoveCompleteEventDataFFI()
 	default:
 		return nil
 	}
@@ -5744,6 +5859,9 @@ func (e *LoreAuthUserTokenEventDataFFI) Clone() LoreAuthUserTokenEventData {
 		PreferredUsername:  e.PreferredUsername.Clone(),
 		FlagServiceAccount: e.FlagServiceAccount != 0,
 		Expires:            e.Expires,
+		RefreshExpires:     e.RefreshExpires,
+		Refreshable:        e.Refreshable != 0,
+		SessionValid:       e.SessionValid != 0,
 	}
 }
 func (e *LoreAuthIdentityEventDataFFI) Clone() LoreAuthIdentityEventData {
@@ -7379,6 +7497,37 @@ func (e *LoreFileAuditEventDataFFI) Clone() LoreFileAuditEventData {
 		Outcome:    e.Outcome,
 	}
 }
+func (e *LoreRepositoryInstanceDeleteBeginEventDataFFI) Clone() LoreRepositoryInstanceDeleteBeginEventData {
+	return LoreRepositoryInstanceDeleteBeginEventData{
+		InstanceId: e.InstanceId,
+		Path:       e.Path.Clone(),
+		IsSwfs:     e.IsSwfs != 0,
+		DryRun:     e.DryRun != 0,
+	}
+}
+func (e *LoreRepositoryInstanceDeleteProgressEventDataFFI) Clone() LoreRepositoryInstanceDeleteProgressEventData {
+	return LoreRepositoryInstanceDeleteProgressEventData{
+		Phase: e.Phase,
+	}
+}
+func (e *LoreRepositoryInstanceDeleteCompleteEventDataFFI) Clone() LoreRepositoryInstanceDeleteCompleteEventData {
+	return LoreRepositoryInstanceDeleteCompleteEventData{
+		InstanceId: e.InstanceId,
+	}
+}
+func (e *LoreRepositoryInstanceMoveBeginEventDataFFI) Clone() LoreRepositoryInstanceMoveBeginEventData {
+	return LoreRepositoryInstanceMoveBeginEventData{
+		InstanceId: e.InstanceId,
+		SourcePath: e.SourcePath.Clone(),
+		TargetPath: e.TargetPath.Clone(),
+	}
+}
+func (e *LoreRepositoryInstanceMoveCompleteEventDataFFI) Clone() LoreRepositoryInstanceMoveCompleteEventData {
+	return LoreRepositoryInstanceMoveCompleteEventData{
+		InstanceId: e.InstanceId,
+		TargetPath: e.TargetPath.Clone(),
+	}
+}
 
 // Clone creates a Go-native copy of the event data
 // This copy is safe to keep after the callback returns
@@ -8573,6 +8722,31 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asFileAuditEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceDeleteBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_PROGRESS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceDeleteProgressEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_DELETE_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceDeleteCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_MOVE_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceMoveBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_MOVE_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceMoveCompleteEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{

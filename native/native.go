@@ -160,6 +160,8 @@ var (
 	loreRepositoryMetadataClearFunc        loreFuncWithCallback
 	loreRepositoryInstanceListFunc         loreFuncWithCallback
 	loreRepositoryInstancePruneFunc        loreFuncWithCallback
+	loreRepositoryInstanceDeleteFunc       loreFuncWithCallback
+	loreRepositoryInstanceMoveFunc         loreFuncWithCallback
 	loreRepositoryUpdatePathFunc           loreFuncWithCallback
 	loreRepositoryConfigGetFunc            loreFuncWithCallback
 	loreRevisionTreeLoadFunc               loreFuncWithCallback
@@ -368,6 +370,8 @@ func initLibrary() error {
 	purego.RegisterLibFunc(&loreRepositoryMetadataClearFunc, libHandle, "lore_repository_metadata_clear")
 	purego.RegisterLibFunc(&loreRepositoryInstanceListFunc, libHandle, "lore_repository_instance_list")
 	purego.RegisterLibFunc(&loreRepositoryInstancePruneFunc, libHandle, "lore_repository_instance_prune")
+	purego.RegisterLibFunc(&loreRepositoryInstanceDeleteFunc, libHandle, "lore_repository_instance_delete")
+	purego.RegisterLibFunc(&loreRepositoryInstanceMoveFunc, libHandle, "lore_repository_instance_move")
 	purego.RegisterLibFunc(&loreRepositoryUpdatePathFunc, libHandle, "lore_repository_update_path")
 	purego.RegisterLibFunc(&loreRepositoryConfigGetFunc, libHandle, "lore_repository_config_get")
 	purego.RegisterLibFunc(&loreRevisionTreeLoadFunc, libHandle, "lore_revision_tree_load")
@@ -653,9 +657,10 @@ auth service. For user IDs without a local token, returns the raw user
 ID. For remote resolution with proper authorization, use
 `lore_auth_user_info` which queries the remote authentication service.
 
-When `with_identity_token` is set, identities with a locally stored token
-are answered as `AUTH_USER_TOKEN` events carrying the cached identity
-token instead of `AUTH_USER_INFO`.
+Every identity is answered with an `AUTH_USER_INFO` event, and an identity
+with a locally stored token also with an `AUTH_USER_TOKEN` event. Its
+`token` holds the cached identity token when `with_identity_token` is set,
+and is empty otherwise.
 
 When `with_access_token` is set, the call requires a repository and
 additionally emits one `AUTH_IDENTITY` event carrying the
@@ -683,7 +688,7 @@ These events are emitted by all interface functions:
 | Tag | Data Type | Description |
 |-----|-----------|-------------|
 | `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with the resolved user id and display name |
-| `LORE_EVENT_AUTH_USER_TOKEN` | `lore_auth_user_token_event_data_t` | Emitted instead of `AUTH_USER_INFO` when `with_identity_token` is set and a cached token is available, includes full token details |
+| `LORE_EVENT_AUTH_USER_TOKEN` | `lore_auth_user_token_event_data_t` | Emitted before `AUTH_USER_INFO` for an identity with a cached token, with the token details; `token` is empty unless `with_identity_token` is set |
 | `LORE_EVENT_AUTH_IDENTITY` | `lore_auth_identity_event_data_t` | Emitted when `with_access_token` is set, carries the repository-scoped authorization token for the current user | */
 func AuthLocalUserInfo(
 	globals *types.LoreGlobalArgsFFI,
@@ -694,6 +699,10 @@ func AuthLocalUserInfo(
 }
 
 /* Authenticate interactively via a browser-based login flow.
+
+With `reuse_session` set, a stored login whose session is still valid, as
+`session_valid` in `lore_auth_user_token_event_data_t` reports it, is
+returned without starting a new login.
 
 # Events
 
@@ -716,7 +725,7 @@ These events are emitted by all interface functions:
 |-----|-----------|-------------|
 | `LORE_EVENT_AUTH_URL` | `lore_auth_url_event_data_t` | Emitted with the login URL when no_browser mode is requested, and whenever the login has a code the user may need to enter or confirm at that URL, browser or not. `user_code` holds the code, or is empty |
 | `LORE_EVENT_AUTH_PENDING` | `lore_auth_pending_event_data_t` | Emitted before each wait while the login awaits the user's approval, with the seconds elapsed, the seconds until the next poll, and the seconds left before the session expires. |
-| `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with user id and display name after successful interactive authentication | */
+| `LORE_EVENT_AUTH_USER_INFO` | `lore_auth_user_info_event_data_t` | Emitted with user id and display name after successful interactive authentication, or for the stored login it reuses | */
 func AuthLoginInteractive(
 	globals *types.LoreGlobalArgsFFI,
 	args *types.LoreAuthLoginInteractiveArgsFFI,
@@ -4395,6 +4404,30 @@ func RepositoryInstancePrune(
 	config *types.LoreEventCallbackConfig,
 ) (int32, error) {
 	return callLoreFunction(&loreRepositoryInstancePruneFunc, globals, args, config)
+}
+
+/* Delete the current repository instance: unmount (if SWFS and in service),
+deregister from the mutable store, and delete associated directories.
+With `dry_run` set in `globals`, emits events describing what would be deleted
+without performing any changes. */
+func RepositoryInstanceDelete(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRepositoryInstanceDeleteArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRepositoryInstanceDeleteFunc, globals, args, config)
+}
+
+/* Move the current repository instance to a new path: update registry metadata
+and remap mount (for SWFS in service context) or move directory (for regular
+instances).
+With `dry_run` set in `globals`, checks that the move can be made without performing it. */
+func RepositoryInstanceMove(
+	globals *types.LoreGlobalArgsFFI,
+	args *types.LoreRepositoryInstanceMoveArgsFFI,
+	config *types.LoreEventCallbackConfig,
+) (int32, error) {
+	return callLoreFunction(&loreRepositoryInstanceMoveFunc, globals, args, config)
 }
 
 /* Update the recorded path of the current repository instance to its present

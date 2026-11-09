@@ -27,6 +27,7 @@ go run github.com/EpicGames/lore-go/cmd/fetch-lore-lib
 
 - `-o <output_dir>` — destination directory (defaults to the current directory)
 - `-os <target_os>` and `-arch <target_arch>` — fetch the library for a different platform (e.g. `-os linux -arch amd64` for cross-compilation)
+- `-linux-arm64-build auto|generic|graviton` — which linux/arm64 library to fetch (defaults to `$LORE_LINUX_ARM64_BUILD`, then `auto`). `graviton` is tuned for Graviton3 and newer (Neoverse V1+) and crashes on older Arm CPUs; `generic` runs on any arm64 CPU. `auto` picks `graviton` when fetching for the current machine and its CPU supports SVE, BF16 and I8MM, and `generic` otherwise, including when fetching for another machine. If you build on one arm64 machine and deploy to another, pass the build that matches the deployment machine.
 
 To automate this, add a directive to your `main.go` so `go generate ./...` installs the library:
 

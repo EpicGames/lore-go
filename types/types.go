@@ -2711,9 +2711,10 @@ type LoreFragmentStatsDataFFI struct {
 	asked for. Branch latest history is one such write, which the server does
 	not store, so a commit against a remote has exactly one. */
 	LocalOnlyWrites uint64
-	/* Fragments whose upload did not land, leaving them stored only locally for
-	a later push to offer again. Their payloads are counted under
-	`local_payload_writes` too, indistinguishably from those kept by request. */
+	/* Fragments stored only locally for a later push to offer again. Either the
+	upload failed or the peer throttled the copy and no upload was attempted.
+	Their payloads also count toward `local_payload_writes`, which does not
+	distinguish them from payloads kept locally by request. */
 	RemoteUploadFailed uint64
 }
 
@@ -2774,9 +2775,10 @@ type LoreFragmentStatsData struct {
 	asked for. Branch latest history is one such write, which the server does
 	not store, so a commit against a remote has exactly one. */
 	LocalOnlyWrites uint64
-	/* Fragments whose upload did not land, leaving them stored only locally for
-	a later push to offer again. Their payloads are counted under
-	`local_payload_writes` too, indistinguishably from those kept by request. */
+	/* Fragments stored only locally for a later push to offer again. Either the
+	upload failed or the peer throttled the copy and no upload was attempted.
+	Their payloads also count toward `local_payload_writes`, which does not
+	distinguish them from payloads kept locally by request. */
 	RemoteUploadFailed uint64
 }
 

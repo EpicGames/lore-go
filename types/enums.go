@@ -90,6 +90,14 @@ const (
 	LoreFileAuditOutcome_UNRESOLVED          LoreFileAuditOutcome = 7
 )
 
+type LoreRepositoryInstanceDeletePhase int32
+
+const (
+	LoreRepositoryInstanceDeletePhase_UNMOUNTING     LoreRepositoryInstanceDeletePhase = 0
+	LoreRepositoryInstanceDeletePhase_DEREGISTERING  LoreRepositoryInstanceDeletePhase = 1
+	LoreRepositoryInstanceDeletePhase_DELETING_FILES LoreRepositoryInstanceDeletePhase = 2
+)
+
 type LoreAuthMode int32
 
 const (
@@ -389,4 +397,9 @@ const (
 	LoreEventTag_AUTH_PENDING                                   LoreEventTag = 235
 	LoreEventTag_STORAGE_GET_FRAGMENT                           LoreEventTag = 236
 	LoreEventTag_FILE_AUDIT                                     LoreEventTag = 237
+	LoreEventTag_REPOSITORY_INSTANCE_DELETE_BEGIN               LoreEventTag = 238
+	LoreEventTag_REPOSITORY_INSTANCE_DELETE_PROGRESS            LoreEventTag = 239
+	LoreEventTag_REPOSITORY_INSTANCE_DELETE_COMPLETE            LoreEventTag = 240
+	LoreEventTag_REPOSITORY_INSTANCE_MOVE_BEGIN                 LoreEventTag = 241
+	LoreEventTag_REPOSITORY_INSTANCE_MOVE_COMPLETE              LoreEventTag = 242
 )

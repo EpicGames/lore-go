@@ -434,7 +434,7 @@ type LoreAuthLocalUserInfoArgs struct {
 	AuthEndpoint string
 	/* User identities to resolve; empty resolves the current user */
 	UserIds []string
-	/* Emit cached identity token details for identities with a local token */
+	/* Include the cached identity token string in `AuthUserToken` events */
 	WithIdentityToken bool
 	/* Emit the repository's authorization (access) token. Requires running
 	inside a repository */
@@ -446,7 +446,7 @@ type LoreAuthLocalUserInfoArgsFFI struct {
 	AuthEndpoint LoreString
 	/* User identities to resolve; empty resolves the current user */
 	UserIds LoreStringArrayFFI
-	/* Emit cached identity token details for identities with a local token */
+	/* Include the cached identity token string in `AuthUserToken` events */
 	WithIdentityToken uint8
 	/* Emit the repository's authorization (access) token. Requires running
 	inside a repository */
@@ -479,6 +479,8 @@ type LoreAuthLoginInteractiveArgs struct {
 	RemoteUrl string
 	/* Emit the login URL instead of opening a browser */
 	NoBrowser bool
+	/* Return the stored login instead of starting a new one while its session is valid */
+	ReuseSession bool
 }
 
 type LoreAuthLoginInteractiveArgsFFI struct {
@@ -486,20 +488,25 @@ type LoreAuthLoginInteractiveArgsFFI struct {
 	RemoteUrl LoreString
 	/* Emit the login URL instead of opening a browser */
 	NoBrowser uint8
+	/* Return the stored login instead of starting a new one while its session is valid */
+	ReuseSession uint8
 }
 
 func NewLoreAuthLoginInteractiveArgs(opts LoreAuthLoginInteractiveArgs) (LoreAuthLoginInteractiveArgsFFI, func()) {
 	valRemoteUrl, cleanupRemoteUrl := NewLoreString(opts.RemoteUrl)
 	valNoBrowser, cleanupNoBrowser := Newuint8(opts.NoBrowser)
+	valReuseSession, cleanupReuseSession := Newuint8(opts.ReuseSession)
 
 	cleanup := func() {
 		cleanupRemoteUrl()
 		cleanupNoBrowser()
+		cleanupReuseSession()
 	}
 
 	return LoreAuthLoginInteractiveArgsFFI{
-		RemoteUrl: valRemoteUrl,
-		NoBrowser: valNoBrowser,
+		RemoteUrl:    valRemoteUrl,
+		NoBrowser:    valNoBrowser,
+		ReuseSession: valReuseSession,
 	}, cleanup
 }
 
@@ -1612,7 +1619,8 @@ type LoreFileResetArgs struct {
 	Paths []string
 	/* Revision to reset files into */
 	Revision string
-	/* Purge untracked files */
+	/* Delete what the revision does not hold within the view: untracked files, whatever the
+	ignore file says, and files the view excludes. Nested repositories stay */
 	Purge bool
 }
 
@@ -1621,7 +1629,8 @@ type LoreFileResetArgsFFI struct {
 	Paths LoreStringArrayFFI
 	/* Revision to reset files into */
 	Revision LoreString
-	/* Purge untracked files */
+	/* Delete what the revision does not hold within the view: untracked files, whatever the
+	ignore file says, and files the view excludes. Nested repositories stay */
 	Purge uint8
 }
 
@@ -1648,7 +1657,8 @@ type LoreFileResetToLastMergedArgs struct {
 	Paths []string
 	/* Branch whose last merged revision to reset to */
 	Branch string
-	/* Purge untracked files */
+	/* Delete what the revision does not hold within the view: untracked files, whatever the
+	ignore file says, and files the view excludes. Nested repositories stay */
 	Purge bool
 	/* Merge side to restore, 0 = resolved (the merge revision), 1 = self ("mine"), 2 = other ("theirs") */
 	MergeSide uint32
@@ -1659,7 +1669,8 @@ type LoreFileResetToLastMergedArgsFFI struct {
 	Paths LoreStringArrayFFI
 	/* Branch whose last merged revision to reset to */
 	Branch LoreString
-	/* Purge untracked files */
+	/* Delete what the revision does not hold within the view: untracked files, whatever the
+	ignore file says, and files the view excludes. Nested repositories stay */
 	Purge uint8
 	/* Merge side to restore, 0 = resolved (the merge revision), 1 = self ("mine"), 2 = other ("theirs") */
 	MergeSide uint32
@@ -4607,6 +4618,46 @@ func NewLoreRepositoryInstancePruneArgs(opts LoreRepositoryInstancePruneArgs) (L
 
 	return LoreRepositoryInstancePruneArgsFFI{
 		Unused: opts.Unused,
+	}, cleanup
+}
+
+type LoreRepositoryInstanceDeleteArgs struct {
+	Unused int
+}
+
+type LoreRepositoryInstanceDeleteArgsFFI struct {
+	Unused int
+}
+
+func NewLoreRepositoryInstanceDeleteArgs(opts LoreRepositoryInstanceDeleteArgs) (LoreRepositoryInstanceDeleteArgsFFI, func()) {
+
+	cleanup := func() {
+	}
+
+	return LoreRepositoryInstanceDeleteArgsFFI{
+		Unused: opts.Unused,
+	}, cleanup
+}
+
+type LoreRepositoryInstanceMoveArgs struct {
+	/* Target path for the instance. */
+	TargetPath string
+}
+
+type LoreRepositoryInstanceMoveArgsFFI struct {
+	/* Target path for the instance. */
+	TargetPath LoreString
+}
+
+func NewLoreRepositoryInstanceMoveArgs(opts LoreRepositoryInstanceMoveArgs) (LoreRepositoryInstanceMoveArgsFFI, func()) {
+	valTargetPath, cleanupTargetPath := NewLoreString(opts.TargetPath)
+
+	cleanup := func() {
+		cleanupTargetPath()
+	}
+
+	return LoreRepositoryInstanceMoveArgsFFI{
+		TargetPath: valTargetPath,
 	}, cleanup
 }
 
