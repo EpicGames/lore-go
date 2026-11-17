@@ -55,9 +55,9 @@ type LoreGlobalArgs struct {
 	StoreKeepAliveSeconds uint64
 	/* Force sync data to storage media during store flush */
 	SyncData bool
-	/* Cache fragment payloads fetched from remote in the local store. Without
-	this only state fragments and fragments flagged for local cache priority
-	are retained */
+	/* Cache fragment payloads fetched from remote, and those written, in the local store, as
+	a repository's `[store] cache_payloads` does for every command. Without either only state
+	fragments and fragments flagged for local cache priority are retained */
 	Cache bool
 	/* Authentication token to use instead of the one held in the secure token
 	store. Authorization tokens are exchanged from it as they are needed.
@@ -96,6 +96,13 @@ type LoreGlobalArgs struct {
 	takes it from the globals it is opened with. Any non-zero value trusts
 	the remote, so a caller zeroes the whole struct, padding included */
 	TrustRemote bool
+	/* Have the call's flushes write the local stores' index in place, rather than replacing each
+	of its files through a temporary file, which is faster where creating files is slow. If the
+	process stops or a write fails while a file is being written, the store drops every entry
+	that file held, including those of revisions and branches not yet pushed. Eviction and
+	compaction replace the files they write whatever it says, and it is independent of
+	`sync_data`, which syncs what is written either way. Any non-zero value writes in place */
+	FastFlush bool
 }
 
 type LoreGlobalArgsFFI struct {
@@ -151,9 +158,9 @@ type LoreGlobalArgsFFI struct {
 	StoreKeepAliveSeconds uint64
 	/* Force sync data to storage media during store flush */
 	SyncData uint8
-	/* Cache fragment payloads fetched from remote in the local store. Without
-	this only state fragments and fragments flagged for local cache priority
-	are retained */
+	/* Cache fragment payloads fetched from remote, and those written, in the local store, as
+	a repository's `[store] cache_payloads` does for every command. Without either only state
+	fragments and fragments flagged for local cache priority are retained */
 	Cache uint8
 	/* Authentication token to use instead of the one held in the secure token
 	store. Authorization tokens are exchanged from it as they are needed.
@@ -192,6 +199,13 @@ type LoreGlobalArgsFFI struct {
 	takes it from the globals it is opened with. Any non-zero value trusts
 	the remote, so a caller zeroes the whole struct, padding included */
 	TrustRemote uint8
+	/* Have the call's flushes write the local stores' index in place, rather than replacing each
+	of its files through a temporary file, which is faster where creating files is slow. If the
+	process stops or a write fails while a file is being written, the store drops every entry
+	that file held, including those of revisions and branches not yet pushed. Eviction and
+	compaction replace the files they write whatever it says, and it is independent of
+	`sync_data`, which syncs what is written either way. Any non-zero value writes in place */
+	FastFlush uint8
 }
 
 func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
@@ -213,6 +227,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 	valIdentityToken, cleanupIdentityToken := NewLoreString(opts.IdentityToken)
 	valAccessToken, cleanupAccessToken := NewLoreString(opts.AccessToken)
 	valTrustRemote, cleanupTrustRemote := Newuint8(opts.TrustRemote)
+	valFastFlush, cleanupFastFlush := Newuint8(opts.FastFlush)
 
 	cleanup := func() {
 		cleanupRepositoryPath()
@@ -233,6 +248,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		cleanupIdentityToken()
 		cleanupAccessToken()
 		cleanupTrustRemote()
+		cleanupFastFlush()
 	}
 
 	return LoreGlobalArgsFFI{
@@ -263,6 +279,7 @@ func NewLoreGlobalArgs(opts LoreGlobalArgs) (LoreGlobalArgsFFI, func()) {
 		EventIntervalMs:       opts.EventIntervalMs,
 		AuthMode:              opts.AuthMode,
 		TrustRemote:           valTrustRemote,
+		FastFlush:             valFastFlush,
 	}, cleanup
 }
 
@@ -1700,7 +1717,8 @@ type LoreFileStageArgs struct {
 	Paths []string
 	/* Case change handling, 0 = error, 1 = update filesystem (keep), 2 = update repository (rename) */
 	CaseChange uint32
-	/* Force a recursive filesystem scan of directory paths (no effect on file paths) */
+	/* Walk directory paths recursively on the filesystem, as the global `force` argument also
+	does (no effect on file paths) */
 	Scan bool
 }
 
@@ -1709,7 +1727,8 @@ type LoreFileStageArgsFFI struct {
 	Paths LoreStringArrayFFI
 	/* Case change handling, 0 = error, 1 = update filesystem (keep), 2 = update repository (rename) */
 	CaseChange uint32
-	/* Force a recursive filesystem scan of directory paths (no effect on file paths) */
+	/* Walk directory paths recursively on the filesystem, as the global `force` argument also
+	does (no effect on file paths) */
 	Scan uint8
 }
 
@@ -2204,20 +2223,22 @@ func NewLoreLockFileStatusArgs(opts LoreLockFileStatusArgs) (LoreLockFileStatusA
 }
 
 type LoreLockFileQueryArgs struct {
-	/* Branch to query locks on */
+	/* Branch to query locks on; empty queries every branch, or the current branch where `path`
+	is given */
 	Branch string
-	/* Owner filter; empty matches any owner */
+	/* Owner filter; empty matches any owner. Can't be combined with `path` */
 	Owner string
-	/* Path filter; empty matches any path */
+	/* Path filter; empty matches any path. Can't be combined with `owner` */
 	Path string
 }
 
 type LoreLockFileQueryArgsFFI struct {
-	/* Branch to query locks on */
+	/* Branch to query locks on; empty queries every branch, or the current branch where `path`
+	is given */
 	Branch LoreString
-	/* Owner filter; empty matches any owner */
+	/* Owner filter; empty matches any owner. Can't be combined with `path` */
 	Owner LoreString
-	/* Path filter; empty matches any path */
+	/* Path filter; empty matches any path. Can't be combined with `owner` */
 	Path LoreString
 }
 
@@ -2458,16 +2479,21 @@ type LoreRepositoryCloneArgs struct {
 	Layer string
 	/* (Optional) Layer metadata key to link revisions with */
 	LayerMetadata string
-	/* (Optional) File containing list of files to prefetch */
+	/* (Optional) Access recording whose paths a virtual clone warms in the background: one
+	repository-relative path per line, a directory ending with `/`, `/` for the root. A
+	relative file path resolves against the caller's working directory. */
 	Prefetch string
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
-	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+	is a virtual one, which always uses a shared store and refuses
+	`LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`. */
 	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath string
 	/* Clone without local repository tracking (memory-only stores) */
 	NoTracking bool
-	/* Root files for dependency-based selective clone */
+	/* Root files for dependency-based selective clone. A root file inside a link is skipped, and
+	error code 9 (not supported) is returned when every root file is. */
 	RootFiles []string
 	/* Tags to filter dependencies by during resolution */
 	DependencyTags []string
@@ -2494,16 +2520,21 @@ type LoreRepositoryCloneArgsFFI struct {
 	Layer LoreString
 	/* (Optional) Layer metadata key to link revisions with */
 	LayerMetadata LoreString
-	/* (Optional) File containing list of files to prefetch */
+	/* (Optional) Access recording whose paths a virtual clone warms in the background: one
+	repository-relative path per line, a directory ending with `/`, `/` for the root. A
+	relative file path resolves against the caller's working directory. */
 	Prefetch LoreString
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
-	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+	is a virtual one, which always uses a shared store and refuses
+	`LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`. */
 	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath LoreString
 	/* Clone without local repository tracking (memory-only stores) */
 	NoTracking uint8
-	/* Root files for dependency-based selective clone */
+	/* Root files for dependency-based selective clone. A root file inside a link is skipped, and
+	error code 9 (not supported) is returned when every root file is. */
 	RootFiles LoreStringArrayFFI
 	/* Tags to filter dependencies by during resolution */
 	DependencyTags LoreStringArrayFFI
@@ -2632,7 +2663,9 @@ type LoreRepositoryCreateArgs struct {
 	/* Which VFS to use, if any */
 	Vfs LoreVfsType
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
-	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+	is a virtual one, which always uses a shared store and refuses
+	`LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`. */
 	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath string
@@ -2650,7 +2683,9 @@ type LoreRepositoryCreateArgsFFI struct {
 	/* Which VFS to use, if any */
 	Vfs LoreVfsType
 	/* Whether to use the shared store instead of a local immutable store. Zero-initialized
-	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting. */
+	(`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+	is a virtual one, which always uses a shared store and refuses
+	`LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`. */
 	UseSharedStore LoreSharedStoreMode
 	/* [Optional] Path to use for the shared store, an empty string means to use the default */
 	SharedStorePath LoreString
@@ -3419,7 +3454,8 @@ type LoreRevisionSyncArgs struct {
 	ForwardChanges bool
 	/* Reset local modified files to match the incoming revision */
 	Reset bool
-	/* Root files for dependency-based selective sync */
+	/* Root files for dependency-based selective sync. A root file inside a link is skipped, and
+	error code 9 (not supported) is returned when every root file is. */
 	RootFiles []string
 	/* Tags to filter dependencies by during resolution */
 	DependencyTags []string
@@ -3439,7 +3475,8 @@ type LoreRevisionSyncArgsFFI struct {
 	ForwardChanges uint8
 	/* Reset local modified files to match the incoming revision */
 	Reset uint8
-	/* Root files for dependency-based selective sync */
+	/* Root files for dependency-based selective sync. A root file inside a link is skipped, and
+	error code 9 (not supported) is returned when every root file is. */
 	RootFiles LoreStringArrayFFI
 	/* Tags to filter dependencies by during resolution */
 	DependencyTags LoreStringArrayFFI
@@ -4658,6 +4695,39 @@ func NewLoreRepositoryInstanceMoveArgs(opts LoreRepositoryInstanceMoveArgs) (Lor
 
 	return LoreRepositoryInstanceMoveArgsFFI{
 		TargetPath: valTargetPath,
+	}, cleanup
+}
+
+type LoreRepositoryInstanceCloneArgs struct {
+	/* Path the clone is created at, which must not exist; a relative path is resolved against
+	`globals->working_directory`, or the process's working directory where that is empty */
+	TargetPath string
+	/* Nonzero to copy the instance's files where the clone cannot share their data blocks;
+	zero refuses such a clone */
+	AllowCopy bool
+}
+
+type LoreRepositoryInstanceCloneArgsFFI struct {
+	/* Path the clone is created at, which must not exist; a relative path is resolved against
+	`globals->working_directory`, or the process's working directory where that is empty */
+	TargetPath LoreString
+	/* Nonzero to copy the instance's files where the clone cannot share their data blocks;
+	zero refuses such a clone */
+	AllowCopy uint8
+}
+
+func NewLoreRepositoryInstanceCloneArgs(opts LoreRepositoryInstanceCloneArgs) (LoreRepositoryInstanceCloneArgsFFI, func()) {
+	valTargetPath, cleanupTargetPath := NewLoreString(opts.TargetPath)
+	valAllowCopy, cleanupAllowCopy := Newuint8(opts.AllowCopy)
+
+	cleanup := func() {
+		cleanupTargetPath()
+		cleanupAllowCopy()
+	}
+
+	return LoreRepositoryInstanceCloneArgsFFI{
+		TargetPath: valTargetPath,
+		AllowCopy:  valAllowCopy,
 	}, cleanup
 }
 

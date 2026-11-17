@@ -2257,7 +2257,7 @@ func (e *LoreFileStageCountDataFFI) Clone() LoreFileStageCountData {
 }
 
 type LoreFileUnstageCountDataFFI struct {
-	/* Number of directories that were unstaged. */
+	/* Number of directories and links that were unstaged. */
 	DirectoryUnstagedCount uint64
 	/* Number of directories that were discarded. */
 	DirectoryDiscardedCount uint64
@@ -2270,7 +2270,7 @@ type LoreFileUnstageCountDataFFI struct {
 }
 
 type LoreFileUnstageCountData struct {
-	/* Number of directories that were unstaged. */
+	/* Number of directories and links that were unstaged. */
 	DirectoryUnstagedCount uint64
 	/* Number of directories that were discarded. */
 	DirectoryDiscardedCount uint64

@@ -98,6 +98,23 @@ const (
 	LoreRepositoryInstanceDeletePhase_DELETING_FILES LoreRepositoryInstanceDeletePhase = 2
 )
 
+type LoreRepositoryInstanceCloneMethod int32
+
+const (
+	LoreRepositoryInstanceCloneMethod_SHARES_BLOCKS LoreRepositoryInstanceCloneMethod = 0
+	LoreRepositoryInstanceCloneMethod_COPIES_BYTES  LoreRepositoryInstanceCloneMethod = 1
+	LoreRepositoryInstanceCloneMethod_UNSUPPORTED   LoreRepositoryInstanceCloneMethod = 2
+)
+
+type LoreRepositoryInstanceClonePhase int32
+
+const (
+	LoreRepositoryInstanceClonePhase_REMOVING_LEFTOVER LoreRepositoryInstanceClonePhase = 0
+	LoreRepositoryInstanceClonePhase_WRITING_RECORDS   LoreRepositoryInstanceClonePhase = 1
+	LoreRepositoryInstanceClonePhase_COPYING           LoreRepositoryInstanceClonePhase = 2
+	LoreRepositoryInstanceClonePhase_REGISTERING       LoreRepositoryInstanceClonePhase = 3
+)
+
 type LoreAuthMode int32
 
 const (
@@ -112,6 +129,7 @@ const (
 	LoreVfsType_NONE    LoreVfsType = 0
 	LoreVfsType_DEFAULT LoreVfsType = 1
 	LoreVfsType_SWFS    LoreVfsType = 2
+	LoreVfsType_FUSE    LoreVfsType = 3
 )
 
 type LoreSharedStoreMode int32
@@ -402,4 +420,7 @@ const (
 	LoreEventTag_REPOSITORY_INSTANCE_DELETE_COMPLETE            LoreEventTag = 240
 	LoreEventTag_REPOSITORY_INSTANCE_MOVE_BEGIN                 LoreEventTag = 241
 	LoreEventTag_REPOSITORY_INSTANCE_MOVE_COMPLETE              LoreEventTag = 242
+	LoreEventTag_REPOSITORY_INSTANCE_CLONE_BEGIN                LoreEventTag = 243
+	LoreEventTag_REPOSITORY_INSTANCE_CLONE_PROGRESS             LoreEventTag = 244
+	LoreEventTag_REPOSITORY_INSTANCE_CLONE_COMPLETE             LoreEventTag = 245
 )

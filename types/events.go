@@ -1089,6 +1089,10 @@ type LoreBranchPushEventData struct {
 	FlagLayer bool
 }
 type LoreBranchPushRevisionUpdateBeginEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision being updated. */
 	Revision LoreHash
 	/* The previous parent revision. */
@@ -1098,6 +1102,10 @@ type LoreBranchPushRevisionUpdateBeginEventDataFFI struct {
 }
 
 type LoreBranchPushRevisionUpdateBeginEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision being updated. */
 	Revision LoreHash
 	/* The previous parent revision. */
@@ -1106,15 +1114,27 @@ type LoreBranchPushRevisionUpdateBeginEventData struct {
 	NewParent LoreHash
 }
 type LoreBranchPushRevisionUpdateEndEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The updated revision. */
 	Revision LoreHash
 }
 
 type LoreBranchPushRevisionUpdateEndEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The updated revision. */
 	Revision LoreHash
 }
 type LoreBranchPushFragmentBeginEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments to transfer. */
 	Fragments uint64
 	/* The total number of bytes to transfer. */
@@ -1122,12 +1142,20 @@ type LoreBranchPushFragmentBeginEventDataFFI struct {
 }
 
 type LoreBranchPushFragmentBeginEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments to transfer. */
 	Fragments uint64
 	/* The total number of bytes to transfer. */
 	BytesTotal uint64
 }
 type LoreBranchPushFragmentProgressEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments transferred so far. */
 	Complete uint64
 	/* The total number of fragments to transfer. */
@@ -1139,6 +1167,10 @@ type LoreBranchPushFragmentProgressEventDataFFI struct {
 }
 
 type LoreBranchPushFragmentProgressEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments transferred so far. */
 	Complete uint64
 	/* The total number of fragments to transfer. */
@@ -1149,6 +1181,10 @@ type LoreBranchPushFragmentProgressEventData struct {
 	BytesTotal uint64
 }
 type LoreBranchPushFragmentEndEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments transferred. */
 	Fragments uint64
 	/* The number of bytes transferred. */
@@ -1156,6 +1192,10 @@ type LoreBranchPushFragmentEndEventDataFFI struct {
 }
 
 type LoreBranchPushFragmentEndEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The number of fragments transferred. */
 	Fragments uint64
 	/* The number of bytes transferred. */
@@ -1179,11 +1219,19 @@ type LoreBranchPushBranchCreateBeginEventData struct {
 	LocalRevision LoreHash
 }
 type LoreBranchPushBranchCreateEndEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision the branch points to on the remote. */
 	RemoteRevision LoreHash
 }
 
 type LoreBranchPushBranchCreateEndEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision the branch points to on the remote. */
 	RemoteRevision LoreHash
 }
@@ -1209,6 +1257,10 @@ type LoreBranchPushRevisionPushBeginEventData struct {
 	LocalRevision LoreHash
 }
 type LoreBranchPushRevisionPushUpdateEventDataFFI struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision before the remote reassigned it. */
 	OldRevision LoreHash
 	/* The revision the remote assigned. */
@@ -1218,6 +1270,10 @@ type LoreBranchPushRevisionPushUpdateEventDataFFI struct {
 }
 
 type LoreBranchPushRevisionPushUpdateEventData struct {
+	/* The repository being pushed. */
+	Repository LoreRepositoryId
+	/* The branch being pushed. */
+	Branch LoreBranchId
 	/* The revision before the remote reassigned it. */
 	OldRevision LoreHash
 	/* The revision the remote assigned. */
@@ -3782,7 +3838,7 @@ type LoreRevisionTreeDeleteCompleteEventDataFFI struct {
 	/* Correlation id of the entry this reports, not of the call. */
 	EntryId uint64
 	/* How many nodes the entry's subtree removed, staged and discarded
-	together. Zero on failure, since nothing was removed. */
+	together. Zero on failure, whatever part of the subtree was removed. */
 	NodeCount uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
@@ -3792,7 +3848,7 @@ type LoreRevisionTreeDeleteCompleteEventData struct {
 	/* Correlation id of the entry this reports, not of the call. */
 	EntryId uint64
 	/* How many nodes the entry's subtree removed, staged and discarded
-	together. Zero on failure, since nothing was removed. */
+	together. Zero on failure, whatever part of the subtree was removed. */
 	NodeCount uint64
 	/* The outcome of the call. */
 	ErrorCode LoreErrorCode
@@ -4268,8 +4324,6 @@ type LoreRepositoryInstanceDeleteBeginEventDataFFI struct {
 	Path LoreString
 	/* Whether this is a SWFS-backed instance */
 	IsSwfs uint8
-	/* Whether this is a dry-run (preview only) */
-	DryRun uint8
 }
 
 type LoreRepositoryInstanceDeleteBeginEventData struct {
@@ -4279,8 +4333,6 @@ type LoreRepositoryInstanceDeleteBeginEventData struct {
 	Path string
 	/* Whether this is a SWFS-backed instance */
 	IsSwfs bool
-	/* Whether this is a dry-run (preview only) */
-	DryRun bool
 }
 type LoreRepositoryInstanceDeleteProgressEventDataFFI struct {
 	/* Current phase of the delete operation */
@@ -4329,6 +4381,115 @@ type LoreRepositoryInstanceMoveCompleteEventData struct {
 	InstanceId LoreInstanceId
 	/* New filesystem path of the instance */
 	TargetPath string
+}
+type LoreRepositoryInstanceCloneBeginEventDataFFI struct {
+	/* Identifier of the instance being cloned */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the instance being cloned */
+	SourcePath LoreString
+	/* Filesystem path the clone is created at */
+	TargetPath LoreString
+	/* How the clone is made */
+	Method LoreRepositoryInstanceCloneMethod
+	/* Filesystem of the volume the clone is created on; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED` */
+	Filesystem LoreString
+	/* Mount point of the volume the clone is created on; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED` */
+	MountPoint LoreString
+	/* Bytes the copy takes on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+	zero otherwise */
+	Size uint64
+	/* Number of files the copy writes, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+	zero otherwise */
+	FileCount uint64
+	/* Bytes free on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`; zero
+	otherwise */
+	AvailableSize uint64
+	/* Why the clone copies or cannot be made; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_SHARES_BLOCKS` */
+	Reason LoreString
+}
+
+type LoreRepositoryInstanceCloneBeginEventData struct {
+	/* Identifier of the instance being cloned */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the instance being cloned */
+	SourcePath string
+	/* Filesystem path the clone is created at */
+	TargetPath string
+	/* How the clone is made */
+	Method LoreRepositoryInstanceCloneMethod
+	/* Filesystem of the volume the clone is created on; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED` */
+	Filesystem string
+	/* Mount point of the volume the clone is created on; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED` */
+	MountPoint string
+	/* Bytes the copy takes on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+	zero otherwise */
+	Size uint64
+	/* Number of files the copy writes, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+	zero otherwise */
+	FileCount uint64
+	/* Bytes free on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`; zero
+	otherwise */
+	AvailableSize uint64
+	/* Why the clone copies or cannot be made; empty for
+	`LORE_REPOSITORY_INSTANCE_CLONE_METHOD_SHARES_BLOCKS` */
+	Reason string
+}
+type LoreRepositoryInstanceCloneProgressEventDataFFI struct {
+	/* Current phase of the clone operation */
+	Phase LoreRepositoryInstanceClonePhase
+	/* The directory the phase removes, for `LORE_REPOSITORY_INSTANCE_CLONE_PHASE_REMOVING_LEFTOVER`;
+	empty otherwise */
+	Path LoreString
+	/* Directories cloned as a whole so far, each with everything in it */
+	ClonedDirectoryCount uint64
+	/* Files and symbolic links cloned one by one so far */
+	ClonedEntryCount uint64
+	/* Files copied so far */
+	CopiedFileCount uint64
+}
+
+type LoreRepositoryInstanceCloneProgressEventData struct {
+	/* Current phase of the clone operation */
+	Phase LoreRepositoryInstanceClonePhase
+	/* The directory the phase removes, for `LORE_REPOSITORY_INSTANCE_CLONE_PHASE_REMOVING_LEFTOVER`;
+	empty otherwise */
+	Path string
+	/* Directories cloned as a whole so far, each with everything in it */
+	ClonedDirectoryCount uint64
+	/* Files and symbolic links cloned one by one so far */
+	ClonedEntryCount uint64
+	/* Files copied so far */
+	CopiedFileCount uint64
+}
+type LoreRepositoryInstanceCloneCompleteEventDataFFI struct {
+	/* Identifier of the new instance, zero in a dry run */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the new instance */
+	TargetPath LoreString
+	/* Directories cloned as a whole, each with everything in it */
+	ClonedDirectoryCount uint64
+	/* Files and symbolic links cloned one by one */
+	ClonedEntryCount uint64
+	/* Files whose data was copied */
+	CopiedFileCount uint64
+}
+
+type LoreRepositoryInstanceCloneCompleteEventData struct {
+	/* Identifier of the new instance, zero in a dry run */
+	InstanceId LoreInstanceId
+	/* Filesystem path of the new instance */
+	TargetPath string
+	/* Directories cloned as a whole, each with everything in it */
+	ClonedDirectoryCount uint64
+	/* Files and symbolic links cloned one by one */
+	ClonedEntryCount uint64
+	/* Files whose data was copied */
+	CopiedFileCount uint64
 }
 
 func (e *LoreEventFFI) asProgressEventDataFFI() *LoreProgressEventDataFFI {
@@ -5303,6 +5464,18 @@ func (e *LoreEventFFI) asRepositoryInstanceMoveCompleteEventDataFFI() *LoreRepos
 	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
 	return (*LoreRepositoryInstanceMoveCompleteEventDataFFI)(unionPtr)
 }
+func (e *LoreEventFFI) asRepositoryInstanceCloneBeginEventDataFFI() *LoreRepositoryInstanceCloneBeginEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceCloneBeginEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceCloneProgressEventDataFFI() *LoreRepositoryInstanceCloneProgressEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceCloneProgressEventDataFFI)(unionPtr)
+}
+func (e *LoreEventFFI) asRepositoryInstanceCloneCompleteEventDataFFI() *LoreRepositoryInstanceCloneCompleteEventDataFFI {
+	unionPtr := unsafe.Add(unsafe.Pointer(e), loreEventUnionOffset)
+	return (*LoreRepositoryInstanceCloneCompleteEventDataFFI)(unionPtr)
+}
 
 func (e *LoreEventFFI) GetData() any {
 	switch e.Tag {
@@ -5792,6 +5965,12 @@ func (e *LoreEventFFI) GetData() any {
 		return e.asRepositoryInstanceMoveBeginEventDataFFI()
 	case LoreEventTag_REPOSITORY_INSTANCE_MOVE_COMPLETE:
 		return e.asRepositoryInstanceMoveCompleteEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_BEGIN:
+		return e.asRepositoryInstanceCloneBeginEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_PROGRESS:
+		return e.asRepositoryInstanceCloneProgressEventDataFFI()
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_COMPLETE:
+		return e.asRepositoryInstanceCloneCompleteEventDataFFI()
 	default:
 		return nil
 	}
@@ -6237,24 +6416,32 @@ func (e *LoreBranchPushEventDataFFI) Clone() LoreBranchPushEventData {
 }
 func (e *LoreBranchPushRevisionUpdateBeginEventDataFFI) Clone() LoreBranchPushRevisionUpdateBeginEventData {
 	return LoreBranchPushRevisionUpdateBeginEventData{
-		Revision:  e.Revision,
-		OldParent: e.OldParent,
-		NewParent: e.NewParent,
+		Repository: e.Repository,
+		Branch:     e.Branch,
+		Revision:   e.Revision,
+		OldParent:  e.OldParent,
+		NewParent:  e.NewParent,
 	}
 }
 func (e *LoreBranchPushRevisionUpdateEndEventDataFFI) Clone() LoreBranchPushRevisionUpdateEndEventData {
 	return LoreBranchPushRevisionUpdateEndEventData{
-		Revision: e.Revision,
+		Repository: e.Repository,
+		Branch:     e.Branch,
+		Revision:   e.Revision,
 	}
 }
 func (e *LoreBranchPushFragmentBeginEventDataFFI) Clone() LoreBranchPushFragmentBeginEventData {
 	return LoreBranchPushFragmentBeginEventData{
+		Repository: e.Repository,
+		Branch:     e.Branch,
 		Fragments:  e.Fragments,
 		BytesTotal: e.BytesTotal,
 	}
 }
 func (e *LoreBranchPushFragmentProgressEventDataFFI) Clone() LoreBranchPushFragmentProgressEventData {
 	return LoreBranchPushFragmentProgressEventData{
+		Repository:       e.Repository,
+		Branch:           e.Branch,
 		Complete:         e.Complete,
 		Count:            e.Count,
 		BytesTransferred: e.BytesTransferred,
@@ -6263,6 +6450,8 @@ func (e *LoreBranchPushFragmentProgressEventDataFFI) Clone() LoreBranchPushFragm
 }
 func (e *LoreBranchPushFragmentEndEventDataFFI) Clone() LoreBranchPushFragmentEndEventData {
 	return LoreBranchPushFragmentEndEventData{
+		Repository:       e.Repository,
+		Branch:           e.Branch,
 		Fragments:        e.Fragments,
 		BytesTransferred: e.BytesTransferred,
 	}
@@ -6276,6 +6465,8 @@ func (e *LoreBranchPushBranchCreateBeginEventDataFFI) Clone() LoreBranchPushBran
 }
 func (e *LoreBranchPushBranchCreateEndEventDataFFI) Clone() LoreBranchPushBranchCreateEndEventData {
 	return LoreBranchPushBranchCreateEndEventData{
+		Repository:     e.Repository,
+		Branch:         e.Branch,
 		RemoteRevision: e.RemoteRevision,
 	}
 }
@@ -6289,6 +6480,8 @@ func (e *LoreBranchPushRevisionPushBeginEventDataFFI) Clone() LoreBranchPushRevi
 }
 func (e *LoreBranchPushRevisionPushUpdateEventDataFFI) Clone() LoreBranchPushRevisionPushUpdateEventData {
 	return LoreBranchPushRevisionPushUpdateEventData{
+		Repository:        e.Repository,
+		Branch:            e.Branch,
 		OldRevision:       e.OldRevision,
 		NewRevision:       e.NewRevision,
 		NewRevisionNumber: e.NewRevisionNumber,
@@ -7502,7 +7695,6 @@ func (e *LoreRepositoryInstanceDeleteBeginEventDataFFI) Clone() LoreRepositoryIn
 		InstanceId: e.InstanceId,
 		Path:       e.Path.Clone(),
 		IsSwfs:     e.IsSwfs != 0,
-		DryRun:     e.DryRun != 0,
 	}
 }
 func (e *LoreRepositoryInstanceDeleteProgressEventDataFFI) Clone() LoreRepositoryInstanceDeleteProgressEventData {
@@ -7526,6 +7718,38 @@ func (e *LoreRepositoryInstanceMoveCompleteEventDataFFI) Clone() LoreRepositoryI
 	return LoreRepositoryInstanceMoveCompleteEventData{
 		InstanceId: e.InstanceId,
 		TargetPath: e.TargetPath.Clone(),
+	}
+}
+func (e *LoreRepositoryInstanceCloneBeginEventDataFFI) Clone() LoreRepositoryInstanceCloneBeginEventData {
+	return LoreRepositoryInstanceCloneBeginEventData{
+		InstanceId:    e.InstanceId,
+		SourcePath:    e.SourcePath.Clone(),
+		TargetPath:    e.TargetPath.Clone(),
+		Method:        e.Method,
+		Filesystem:    e.Filesystem.Clone(),
+		MountPoint:    e.MountPoint.Clone(),
+		Size:          e.Size,
+		FileCount:     e.FileCount,
+		AvailableSize: e.AvailableSize,
+		Reason:        e.Reason.Clone(),
+	}
+}
+func (e *LoreRepositoryInstanceCloneProgressEventDataFFI) Clone() LoreRepositoryInstanceCloneProgressEventData {
+	return LoreRepositoryInstanceCloneProgressEventData{
+		Phase:                e.Phase,
+		Path:                 e.Path.Clone(),
+		ClonedDirectoryCount: e.ClonedDirectoryCount,
+		ClonedEntryCount:     e.ClonedEntryCount,
+		CopiedFileCount:      e.CopiedFileCount,
+	}
+}
+func (e *LoreRepositoryInstanceCloneCompleteEventDataFFI) Clone() LoreRepositoryInstanceCloneCompleteEventData {
+	return LoreRepositoryInstanceCloneCompleteEventData{
+		InstanceId:           e.InstanceId,
+		TargetPath:           e.TargetPath.Clone(),
+		ClonedDirectoryCount: e.ClonedDirectoryCount,
+		ClonedEntryCount:     e.ClonedEntryCount,
+		CopiedFileCount:      e.CopiedFileCount,
 	}
 }
 
@@ -8747,6 +8971,21 @@ func (e *LoreEventFFI) Clone() LoreEvent {
 		return LoreEvent{
 			Tag:  e.Tag,
 			Data: e.asRepositoryInstanceMoveCompleteEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_BEGIN:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceCloneBeginEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_PROGRESS:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceCloneProgressEventDataFFI().Clone(),
+		}
+	case LoreEventTag_REPOSITORY_INSTANCE_CLONE_COMPLETE:
+		return LoreEvent{
+			Tag:  e.Tag,
+			Data: e.asRepositoryInstanceCloneCompleteEventDataFFI().Clone(),
 		}
 	default:
 		return LoreEvent{
